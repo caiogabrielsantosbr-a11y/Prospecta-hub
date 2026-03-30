@@ -1,0 +1,51 @@
+═══════════════════════════════════════════════════════════
+  CONFIGURAÇÕES PARA COLAR NO VERCEL
+═══════════════════════════════════════════════════════════
+
+📁 ROOT DIRECTORY
+──────────────────────────────────────────────────────────
+frontend
+
+
+🔨 BUILD COMMAND
+──────────────────────────────────────────────────────────
+npm run build
+
+
+📦 OUTPUT DIRECTORY
+──────────────────────────────────────────────────────────
+dist
+
+
+⚙️ INSTALL COMMAND
+──────────────────────────────────────────────────────────
+npm install
+
+
+🔐 ENVIRONMENT VARIABLES
+──────────────────────────────────────────────────────────
+
+Nome: VITE_SUPABASE_URL
+Valor: https://gyenypsxpidmsxabjhqg.supabase.co
+
+Nome: VITE_SUPABASE_KEY
+Valor: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZW55cHN4cGlkbXN4YWJqaHFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1Njc1NjksImV4cCI6MjA5MDE0MzU2OX0.raSSLBSlRgtSnkzrWTYZTgHPL-9IMPF6f1pRdrLD9wM
+
+
+═══════════════════════════════════════════════════════════
+  INSTRUÇÕES
+═══════════════════════════════════════════════════════════
+
+1. No Vercel, você já selecionou "frontend" como Root Directory ✓
+
+2. As configurações de Build já devem estar preenchidas automaticamente
+   (Vercel detecta Vite automaticamente)
+
+3. IMPORTANTE: Adicione as Environment Variables acima em:
+   "Environment Variables" > "Add New"
+   
+4. Clique em "Deploy" e aguarde
+
+5. Após o deploy, teste a URL gerada
+
+═══════════════════════════════════════════════════════════
