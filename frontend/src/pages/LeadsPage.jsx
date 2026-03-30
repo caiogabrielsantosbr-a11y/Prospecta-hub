@@ -2,9 +2,11 @@
  * Leads Management Page — Complete lead management interface
  */
 import { useState, useEffect } from 'react'
-import { api } from '../services/api'
+import useConfigStore from '../store/useConfigStore'
+import toast from 'react-hot-toast'
 
 export default function LeadsPage() {
+  const { apiUrl } = useConfigStore()
   const [leads, setLeads] = useState([])
   const [stats, setStats] = useState(null)
   const [conjuntos, setConjuntos] = useState([])
@@ -26,40 +28,68 @@ export default function LeadsPage() {
   const [editingLead, setEditingLead] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
 
+  // Helper function to make API requests
+  const apiRequest = async (endpoint, options = {}) => {
+    if (!apiUrl) {
+      toast.error('Backend não configurado. Configure em Configurações.')
+      throw new Error('Backend URL not configured')
+    }
+    
+    const response = await fetch(`${apiUrl}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+        ...options.headers
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    return response.json()
+  }
+
   // Load initial data
   useEffect(() => {
-    loadStats()
-    loadConjuntos()
-    loadLeads()
-  }, [])
+    if (apiUrl) {
+      loadStats()
+      loadConjuntos()
+      loadLeads()
+    }
+  }, [apiUrl])
 
   // Reload leads when filters or page change
   useEffect(() => {
-    loadLeads()
-  }, [selectedConjunto, selectedCidade, searchTerm, page])
+    if (apiUrl) {
+      loadLeads()
+    }
+  }, [selectedConjunto, selectedCidade, searchTerm, page, apiUrl])
 
   // Load cidades when conjunto changes
   useEffect(() => {
-    if (selectedConjunto) {
+    if (selectedConjunto && apiUrl) {
       loadCidades(selectedConjunto)
     } else {
       setCidades([])
       setSelectedCidade('')
     }
-  }, [selectedConjunto])
+  }, [selectedConjunto, apiUrl])
 
   const loadStats = async () => {
     try {
-      const data = await api.getLeadsStats()
+      const data = await apiRequest('/api/leads/stats')
       setStats(data)
     } catch (error) {
       console.error('Error loading stats:', error)
+      toast.error('Erro ao carregar estatísticas')
     }
   }
 
   const loadConjuntos = async () => {
     try {
-      const data = await api.getConjuntos()
+      const data = await apiRequest('/api/leads/conjuntos')
       setConjuntos(data.conjuntos || [])
     } catch (error) {
       console.error('Error loading conjuntos:', error)
@@ -68,7 +98,7 @@ export default function LeadsPage() {
 
   const loadCidades = async (conjunto) => {
     try {
-      const data = await api.getCidades(conjunto)
+      const data = await apiRequest(`/api/leads/cidades?conjunto=${encodeURIComponent(conjunto)}`)
       setCidades(data.cidades || [])
     } catch (error) {
       console.error('Error loading cidades:', error)
@@ -79,17 +109,23 @@ export default function LeadsPage() {
     setLoading(true)
     try {
       const offset = (page - 1) * limit
-      const data = await api.getLeads({
-        limit,
-        offset,
-        conjunto: selectedConjunto || undefined,
-        cidade: selectedCidade || undefined,
-        search: searchTerm || undefined
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+        offset: offset.toString()
       })
+      
+      if (selectedConjunto) params.append('conjunto', selectedConjunto)
+      if (selectedCidade) params.append('cidade', selectedCidade)
+      if (searchTerm) params.append('search', searchTerm)
+      
+      const data = await apiRequest(`/api/leads?${params}`)
       setLeads(data.leads || [])
       setTotal(data.total || 0)
     } catch (error) {
       console.error('Error loading leads:', error)
+      toast.error('Erro ao carregar leads')
+      setLeads([])
+      setTotal(0)
     } finally {
       setLoading(false)
     }
@@ -99,12 +135,13 @@ export default function LeadsPage() {
     if (!confirm('Tem certeza que deseja excluir este lead?')) return
     
     try {
-      await api.deleteLead(leadId)
+      await apiRequest(`/api/leads/${leadId}`, { method: 'DELETE' })
+      toast.success('Lead excluído com sucesso')
       loadLeads()
       loadStats()
     } catch (error) {
       console.error('Error deleting lead:', error)
-      alert('Erro ao excluir lead')
+      toast.error('Erro ao excluir lead')
     }
   }
 
@@ -113,13 +150,16 @@ export default function LeadsPage() {
     if (!confirm(`Tem certeza que deseja excluir ${selectedLeads.size} leads?`)) return
     
     try {
-      await Promise.all([...selectedLeads].map(id => api.deleteLead(id)))
+      await Promise.all([...selectedLeads].map(id => 
+        apiRequest(`/api/leads/${id}`, { method: 'DELETE' })
+      ))
       setSelectedLeads(new Set())
+      toast.success(`${selectedLeads.size} leads excluídos com sucesso`)
       loadLeads()
       loadStats()
     } catch (error) {
       console.error('Error deleting leads:', error)
-      alert('Erro ao excluir leads')
+      toast.error('Erro ao excluir leads')
     }
   }
 
@@ -130,37 +170,45 @@ export default function LeadsPage() {
 
   const handleSaveEdit = async () => {
     try {
-      await api.updateLead(editingLead.id, {
-        nome: editingLead.nome,
-        telefone: editingLead.telefone,
-        website: editingLead.website,
-        email: editingLead.email,
-        endereco: editingLead.endereco,
-        cidade: editingLead.cidade
+      await apiRequest(`/api/leads/${editingLead.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          nome: editingLead.nome,
+          telefone: editingLead.telefone,
+          website: editingLead.website,
+          email: editingLead.email,
+          endereco: editingLead.endereco,
+          cidade: editingLead.cidade
+        })
       })
       setShowEditModal(false)
       setEditingLead(null)
+      toast.success('Lead atualizado com sucesso')
       loadLeads()
     } catch (error) {
       console.error('Error updating lead:', error)
-      alert('Erro ao atualizar lead')
+      toast.error('Erro ao atualizar lead')
     }
   }
 
   const handleExport = async () => {
     try {
-      const data = await api.exportLeads({
-        conjunto: selectedConjunto || undefined,
-        cidade: selectedCidade || undefined,
-        search: searchTerm || undefined
+      const data = await apiRequest('/api/leads/export', {
+        method: 'POST',
+        body: JSON.stringify({
+          conjunto: selectedConjunto || undefined,
+          cidade: selectedCidade || undefined,
+          search: searchTerm || undefined
+        })
       })
       
       // Convert to CSV
       const csv = convertToCSV(data.leads)
       downloadCSV(csv, `leads-${Date.now()}.csv`)
+      toast.success(`${data.count} leads exportados`)
     } catch (error) {
       console.error('Error exporting leads:', error)
-      alert('Erro ao exportar leads')
+      toast.error('Erro ao exportar leads')
     }
   }
 
@@ -211,6 +259,30 @@ export default function LeadsPage() {
   }
 
   const totalPages = Math.ceil(total / limit)
+
+  // Show configuration message if backend is not configured
+  if (!apiUrl) {
+    return (
+      <div className="p-8 space-y-8 max-w-[1800px]">
+        <div className="flex flex-col gap-1">
+          <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">GERENCIAMENTO</span>
+          <h2 className="text-3xl font-bold tracking-tight">Leads</h2>
+        </div>
+        
+        <div className="glass-card p-12 rounded-lg text-center">
+          <span className="material-symbols-outlined text-6xl text-on-surface-variant opacity-30">settings</span>
+          <h3 className="text-xl font-bold mt-4 mb-2">Backend Não Configurado</h3>
+          <p className="text-on-surface-variant mb-6">
+            Configure a URL do backend em Configurações para visualizar os leads.
+          </p>
+          <a href="/admin/config" className="btn-primary inline-flex">
+            <span className="material-symbols-outlined text-lg">settings</span>
+            Ir para Configurações
+          </a>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-8 space-y-8 max-w-[1800px]">
