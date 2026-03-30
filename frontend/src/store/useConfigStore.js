@@ -154,7 +154,10 @@ const useConfigStore = create((set, get) => ({
     try {
       const response = await fetch(`${apiUrl}/api/health`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true' // Skip ngrok warning page
+        },
         signal: AbortSignal.timeout(5000)
       })
       return response.ok
