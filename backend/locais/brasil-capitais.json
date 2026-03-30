@@ -1,0 +1,33 @@
+{
+  "nome": "Capitais do Brasil",
+  "descricao": "Todas as 27 capitais brasileiras",
+  "locais": [
+    "São Paulo, SP",
+    "Rio de Janeiro, RJ",
+    "Belo Horizonte, MG",
+    "Curitiba, PR",
+    "Porto Alegre, RS",
+    "Salvador, BA",
+    "Brasília, DF",
+    "Fortaleza, CE",
+    "Recife, PE",
+    "Goiânia, GO",
+    "Manaus, AM",
+    "Belém, PA",
+    "Florianópolis, SC",
+    "Vitória, ES",
+    "Natal, RN",
+    "João Pessoa, PB",
+    "Aracaju, SE",
+    "Maceió, AL",
+    "São Luís, MA",
+    "Teresina, PI",
+    "Campo Grande, MS",
+    "Cuiabá, MT",
+    "Palmas, TO",
+    "Porto Velho, RO",
+    "Rio Branco, AC",
+    "Boa Vista, RR",
+    "Macapá, AP"
+  ]
+}

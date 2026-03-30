@@ -1,0 +1,26 @@
+{
+  "nome": "Região Sudeste",
+  "descricao": "Principais cidades da região Sudeste do Brasil",
+  "locais": [
+    "São Paulo, SP",
+    "Rio de Janeiro, RJ",
+    "Belo Horizonte, MG",
+    "Campinas, SP",
+    "Guarulhos, SP",
+    "São Bernardo do Campo, SP",
+    "Santo André, SP",
+    "Osasco, SP",
+    "Sorocaba, SP",
+    "Ribeirão Preto, SP",
+    "Niterói, RJ",
+    "Duque de Caxias, RJ",
+    "Nova Iguaçu, RJ",
+    "Contagem, MG",
+    "Uberlândia, MG",
+    "Juiz de Fora, MG",
+    "Vitória, ES",
+    "Vila Velha, ES",
+    "Serra, ES",
+    "Cariacica, ES"
+  ]
+}

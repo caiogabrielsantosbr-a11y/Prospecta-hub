@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Cache Manual Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #555;
+      margin-top: 30px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button.danger {
+      background: #f44336;
+    }
+    button.danger:hover {
+      background: #da190b;
+    }
+    .output {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .success {
+      color: #4CAF50;
+      font-weight: bold;
+    }
+    .error {
+      color: #f44336;
+      font-weight: bold;
+    }
+    .info {
+      color: #2196F3;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #fafafa;
+      border-left: 4px solid #4CAF50;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Session Cache Manual Test Suite</h1>
+    <p>This page tests the sessionCache utility for location sets management.</p>
+
+    <div class="test-section">
+      <h2>Test 1: Basic Set and Get</h2>
+      <button onclick="testBasicSetGet()">Run Test</button>
+      <div id="test1-output" class="output"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 2: TTL Expiration</h2>
+      <button onclick="testTTLExpiration()">Run Test</button>
+      <div id="test2-output" class="output"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 3: Clear Operations</h2>
+      <button onclick="testClearOperations()">Run Test</button>
+      <div id="test3-output" class="output"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 4: Cache Statistics</h2>
+      <button onclick="testCacheStats()">Run Test</button>
+      <div id="test4-output" class="output"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 5: Multiple Entries</h2>
+      <button onclick="testMultipleEntries()">Run Test</button>
+      <div id="test5-output" class="output"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Actions</h2>
+      <button onclick="viewRawStorage()">View Raw Storage</button>
+      <button class="danger" onclick="clearAllCache()">Clear All Cache</button>
+      <div id="actions-output" class="output"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import the sessionCache module
+    import { sessionCache } from './sessionCache.js'
+    
+    // Make it available globally for the test functions
+    window.sessionCache = sessionCache
+
+    window.testBasicSetGet = function() {
+      const output = document.getElementById('test1-output')
+      output.innerHTML = 'Running test...\n\n'
+      
+      try {
+        // Test 1: Store and retrieve data
+        const testData = {
+          locais: ['São Paulo, SP', 'Rio de Janeiro, RJ', 'Belo Horizonte, MG']
+        }
+        
+        output.innerHTML += '📝 Storing test data...\n'
+        sessionCache.set('test-set-1', testData)
+        output.innerHTML += '<span class="success">✓ Data stored successfully</span>\n\n'
+        
+        output.innerHTML += '📖 Retrieving data...\n'
+        const retrieved = sessionCache.get('test-set-1')
+        
+        if (JSON.stringify(retrieved) === JSON.stringify(testData)) {
+          output.innerHTML += '<span class="success">✓ Data retrieved successfully and matches!</span>\n'
+          output.innerHTML += `Retrieved: ${JSON.stringify(retrieved, null, 2)}\n`
+        } else {
+          output.innerHTML += '<span class="error">✗ Data mismatch!</span>\n'
+          output.innerHTML += `Expected: ${JSON.stringify(testData, null, 2)}\n`
+          output.innerHTML += `Got: ${JSON.stringify(retrieved, null, 2)}\n`
+        }
+        
+        // Test 2: Non-existent key
+        output.innerHTML += '\n📖 Testing non-existent key...\n'
+        const nonExistent = sessionCache.get('non-existent-key')
+        
+        if (nonExistent === null) {
+          output.innerHTML += '<span class="success">✓ Correctly returns null for non-existent key</span>\n'
+        } else {
+          output.innerHTML += '<span class="error">✗ Should return null for non-existent key</span>\n'
+        }
+        
+      } catch (error) {
+        output.innerHTML += `<span class="error">✗ Test failed: ${error.message}</span>\n`
+      }
+    }
+
+    window.testTTLExpiration = function() {
+      const output = document.getElementById('test2-output')
+      output.innerHTML = 'Running test...\n\n'
+      
+      try {
+        // Test expired cache
+        output.innerHTML += '📝 Creating expired cache entry...\n'
+        const oldTimestamp = Date.now() - (3600000 + 1000) // 1 hour + 1 second ago
+        sessionStorage.setItem('location-set:expired-test', JSON.stringify({
+          data: { locais: ['Expired City'] },
+          timestamp: oldTimestamp
+        }))
+        output.innerHTML += '<span class="success">✓ Expired entry created</span>\n\n'
+        
+        output.innerHTML += '📖 Attempting to retrieve expired entry...\n'
+        const expired = sessionCache.get('expired-test')
+        
+        if (expired === null) {
+          output.innerHTML += '<span class="success">✓ Correctly returns null for expired entry</span>\n'
+          
+          // Check if it was removed
+          const stillExists = sessionStorage.getItem('location-set:expired-test')
+          if (stillExists === null) {
+            output.innerHTML += '<span class="success">✓ Expired entry was removed from storage</span>\n'
+          } else {
+            output.innerHTML += '<span class="error">✗ Expired entry should be removed</span>\n'
+          }
+        } else {
+          output.innerHTML += '<span class="error">✗ Should return null for expired entry</span>\n'
+        }
+        
+        // Test recent cache
+        output.innerHTML += '\n📝 Creating recent cache entry...\n'
+        const recentTimestamp = Date.now() - 1800000 // 30 minutes ago
+        sessionStorage.setItem('location-set:recent-test', JSON.stringify({
+          data: { locais: ['Recent City'] },
+          timestamp: recentTimestamp
+        }))
+        output.innerHTML += '<span class="success">✓ Recent entry created</span>\n\n'
+        
+        output.innerHTML += '📖 Retrieving recent entry...\n'
+        const recent = sessionCache.get('recent-test')
+        
+        if (recent !== null && recent.locais[0] === 'Recent City') {
+          output.innerHTML += '<span class="success">✓ Recent entry retrieved successfully</span>\n'
+        } else {
+          output.innerHTML += '<span class="error">✗ Recent entry should be available</span>\n'
+        }
+        
+      } catch (error) {
+        output.innerHTML += `<span class="error">✗ Test failed: ${error.message}</span>\n`
+      }
+    }
+
+    window.testClearOperations = function() {
+      const output = document.getElementById('test3-output')
+      output.innerHTML = 'Running test...\n\n'
+      
+      try {
+        // Setup test data
+        output.innerHTML += '📝 Setting up test data...\n'
+        sessionCache.set('clear-test-1', { locais: ['City 1'] })
+        sessionCache.set('clear-test-2', { locais: ['City 2'] })
+        sessionCache.set('clear-test-3', { locais: ['City 3'] })
+        output.innerHTML += '<span class="success">✓ Test data created</span>\n\n'
+        
+        // Test clear single entry
+        output.innerHTML += '🗑️ Clearing single entry (clear-test-1)...\n'
+        sessionCache.clear('clear-test-1')
+        
+        const cleared = sessionCache.get('clear-test-1')
+        const notCleared = sessionCache.get('clear-test-2')
+        
+        if (cleared === null && notCleared !== null) {
+          output.innerHTML += '<span class="success">✓ Single entry cleared correctly</span>\n'
+        } else {
+          output.innerHTML += '<span class="error">✗ Clear single entry failed</span>\n'
+        }
+        
+        // Test clearAll
+        output.innerHTML += '\n🗑️ Clearing all cache entries...\n'
+        sessionCache.clearAll()
+        
+        const all1 = sessionCache.get('clear-test-1')
+        const all2 = sessionCache.get('clear-test-2')
+        const all3 = sessionCache.get('clear-test-3')
+        
+        if (all1 === null && all2 === null && all3 === null) {
+          output.innerHTML += '<span class="success">✓ All entries cleared successfully</span>\n'
+        } else {
+          output.innerHTML += '<span class="error">✗ ClearAll failed</span>\n'
+        }
+        
+      } catch (error) {
+        output.innerHTML += `<span class="error">✗ Test failed: ${error.message}</span>\n`
+      }
+    }
+
+    window.testCacheStats = function() {
+      const output = document.getElementById('test4-output')
+      output.innerHTML = 'Running test...\n\n'
+      
+      try {
+        // Clear first
+        sessionCache.clearAll()
+        
+        // Add some entries
+        output.innerHTML += '📝 Creating test entries...\n'
+        sessionCache.set('stats-test-1', { locais: ['City 1', 'City 2'] })
+        sessionCache.set('stats-test-2', { locais: ['City 3', 'City 4', 'City 5'] })
+        
+        // Add expired entry
+        const oldTimestamp = Date.now() - 4000000
+        sessionStorage.setItem('location-set:stats-expired', JSON.stringify({
+          data: { locais: ['Expired'] },
+          timestamp: oldTimestamp
+        }))
+        
+        output.innerHTML += '<span class="success">✓ Test entries created</span>\n\n'
+        
+        // Get stats
+        output.innerHTML += '📊 Getting cache statistics...\n'
+        const stats = sessionCache.getStats()
+        
+        output.innerHTML += `\nTotal Entries: ${stats.totalEntries}\n`
+        output.innerHTML += `Valid Entries: ${stats.validEntries}\n`
+        output.innerHTML += `Expired Entries: ${stats.expiredEntries}\n`
+        output.innerHTML += `Total Size: ${stats.totalSize} bytes\n\n`
+        
+        output.innerHTML += 'Entry Details:\n'
+        stats.entries.forEach(entry => {
+          const status = entry.isExpired ? '❌ EXPIRED' : '✅ VALID'
+          const age = Math.floor(entry.age / 1000)
+          output.innerHTML += `  ${status} - ${entry.key} (${age}s old, ${entry.size} bytes)\n`
+        })
+        
+        if (stats.totalEntries === 3 && stats.validEntries === 2 && stats.expiredEntries === 1) {
+          output.innerHTML += '\n<span class="success">✓ Statistics are correct!</span>\n'
+        } else {
+          output.innerHTML += '\n<span class="error">✗ Statistics mismatch</span>\n'
+        }
+        
+      } catch (error) {
+        output.innerHTML += `<span class="error">✗ Test failed: ${error.message}</span>\n`
+      }
+    }
+
+    window.testMultipleEntries = function() {
+      const output = document.getElementById('test5-output')
+      output.innerHTML = 'Running test...\n\n'
+      
+      try {
+        // Clear first
+        sessionCache.clearAll()
+        
+        output.innerHTML += '📝 Creating multiple location sets...\n'
+        
+        const sets = [
+          { id: 'brasil-capitais', data: { locais: ['São Paulo, SP', 'Rio de Janeiro, RJ', 'Brasília, DF'] } },
+          { id: 'sudeste', data: { locais: ['São Paulo, SP', 'Rio de Janeiro, RJ', 'Belo Horizonte, MG', 'Vitória, ES'] } },
+          { id: 'sul', data: { locais: ['Curitiba, PR', 'Porto Alegre, RS', 'Florianópolis, SC'] } },
+        ]
+        
+        sets.forEach(set => {
+          sessionCache.set(set.id, set.data)
+          output.innerHTML += `  ✓ Stored: ${set.id} (${set.data.locais.length} locations)\n`
+        })
+        
+        output.innerHTML += '\n📖 Retrieving all sets...\n'
+        
+        let allCorrect = true
+        sets.forEach(set => {
+          const retrieved = sessionCache.get(set.id)
+          if (JSON.stringify(retrieved) === JSON.stringify(set.data)) {
+            output.innerHTML += `  ✓ Retrieved: ${set.id}\n`
+          } else {
+            output.innerHTML += `  ✗ Failed: ${set.id}\n`
+            allCorrect = false
+          }
+        })
+        
+        if (allCorrect) {
+          output.innerHTML += '\n<span class="success">✓ All entries stored and retrieved correctly!</span>\n'
+        } else {
+          output.innerHTML += '\n<span class="error">✗ Some entries failed</span>\n'
+        }
+        
+        // Test clearOldest
+        output.innerHTML += '\n🗑️ Testing clearOldest...\n'
+        
+        // Make one entry older
+        const oldTimestamp = Date.now() - 5000000
+        sessionStorage.setItem('location-set:sudeste', JSON.stringify({
+          data: sets[1].data,
+          timestamp: oldTimestamp
+        }))
+        
+        sessionCache.clearOldest()
+        
+        const afterClear = sessionCache.get('sudeste')
+        if (afterClear === null) {
+          output.innerHTML += '<span class="success">✓ Oldest entry cleared successfully</span>\n'
+        } else {
+          output.innerHTML += '<span class="error">✗ clearOldest failed</span>\n'
+        }
+        
+      } catch (error) {
+        output.innerHTML += `<span class="error">✗ Test failed: ${error.message}</span>\n`
+      }
+    }
+
+    window.viewRawStorage = function() {
+      const output = document.getElementById('actions-output')
+      output.innerHTML = 'Raw sessionStorage contents:\n\n'
+      
+      const entries = []
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i)
+        if (key.startsWith('location-set:')) {
+          const value = sessionStorage.getItem(key)
+          entries.push({ key, value })
+        }
+      }
+      
+      if (entries.length === 0) {
+        output.innerHTML += '<span class="info">No location-set entries found</span>\n'
+      } else {
+        entries.forEach(entry => {
+          output.innerHTML += `<span class="info">Key:</span> ${entry.key}\n`
+          try {
+            const parsed = JSON.parse(entry.value)
+            output.innerHTML += `<span class="info">Value:</span> ${JSON.stringify(parsed, null, 2)}\n\n`
+          } catch {
+            output.innerHTML += `<span class="error">Invalid JSON:</span> ${entry.value}\n\n`
+          }
+        })
+      }
+    }
+
+    window.clearAllCache = function() {
+      if (confirm('Are you sure you want to clear all cache entries?')) {
+        sessionCache.clearAll()
+        document.getElementById('actions-output').innerHTML = '<span class="success">✓ All cache entries cleared</span>\n'
+      }
+    }
+  </script>
+</body>
+</html>
