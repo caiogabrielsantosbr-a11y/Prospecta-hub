@@ -152,6 +152,7 @@ const useConfigStore = create((set, get) => ({
     if (!apiUrl) return false
     
     try {
+      console.log('[Config] Testing connection to:', `${apiUrl}/api/health`)
       const response = await fetch(`${apiUrl}/api/health`, {
         method: 'GET',
         headers: { 
@@ -160,9 +161,22 @@ const useConfigStore = create((set, get) => ({
         },
         signal: AbortSignal.timeout(5000)
       })
-      return response.ok
+      
+      console.log('[Config] Health check response:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('[Config] Health check data:', data)
+        return data.status === 'ok'
+      }
+      
+      return false
     } catch (error) {
-      console.error('Health check failed:', error)
+      console.error('[Config] Health check failed:', error)
       return false
     }
   },
