@@ -8,12 +8,19 @@ frontend
 ```
 
 ### Build Settings
-- **Build Command**: `npm run build`
-- **Output Directory**: `dist`
-- **Install Command**: `npm install`
+**IMPORTANTE**: Os comandos de build estão configurados no arquivo `vercel.json` e não podem ser editados na interface do Vercel quando um Framework Preset está selecionado. Isso é normal e esperado.
+
+O arquivo `vercel.json` já contém:
+```json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install"
+}
+```
 
 ### Framework Preset
-Vite (detectado automaticamente)
+Vite (pode deixar selecionado - o vercel.json vai fazer o override dos comandos)
 
 ## Variáveis de Ambiente
 

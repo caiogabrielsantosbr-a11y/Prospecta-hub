@@ -9,13 +9,16 @@
 
 ## 📋 Próximos Passos no Vercel
 
-### 1. Configurações de Build (já preenchidas automaticamente)
-```
-Root Directory: frontend
-Build Command: npm run build
-Output Directory: dist
-Install Command: npm install
-```
+### 1. Configurações de Build
+
+**IMPORTANTE**: Não se preocupe se os campos de Build Command e Install Command estiverem bloqueados (cinza). Isso é normal quando um Framework Preset está selecionado.
+
+Os comandos corretos já estão configurados no arquivo `vercel.json`:
+- Build Command: `npm run build`
+- Output Directory: `dist`  
+- Install Command: `npm install`
+
+**Deixe tudo como está** - o Vercel vai usar as configurações do `vercel.json` automaticamente.
 
 ### 2. Variáveis de Ambiente (IMPORTANTE!)
 
