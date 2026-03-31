@@ -1,12 +1,12 @@
 /**
  * Leads Management Page — Complete lead management interface
+ * Comunicação DIRETA com Supabase (não usa backend local)
  */
 import { useState, useEffect } from 'react'
-import useConfigStore from '../store/useConfigStore'
+import { leadsService } from '../services/supabase'
 import toast from 'react-hot-toast'
 
 export default function LeadsPage() {
-  const { apiUrl } = useConfigStore()
   const [leads, setLeads] = useState([])
   const [stats, setStats] = useState(null)
   const [conjuntos, setConjuntos] = useState([])
@@ -28,58 +28,31 @@ export default function LeadsPage() {
   const [editingLead, setEditingLead] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
 
-  // Helper function to make API requests
-  const apiRequest = async (endpoint, options = {}) => {
-    if (!apiUrl) {
-      toast.error('Backend não configurado. Configure em Configurações.')
-      throw new Error('Backend URL not configured')
-    }
-    
-    const response = await fetch(`${apiUrl}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
-        ...options.headers
-      }
-    })
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-    
-    return response.json()
-  }
-
   // Load initial data
   useEffect(() => {
-    if (apiUrl) {
-      loadStats()
-      loadConjuntos()
-      loadLeads()
-    }
-  }, [apiUrl])
+    loadStats()
+    loadConjuntos()
+    loadLeads()
+  }, [])
 
   // Reload leads when filters or page change
   useEffect(() => {
-    if (apiUrl) {
-      loadLeads()
-    }
-  }, [selectedConjunto, selectedCidade, searchTerm, page, apiUrl])
+    loadLeads()
+  }, [selectedConjunto, selectedCidade, searchTerm, page])
 
   // Load cidades when conjunto changes
   useEffect(() => {
-    if (selectedConjunto && apiUrl) {
+    if (selectedConjunto) {
       loadCidades(selectedConjunto)
     } else {
       setCidades([])
       setSelectedCidade('')
     }
-  }, [selectedConjunto, apiUrl])
+  }, [selectedConjunto])
 
   const loadStats = async () => {
     try {
-      const data = await apiRequest('/api/leads/stats')
+      const data = await leadsService.getStats()
       setStats(data)
     } catch (error) {
       console.error('Error loading stats:', error)
@@ -89,8 +62,8 @@ export default function LeadsPage() {
 
   const loadConjuntos = async () => {
     try {
-      const data = await apiRequest('/api/leads/conjuntos')
-      setConjuntos(data.conjuntos || [])
+      const data = await leadsService.getConjuntos()
+      setConjuntos(data || [])
     } catch (error) {
       console.error('Error loading conjuntos:', error)
     }
@@ -98,8 +71,8 @@ export default function LeadsPage() {
 
   const loadCidades = async (conjunto) => {
     try {
-      const data = await apiRequest(`/api/leads/cidades?conjunto=${encodeURIComponent(conjunto)}`)
-      setCidades(data.cidades || [])
+      const data = await leadsService.getCidades(conjunto)
+      setCidades(data || [])
     } catch (error) {
       console.error('Error loading cidades:', error)
     }
@@ -109,18 +82,16 @@ export default function LeadsPage() {
     setLoading(true)
     try {
       const offset = (page - 1) * limit
-      const params = new URLSearchParams({
-        limit: limit.toString(),
-        offset: offset.toString()
+      const { leads: data, total: count } = await leadsService.getLeads({
+        limit,
+        offset,
+        conjunto: selectedConjunto || undefined,
+        cidade: selectedCidade || undefined,
+        search: searchTerm || undefined
       })
       
-      if (selectedConjunto) params.append('conjunto', selectedConjunto)
-      if (selectedCidade) params.append('cidade', selectedCidade)
-      if (searchTerm) params.append('search', searchTerm)
-      
-      const data = await apiRequest(`/api/leads?${params}`)
-      setLeads(data.leads || [])
-      setTotal(data.total || 0)
+      setLeads(data || [])
+      setTotal(count || 0)
     } catch (error) {
       console.error('Error loading leads:', error)
       toast.error('Erro ao carregar leads')
@@ -135,7 +106,7 @@ export default function LeadsPage() {
     if (!confirm('Tem certeza que deseja excluir este lead?')) return
     
     try {
-      await apiRequest(`/api/leads/${leadId}`, { method: 'DELETE' })
+      await leadsService.deleteLead(leadId)
       toast.success('Lead excluído com sucesso')
       loadLeads()
       loadStats()
@@ -150,9 +121,7 @@ export default function LeadsPage() {
     if (!confirm(`Tem certeza que deseja excluir ${selectedLeads.size} leads?`)) return
     
     try {
-      await Promise.all([...selectedLeads].map(id => 
-        apiRequest(`/api/leads/${id}`, { method: 'DELETE' })
-      ))
+      await leadsService.deleteLeads([...selectedLeads])
       setSelectedLeads(new Set())
       toast.success(`${selectedLeads.size} leads excluídos com sucesso`)
       loadLeads()
@@ -170,16 +139,13 @@ export default function LeadsPage() {
 
   const handleSaveEdit = async () => {
     try {
-      await apiRequest(`/api/leads/${editingLead.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          nome: editingLead.nome,
-          telefone: editingLead.telefone,
-          website: editingLead.website,
-          email: editingLead.email,
-          endereco: editingLead.endereco,
-          cidade: editingLead.cidade
-        })
+      await leadsService.updateLead(editingLead.id, {
+        nome: editingLead.nome,
+        telefone: editingLead.telefone,
+        website: editingLead.website,
+        email: editingLead.email,
+        endereco: editingLead.endereco,
+        cidade: editingLead.cidade
       })
       setShowEditModal(false)
       setEditingLead(null)
@@ -193,19 +159,16 @@ export default function LeadsPage() {
 
   const handleExport = async () => {
     try {
-      const data = await apiRequest('/api/leads/export', {
-        method: 'POST',
-        body: JSON.stringify({
-          conjunto: selectedConjunto || undefined,
-          cidade: selectedCidade || undefined,
-          search: searchTerm || undefined
-        })
+      const data = await leadsService.exportLeads({
+        conjunto: selectedConjunto || undefined,
+        cidade: selectedCidade || undefined,
+        search: searchTerm || undefined
       })
       
       // Convert to CSV
-      const csv = convertToCSV(data.leads)
+      const csv = convertToCSV(data)
       downloadCSV(csv, `leads-${Date.now()}.csv`)
-      toast.success(`${data.count} leads exportados`)
+      toast.success(`${data.length} leads exportados`)
     } catch (error) {
       console.error('Error exporting leads:', error)
       toast.error('Erro ao exportar leads')
@@ -259,30 +222,6 @@ export default function LeadsPage() {
   }
 
   const totalPages = Math.ceil(total / limit)
-
-  // Show configuration message if backend is not configured
-  if (!apiUrl) {
-    return (
-      <div className="p-8 space-y-8 max-w-[1800px]">
-        <div className="flex flex-col gap-1">
-          <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">GERENCIAMENTO</span>
-          <h2 className="text-3xl font-bold tracking-tight">Leads</h2>
-        </div>
-        
-        <div className="glass-card p-12 rounded-lg text-center">
-          <span className="material-symbols-outlined text-6xl text-on-surface-variant opacity-30">settings</span>
-          <h3 className="text-xl font-bold mt-4 mb-2">Backend Não Configurado</h3>
-          <p className="text-on-surface-variant mb-6">
-            Configure a URL do backend em Configurações para visualizar os leads.
-          </p>
-          <a href="/admin/config" className="btn-primary inline-flex">
-            <span className="material-symbols-outlined text-lg">settings</span>
-            Ir para Configurações
-          </a>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="p-8 space-y-8 max-w-[1800px]">

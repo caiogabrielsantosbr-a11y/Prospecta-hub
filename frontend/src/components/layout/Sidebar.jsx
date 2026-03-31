@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { path: '/facebook', icon: 'ads_click', label: 'Facebook ADS' },
   { path: '/dispatch', icon: 'forward_to_inbox', label: 'Disparo de Email' },
   { path: '/leads', icon: 'groups', label: 'Leads' },
+  { path: '/profile', icon: 'person', label: 'Perfil' },
   { path: '/admin/config', icon: 'settings', label: 'Configurações' },
 ]
 
