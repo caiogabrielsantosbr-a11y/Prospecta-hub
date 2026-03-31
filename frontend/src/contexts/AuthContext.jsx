@@ -32,7 +32,17 @@ export function AuthProvider({ children }) {
     })
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event)
+      
+      if (event === 'SIGNED_IN') {
+        toast.success('Login realizado com sucesso!')
+      }
+      
+      if (event === 'USER_UPDATED') {
+        toast.success('Email confirmado com sucesso!')
+      }
+      
       setUser(session?.user ?? null)
       if (session?.user) {
         loadProfile(session.user.id)
@@ -70,13 +80,20 @@ export function AuthProvider({ children }) {
         options: {
           data: {
             full_name: fullName
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/`
         }
       })
 
       if (error) throw error
       
-      toast.success('Conta criada com sucesso! Verifique seu email.')
+      // Check if email confirmation is required
+      if (data?.user && !data.session) {
+        toast.success('Conta criada! Verifique seu email para confirmar.')
+      } else {
+        toast.success('Conta criada com sucesso!')
+      }
+      
       return { data, error: null }
     } catch (error) {
       console.error('Error signing up:', error)

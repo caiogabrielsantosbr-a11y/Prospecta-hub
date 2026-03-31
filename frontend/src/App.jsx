@@ -20,6 +20,7 @@ import LeadsPage from './pages/LeadsPage'
 import AdminConfigPage from './pages/AdminConfigPage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
+import AuthCallbackPage from './pages/AuthCallbackPage'
 import { useEffect } from 'react'
 
 // Protected Route wrapper
@@ -94,6 +95,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route
               path="/*"
               element={
