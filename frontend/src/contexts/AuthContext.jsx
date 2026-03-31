@@ -155,26 +155,57 @@ export function AuthProvider({ children }) {
 
   const uploadAvatar = async (file) => {
     try {
+      // Validar arquivo
+      if (!file) {
+        throw new Error('Nenhum arquivo selecionado')
+      }
+
+      // Validar tipo
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Por favor, selecione uma imagem')
+      }
+
+      // Validar tamanho (2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        throw new Error('Imagem muito grande. Máximo 2MB')
+      }
+
       const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}-${Math.random()}.${fileExt}`
-      const filePath = `avatars/${fileName}`
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`
 
-      const { error: uploadError } = await supabase.storage
+      console.log('Uploading avatar:', fileName)
+
+      // Upload do arquivo
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file)
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        })
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        console.error('Upload error:', uploadError)
+        throw new Error(uploadError.message || 'Erro ao fazer upload')
+      }
 
+      console.log('Upload successful:', uploadData)
+
+      // Obter URL pública
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
-        .getPublicUrl(filePath)
+        .getPublicUrl(fileName)
 
+      console.log('Public URL:', publicUrl)
+
+      // Atualizar perfil
       await updateProfile({ avatar_url: publicUrl })
       
+      toast.success('Foto atualizada com sucesso!')
       return { url: publicUrl, error: null }
     } catch (error) {
       console.error('Error uploading avatar:', error)
-      toast.error('Erro ao fazer upload da foto')
+      const errorMessage = error.message || 'Erro ao fazer upload da foto'
+      toast.error(errorMessage)
       return { url: null, error }
     }
   }
