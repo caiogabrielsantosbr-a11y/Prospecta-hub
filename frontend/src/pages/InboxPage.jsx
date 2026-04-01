@@ -92,7 +92,11 @@ export default function InboxPage() {
   const [translatedBody, setTranslatedBody] = useState(null)
   const [classifying, setClassifying]       = useState(false)
 
-  useEffect(() => { loadAccounts() }, [])
+  const [showSettings, setShowSettings]   = useState(false)
+  const [geminiKey, setGeminiKey]         = useState('')
+  const [savingKey, setSavingKey]         = useState(false)
+
+  useEffect(() => { loadAccounts(); loadGeminiKey() }, [])
 
   useEffect(() => {
     if (selectedAccount) { setEmails([]); setNextPageToken(''); fetchEmails('') }
@@ -176,6 +180,33 @@ export default function InboxPage() {
       const data = await edgeFn('gmail-messages', { params: { action: 'templates' } })
       setTemplates(data || [])
     } catch (e) { console.error(e) }
+  }
+
+  const loadGeminiKey = async () => {
+    try {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'gemini_api_key')
+        .maybeSingle()
+      if (data?.value) setGeminiKey(data.value)
+    } catch (e) { console.error(e) }
+  }
+
+  const saveGeminiKey = async () => {
+    if (!geminiKey.trim()) { toast.error('Cole sua Gemini API Key'); return }
+    setSavingKey(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const userId = session?.user?.id
+      await supabase.from('app_settings').upsert(
+        { user_id: userId, key: 'gemini_api_key', value: geminiKey.trim() },
+        { onConflict: 'user_id,key' }
+      )
+      toast.success('Gemini API Key salva!')
+      setShowSettings(false)
+    } catch (e) { toast.error('Erro ao salvar: ' + e.message) }
+    finally { setSavingKey(false) }
   }
 
   // ── Connect / disconnect ───────────────────────────────────
@@ -270,7 +301,8 @@ export default function InboxPage() {
   // ─────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 64px)' }}>
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 64px)' }}
+      onClick={() => showSettings && setShowSettings(false)}>
       {/* Header */}
       <div className="px-8 py-4 border-b border-outline-variant/10 shrink-0">
         <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -307,6 +339,51 @@ export default function InboxPage() {
               <span className="material-symbols-outlined text-lg">add</span>
               Conectar Gmail
             </button>
+
+            {/* Configurações IA */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSettings(s => !s)}
+                className={`p-2 rounded-lg border transition-colors cursor-pointer ${
+                  showSettings
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-low'
+                }`}
+                title="Configurar IA (Gemini API Key)"
+              >
+                <span className="material-symbols-outlined text-lg">psychology</span>
+              </button>
+
+              {showSettings && (
+                <div className="absolute right-0 top-11 z-50 w-80 bg-surface-container rounded-xl shadow-2xl border border-outline-variant/20 p-4"
+                  onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="material-symbols-outlined text-base text-primary">psychology</span>
+                    <span className="font-semibold text-sm">Gemini API Key</span>
+                  </div>
+                  <p className="text-xs text-on-surface-variant mb-3 leading-relaxed">
+                    Necessária para classificar emails com IA. Gratuita em{' '}
+                    <span className="text-primary">aistudio.google.com</span>
+                  </p>
+                  <input
+                    type="password"
+                    value={geminiKey}
+                    onChange={e => setGeminiKey(e.target.value)}
+                    placeholder="AIza..."
+                    className="input-field w-full text-sm mb-3"
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={saveGeminiKey} disabled={savingKey}
+                      className="btn-primary flex-1 justify-center text-sm disabled:opacity-50">
+                      {savingKey ? 'Salvando...' : 'Salvar'}
+                    </button>
+                    <button onClick={() => setShowSettings(false)} className="btn-ghost text-sm">
+                      Fechar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
