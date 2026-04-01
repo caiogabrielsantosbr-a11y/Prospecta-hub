@@ -1,49 +1,57 @@
 /**
  * InboxPage — Gmail multi-account inbox
- * OAuth2 connect, list/read/reply emails, AI classification, templates, translation
+ * OAuth2 via Supabase Edge Functions (sem backend Python)
  */
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
-import useConfigStore from '../store/useConfigStore'
 import { supabase } from '../config/supabase'
-import { emailTemplatesService } from '../services/supabase'
 
-// ── API helper (calls our FastAPI backend) ───────────────────
-async function gmailAPI(method, path, body = null) {
-  const { apiUrl } = useConfigStore.getState()
-  if (!apiUrl) throw new Error('Backend URL não configurado. Configure no Admin Panel.')
+const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_KEY
 
+// ── Edge Function helper ──────────────────────────────────────
+async function edgeFn(fnName, { method = 'GET', params = {}, body } = {}) {
   const { data: { session } } = await supabase.auth.getSession()
-  const headers = { 'Content-Type': 'application/json' }
-  if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`
+  const token = session?.access_token
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.')
 
-  const res = await fetch(`${apiUrl}/api/gmail${path}`, {
+  const url = new URL(`${SUPABASE_URL}/functions/v1/${fnName}`)
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v))
+  })
+
+  const res = await fetch(url.toString(), {
     method,
-    headers,
+    headers: {
+      Authorization:   `Bearer ${token}`,
+      apikey:          SUPABASE_ANON_KEY,
+      'Content-Type':  'application/json',
+    },
     body: body ? JSON.stringify(body) : undefined,
   })
+
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(err.detail || 'Erro na API')
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(err.error || 'Erro na API')
   }
   return res.json()
 }
 
-// ── MyMemory translation (free, no key, direct from frontend) ─
+// ── MyMemory translation (free, direto do frontend) ───────────
 async function translateText(text) {
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0, 500))}&langpair=auto|pt-BR`
-  const res = await fetch(url)
+  const res  = await fetch(url)
   const data = await res.json()
   return data?.responseData?.translatedText || text
 }
 
 // ── Label colors ─────────────────────────────────────────────
 const LABEL_STYLES = {
-  'Interesse':      'bg-primary/20 text-primary',
-  'Sem interesse':  'bg-error/20 text-error',
-  'Pergunta':       'bg-yellow-500/20 text-yellow-500',
-  'Irrelevante':    'bg-surface-container-high text-on-surface-variant',
-  'Aguardar':       'bg-secondary/20 text-secondary',
+  'Interesse':     'bg-primary/20 text-primary',
+  'Sem interesse': 'bg-error/20 text-error',
+  'Pergunta':      'bg-yellow-500/20 text-yellow-500',
+  'Irrelevante':   'bg-surface-container-high text-on-surface-variant',
+  'Aguardar':      'bg-secondary/20 text-secondary',
 }
 
 const FILTER_TABS = [
@@ -73,7 +81,7 @@ export default function InboxPage() {
   const [search, setSearch] = useState('')
   const searchTimeout       = useRef(null)
 
-  const [labels, setLabels] = useState({})   // { message_id: {label, confidence, reason} }
+  const [labels, setLabels] = useState({})   // { message_id: { label, confidence, reason } }
 
   const [replyBody, setReplyBody]             = useState('')
   const [sending, setSending]                 = useState(false)
@@ -106,11 +114,11 @@ export default function InboxPage() {
   const loadAccounts = async () => {
     setLoadingAccounts(true)
     try {
-      const data = await gmailAPI('GET', '/accounts')
+      const data = await edgeFn('gmail-accounts')
       setAccounts(data || [])
       if (data?.length) setSelectedAccount(a => a || data[0])
     } catch (e) {
-      if (!e.message.includes('Backend URL')) toast.error('Erro ao carregar contas: ' + e.message)
+      toast.error('Erro ao carregar contas: ' + e.message)
     } finally {
       setLoadingAccounts(false)
     }
@@ -120,10 +128,23 @@ export default function InboxPage() {
     if (!selectedAccount) return
     setLoadingEmails(true)
     try {
-      const q = encodeURIComponent(search)
-      const data = await gmailAPI('GET', `/messages?account_id=${selectedAccount.id}&filter=${filter}&search=${q}&page_token=${pageToken}`)
-      setEmails(prev => pageToken ? [...prev, ...(data.messages || [])] : (data.messages || []))
-      setNextPageToken(data.nextPageToken || '')
+      const data = await edgeFn('gmail-messages', {
+        params: {
+          account_id: selectedAccount.id,
+          filter,
+          search,
+          page_token: pageToken,
+        },
+      })
+      const msgs = data.messages || []
+
+      // Sincroniza labels já persistidos com o estado local
+      const incoming = {}
+      msgs.forEach(m => { if (m.label) incoming[m.id] = { label: m.label, confidence: m.label_confidence } })
+      setLabels(prev => ({ ...prev, ...incoming }))
+
+      setEmails(prev => pageToken ? [...prev, ...msgs] : msgs)
+      setNextPageToken(data.next_page_token || '')
     } catch (e) {
       toast.error('Erro ao carregar emails: ' + e.message)
     } finally {
@@ -138,7 +159,9 @@ export default function InboxPage() {
     setReplyBody('')
     setLoadingEmail(true)
     try {
-      const data = await gmailAPI('GET', `/messages/${email.id}?account_id=${selectedAccount.id}`)
+      const data = await edgeFn('gmail-messages', {
+        params: { account_id: selectedAccount.id, message_id: email.id },
+      })
       setEmailContent(data)
       setEmails(prev => prev.map(e => e.id === email.id ? { ...e, unread: false } : e))
     } catch (e) {
@@ -150,28 +173,19 @@ export default function InboxPage() {
 
   const loadTemplates = async () => {
     try {
-      const data = await emailTemplatesService.getAll()
+      const data = await edgeFn('gmail-messages', { params: { action: 'templates' } })
       setTemplates(data || [])
     } catch (e) { console.error(e) }
   }
 
-  // ── Connect account ────────────────────────────────────────
+  // ── Connect / disconnect ───────────────────────────────────
 
   const connectAccount = async () => {
-    const { apiUrl } = useConfigStore.getState()
-    if (!apiUrl) { toast.error('Configure o Backend URL no Admin Panel primeiro'); return }
-
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { toast.error('Faça login primeiro'); return }
-
     try {
-      const res = await fetch(`${apiUrl}/api/gmail/auth-url`, {
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
-      })
-      const data = await res.json()
-      if (!data.url) throw new Error(data.detail || 'URL inválida')
+      const { url } = await edgeFn('gmail-accounts', { method: 'POST' })
+      if (!url) throw new Error('URL de autenticação inválida')
 
-      const popup = window.open(data.url, 'gmail_auth', 'width=500,height=640,scrollbars=yes')
+      window.open(url, 'gmail_auth', 'width=500,height=640,scrollbars=yes')
 
       const handler = (e) => {
         if (e.data?.type === 'gmail_connected') {
@@ -192,13 +206,12 @@ export default function InboxPage() {
   const disconnectAccount = async (accountId) => {
     if (!confirm('Desconectar esta conta Gmail?')) return
     try {
-      await gmailAPI('DELETE', `/accounts/${accountId}`)
+      await edgeFn('gmail-accounts', { method: 'DELETE', params: { id: accountId } })
       toast.success('Conta desconectada')
       const updated = accounts.filter(a => a.id !== accountId)
       setAccounts(updated)
       if (selectedAccount?.id === accountId) {
-        const next = updated[0] || null
-        setSelectedAccount(next)
+        setSelectedAccount(updated[0] || null)
         setEmails([])
         setSelectedEmail(null)
         setEmailContent(null)
@@ -212,13 +225,16 @@ export default function InboxPage() {
     if (!replyBody.trim()) { toast.error('Escreva a resposta antes de enviar'); return }
     setSending(true)
     try {
-      await gmailAPI('POST', '/reply', {
-        account_id: selectedAccount.id,
-        message_id: emailContent.id,
-        thread_id:  emailContent.thread_id,
-        to:         emailContent.from,
-        subject:    emailContent.subject,
-        body:       replyBody,
+      await edgeFn('gmail-messages', {
+        method: 'POST',
+        params: { action: 'reply', account_id: selectedAccount.id },
+        body: {
+          message_id: emailContent.id,
+          thread_id:  emailContent.thread_id,
+          to:         emailContent.from,
+          subject:    emailContent.subject,
+          body:       replyBody,
+        },
       })
       toast.success('Resposta enviada!')
       setReplyBody('')
@@ -230,9 +246,10 @@ export default function InboxPage() {
     if (!emailContent) return
     setClassifying(true)
     try {
-      const result = await gmailAPI('POST', '/classify', {
-        account_id: selectedAccount.id,
-        message_id: emailContent.id,
+      const result = await edgeFn('gmail-messages', {
+        method: 'POST',
+        params: { action: 'classify', account_id: selectedAccount.id },
+        body:   { message_id: emailContent.id },
       })
       setLabels(prev => ({ ...prev, [emailContent.id]: result }))
       toast.success(`Classificado: ${result.label}`)
@@ -523,7 +540,11 @@ function TemplatesModal({ templates, onSelect, onClose, onRefresh }) {
     if (!form.name || !form.body) { toast.error('Nome e corpo são obrigatórios'); return }
     setSaving(true)
     try {
-      await emailTemplatesService.create(form)
+      await edgeFn('gmail-messages', {
+        method: 'POST',
+        params: { action: 'templates' },
+        body:   form,
+      })
       toast.success('Template criado!')
       onRefresh()
       setCreating(false)
@@ -535,7 +556,10 @@ function TemplatesModal({ templates, onSelect, onClose, onRefresh }) {
   const handleDelete = async (id) => {
     if (!confirm('Excluir este template?')) return
     try {
-      await emailTemplatesService.delete(id)
+      await edgeFn('gmail-messages', {
+        method: 'DELETE',
+        params: { action: 'templates', id },
+      })
       toast.success('Excluído')
       onRefresh()
     } catch { toast.error('Erro') }
