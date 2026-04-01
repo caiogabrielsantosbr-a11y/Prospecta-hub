@@ -56,11 +56,14 @@ class SupabaseClient:
         self._available = False
         self._url: Optional[str] = None
         self._key: Optional[str] = None
-        
+        self._service_key: Optional[str] = None
+
         # Read credentials from environment
         self._url = os.getenv('SUPABASE_URL', '').strip()
         self._key = os.getenv('SUPABASE_KEY', '').strip()
-        
+        # Service role key bypasses RLS for server-side writes; falls back to anon key
+        self._service_key = os.getenv('SUPABASE_SERVICE_KEY', '').strip() or self._key
+
         # Validate credentials
         if not self._url or not self._key:
             missing = []
@@ -127,11 +130,12 @@ class SupabaseClient:
         """
         # Reload environment variables
         load_dotenv(override=True)
-        
+
         # Read credentials from environment
         self._url = os.getenv('SUPABASE_URL', '').strip()
         self._key = os.getenv('SUPABASE_KEY', '').strip()
-        
+        self._service_key = os.getenv('SUPABASE_SERVICE_KEY', '').strip() or self._key
+
         # Validate credentials
         if not self._url or not self._key:
             missing = []
@@ -202,7 +206,7 @@ class SupabaseClient:
                         json=payload,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=minimal'
                         }
@@ -384,7 +388,7 @@ class SupabaseClient:
                         json=valid_leads,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=minimal'
                         }
@@ -574,7 +578,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json'
                     }
                 )
@@ -691,7 +695,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json'
                     }
                 )
@@ -806,7 +810,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json'
                     }
                 )
@@ -925,7 +929,7 @@ class SupabaseClient:
                         json=payload,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=minimal'
                         }
@@ -1108,7 +1112,7 @@ class SupabaseClient:
                         json=valid_leads,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=minimal'
                         }
@@ -1302,7 +1306,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json'
                     }
                 )
@@ -1417,7 +1421,7 @@ class SupabaseClient:
                     json=updates,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json',
                         'Prefer': 'return=minimal'
                     }
@@ -1528,7 +1532,7 @@ class SupabaseClient:
                         json=payload,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=minimal'
                         }
@@ -1706,7 +1710,7 @@ class SupabaseClient:
                         json=valid_results,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=minimal'
                         }
@@ -1900,7 +1904,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json'
                     }
                 )
@@ -2023,7 +2027,7 @@ class SupabaseClient:
                         json=payload,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=minimal'
                         }
@@ -2193,7 +2197,7 @@ class SupabaseClient:
                         json=payload,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=minimal'
                         }
@@ -2340,7 +2344,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json'
                     }
                 )
@@ -2449,7 +2453,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json'
                     }
                 )
@@ -2558,7 +2562,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json'
                     }
                 )
@@ -2674,7 +2678,7 @@ class SupabaseClient:
                         json=payload,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=minimal'
                         }
@@ -2854,7 +2858,7 @@ class SupabaseClient:
                         json=valid_dispatches,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=minimal'
                         }
@@ -3048,7 +3052,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json'
                     }
                 )
@@ -3154,7 +3158,7 @@ class SupabaseClient:
                     json=updates,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json',
                         'Prefer': 'return=minimal'
                     }
@@ -3270,7 +3274,7 @@ class SupabaseClient:
                         json=payload,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=minimal'
                         }
@@ -3438,7 +3442,7 @@ class SupabaseClient:
                         json=payload,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=minimal'
                         }
@@ -3586,7 +3590,7 @@ class SupabaseClient:
                         params={'id': f'eq.{id}'},
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=minimal'
                         }
@@ -3732,7 +3736,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json'
                     }
                 )
@@ -3841,7 +3845,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json'
                     }
                 )
@@ -4061,7 +4065,7 @@ class SupabaseClient:
                         content=json_bytes,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json'
                         }
                     )
@@ -4201,7 +4205,7 @@ class SupabaseClient:
                         json=metadata,
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}',
+                            'Authorization': f'Bearer {self._service_key}',
                             'Content-Type': 'application/json',
                             'Prefer': 'return=representation'
                         }
@@ -4340,7 +4344,7 @@ class SupabaseClient:
                     f"{self._url}/storage/v1/object/location-files/{file_path}",
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}'
+                        'Authorization': f'Bearer {self._service_key}'
                     }
                 )
                 
@@ -4408,7 +4412,7 @@ class SupabaseClient:
                         },
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}'
+                            'Authorization': f'Bearer {self._service_key}'
                         }
                     )
                     
@@ -4547,7 +4551,7 @@ class SupabaseClient:
                     },
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}'
+                        'Authorization': f'Bearer {self._service_key}'
                     }
                 )
                 
@@ -4790,7 +4794,7 @@ class SupabaseClient:
                     },
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}'
+                        'Authorization': f'Bearer {self._service_key}'
                     }
                 )
                 
@@ -5025,7 +5029,7 @@ class SupabaseClient:
                     },
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}'
+                        'Authorization': f'Bearer {self._service_key}'
                     }
                 )
                 
@@ -5092,7 +5096,7 @@ class SupabaseClient:
                         },
                         headers={
                             'apikey': self._key,
-                            'Authorization': f'Bearer {self._key}'
+                            'Authorization': f'Bearer {self._service_key}'
                         }
                     )
                     
@@ -5261,7 +5265,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json'
                     }
                 )
@@ -5302,7 +5306,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}'
+                        'Authorization': f'Bearer {self._service_key}'
                     }
                 )
                 
@@ -5328,7 +5332,7 @@ class SupabaseClient:
                     params={'select': 'telefone,website,email'},
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}'
+                        'Authorization': f'Bearer {self._service_key}'
                     }
                 )
                 
@@ -5365,7 +5369,7 @@ class SupabaseClient:
                     params={'select': 'conjunto_de_locais'},
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}'
+                        'Authorization': f'Bearer {self._service_key}'
                     }
                 )
 
@@ -5395,7 +5399,7 @@ class SupabaseClient:
                     params=params,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}'
+                        'Authorization': f'Bearer {self._service_key}'
                     }
                 )
 
@@ -5421,7 +5425,7 @@ class SupabaseClient:
                     params={'id': f'eq.{lead_id}'},
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}'
+                        'Authorization': f'Bearer {self._service_key}'
                     }
                 )
 
@@ -5444,7 +5448,7 @@ class SupabaseClient:
                     json=lead_data,
                     headers={
                         'apikey': self._key,
-                        'Authorization': f'Bearer {self._key}',
+                        'Authorization': f'Bearer {self._service_key}',
                         'Content-Type': 'application/json'
                     }
                 )
