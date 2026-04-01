@@ -387,6 +387,7 @@ function GSheetsTab() {
   const [sendStats, setSendStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [controlWebhook, setControlWebhook] = useState(null)
 
   useEffect(() => { loadAll() }, [])
 
@@ -477,6 +478,11 @@ function GSheetsTab() {
                   <div>Limite: {wh.daily_limit}/dia</div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => setControlWebhook(wh)}
+                    className="p-2 rounded-lg hover:bg-surface-container-highest transition-all"
+                    title="Gerenciar">
+                    <span className="material-symbols-outlined text-sm text-primary">settings</span>
+                  </button>
                   <button onClick={() => handleToggle(wh)}
                     className="p-2 rounded-lg hover:bg-surface-container-highest transition-all"
                     title={wh.active ? 'Desativar' : 'Ativar'}>
@@ -533,6 +539,13 @@ function GSheetsTab() {
 
       {showAddModal && (
         <AddWebhookModal onClose={() => setShowAddModal(false)} onAdded={loadAll} />
+      )}
+
+      {controlWebhook && (
+        <WebhookControlModal
+          webhook={controlWebhook}
+          onClose={() => setControlWebhook(null)}
+        />
       )}
     </div>
   )
@@ -805,6 +818,297 @@ function Modal({ title, onClose, children }) {
         <div className="p-8 overflow-y-auto max-h-[calc(85vh-160px)]">{children}</div>
       </div>
     </div>
+  )
+}
+
+/* ── WEBHOOK CONTROL MODAL ──────────────────────────────────── */
+
+function WebhookControlModal({ webhook, onClose }) {
+  const [stats, setStats] = useState(null)
+  const [loadingData, setLoadingData] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [triggering, setTriggering] = useState(false)
+
+  const [subject, setSubject] = useState('')
+  const [senderName, setSenderName] = useState('')
+  const [dailyLimit, setDailyLimit] = useState(80)
+  const [batchSize, setBatchSize] = useState(20)
+  const [minHour, setMinHour] = useState(8)
+  const [maxHour, setMaxHour] = useState(16)
+  const [selectedDays, setSelectedDays] = useState([])
+
+  const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+  useEffect(() => { loadData() }, [])
+
+  const apiPost = async (payload) => {
+    const res = await fetch(webhook.webhook_url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    return res.json()
+  }
+
+  const loadData = async () => {
+    setLoadingData(true)
+    try {
+      const [statsRes, settingsRes] = await Promise.all([
+        fetch(webhook.webhook_url + '?action=stats').then(r => r.json()),
+        fetch(webhook.webhook_url + '?action=settings').then(r => r.json()),
+      ])
+      setStats(statsRes)
+      if (settingsRes.success !== false) {
+        setSubject(settingsRes.subject || '')
+        setSenderName(settingsRes.sender_name || '')
+        setDailyLimit(settingsRes.daily_limit || 80)
+        setBatchSize(settingsRes.hourly_batch_size || 20)
+        setMinHour(settingsRes.min_hour || 8)
+        setMaxHour(settingsRes.max_hour || 16)
+        setSelectedDays(settingsRes.days || [])
+      }
+    } catch {
+      toast.error('Erro ao conectar com a planilha. Verifique a URL do webhook.')
+    } finally {
+      setLoadingData(false)
+    }
+  }
+
+  const handleConfigure = async () => {
+    if (!subject.trim()) { toast.error('Defina o assunto do rascunho Gmail'); return }
+    setSaving(true)
+    try {
+      const res = await apiPost({
+        action: 'configure', subject, sender_name: senderName,
+        daily_limit: dailyLimit, hourly_batch_size: batchSize,
+        min_hour: minHour, max_hour: maxHour,
+      })
+      if (res.success) { toast.success('Configurações salvas!'); loadData() }
+      else toast.error(res.error || 'Erro ao salvar')
+    } catch { toast.error('Erro de conexão') }
+    finally { setSaving(false) }
+  }
+
+  const handleSchedule = async (active) => {
+    if (active && selectedDays.length === 0) { toast.error('Selecione ao menos um dia'); return }
+    if (active && !subject.trim()) { toast.error('Salve as configurações (assunto) antes de ativar'); return }
+    setSaving(true)
+    try {
+      const res = await apiPost({ action: 'schedule', active, days: selectedDays, subject })
+      if (res.success) { toast.success(active ? 'Agendamento ativado!' : 'Agendamento parado!'); loadData() }
+      else toast.error(res.error || 'Erro')
+    } catch { toast.error('Erro de conexão') }
+    finally { setSaving(false) }
+  }
+
+  const handleTrigger = async () => {
+    if (!subject.trim()) { toast.error('Configure o assunto primeiro'); return }
+    if (!confirm(`Disparar até ${batchSize} emails agora para "${webhook.name}"?`)) return
+    setTriggering(true)
+    try {
+      const res = await apiPost({ action: 'trigger_send', limit: batchSize })
+      if (res.success) {
+        toast.success(`${res.sent} email(s) enviado(s)! Pendentes: ${res.pending_after}`)
+        loadData()
+      } else toast.error(res.error || 'Erro ao disparar')
+    } catch { toast.error('Erro de conexão') }
+    finally { setTriggering(false) }
+  }
+
+  const handleStop = async () => {
+    if (!confirm('Parar o agendamento automático desta planilha?')) return
+    try {
+      const res = await apiPost({ action: 'stop' })
+      if (res.success) { toast.success('Agendamento parado'); loadData() }
+    } catch { toast.error('Erro') }
+  }
+
+  const handleClear = async () => {
+    if (!confirm(`Limpar TODOS os leads da planilha "${webhook.name}"?\n\nEsta ação não pode ser desfeita.`)) return
+    try {
+      const res = await apiPost({ action: 'clear' })
+      if (res.success) { toast.success('Lista limpa!'); loadData() }
+    } catch { toast.error('Erro') }
+  }
+
+  const toggleDay = (d) => {
+    setSelectedDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])
+  }
+
+  return (
+    <Modal title={`Gerenciar — ${webhook.name}`} onClose={onClose}>
+      {loadingData ? (
+        <div className="p-8 text-center">
+          <div className="inline-block w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="mt-3 text-on-surface-variant text-sm">Conectando à planilha...</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Stats em tempo real */}
+          {stats && (
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'Cota Gmail', value: stats.quota_gmail, color: stats.quota_gmail > 85 ? 'text-primary' : 'text-error' },
+                  { label: 'Pendentes', value: stats.pending, color: 'text-secondary' },
+                  { label: 'Enviados', value: stats.sent, color: 'text-primary' },
+                ].map(s => (
+                  <div key={s.label} className="bg-surface-container rounded-lg p-3 text-center">
+                    <div className="text-xs text-on-surface-variant mb-1">{s.label}</div>
+                    <div className={`text-2xl font-bold ${s.color}`}>{s.value ?? '—'}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-surface-container rounded-lg p-4 space-y-2">
+                {[
+                  { label: 'Total na planilha', value: stats.total },
+                  { label: 'Enviados hoje (robô)', value: `${stats.daily_sent} / ${stats.daily_limit}` },
+                  { label: 'Restam hoje', value: stats.daily_remaining, color: stats.daily_remaining > 0 ? 'text-primary' : 'text-error' },
+                  { label: 'Erros', value: stats.errors, color: stats.errors > 0 ? 'text-error' : '' },
+                ].map(row => (
+                  <div key={row.label} className="flex justify-between text-sm">
+                    <span className="text-on-surface-variant">{row.label}</span>
+                    <span className={`font-semibold ${row.color || ''}`}>{row.value}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between text-sm pt-1 border-t border-outline-variant/10">
+                  <span className="text-on-surface-variant">Agendamento</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    stats.schedule_active ? 'bg-primary/20 text-primary' : 'bg-surface-container-high text-on-surface-variant'
+                  }`}>{stats.schedule_active ? 'Ativo' : 'Inativo'}</span>
+                </div>
+              </div>
+
+              <button onClick={loadData} className="btn-ghost w-full justify-center text-sm">
+                <span className="material-symbols-outlined text-sm">refresh</span>
+                Atualizar stats
+              </button>
+            </>
+          )}
+
+          {/* Configurações */}
+          <div className="border-t border-outline-variant/10 pt-4">
+            <h4 className="font-semibold mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-base text-primary">settings</span>
+              Configurações de Envio
+            </h4>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">
+                  Assunto do Rascunho (Gmail) *
+                </label>
+                <input type="text" value={subject} onChange={e => setSubject(e.target.value)}
+                  placeholder="Ex: Proposta para {{EMPRESA}}" className="w-full" />
+                <p className="text-xs text-on-surface-variant mt-1">
+                  Crie um rascunho no Gmail com esse assunto. Use {`{{EMPRESA}}`}, {`{{EMAIL}}`}, {`{{CIDADE}}`} no corpo.
+                </p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">
+                  Nome do Remetente
+                </label>
+                <input type="text" value={senderName} onChange={e => setSenderName(e.target.value)}
+                  placeholder="Ex: João Silva" className="w-full" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Limite diário (emails)</label>
+                  <input type="number" value={dailyLimit} min={1} max={500}
+                    onChange={e => setDailyLimit(parseInt(e.target.value) || 80)} className="w-full" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Lote por hora</label>
+                  <input type="number" value={batchSize} min={1} max={100}
+                    onChange={e => setBatchSize(parseInt(e.target.value) || 20)} className="w-full" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Hora início</label>
+                  <input type="number" value={minHour} min={0} max={23}
+                    onChange={e => setMinHour(parseInt(e.target.value) || 8)} className="w-full" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Hora fim</label>
+                  <input type="number" value={maxHour} min={1} max={23}
+                    onChange={e => setMaxHour(parseInt(e.target.value) || 16)} className="w-full" />
+                </div>
+              </div>
+              <button onClick={handleConfigure} disabled={saving}
+                className="btn-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+                {saving
+                  ? <><span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Salvando...</>
+                  : <><span className="material-symbols-outlined text-lg">save</span>Salvar Configurações</>}
+              </button>
+            </div>
+          </div>
+
+          {/* Agendamento */}
+          <div className="border-t border-outline-variant/10 pt-4">
+            <h4 className="font-semibold mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-base text-primary">schedule</span>
+              Agendamento Automático
+            </h4>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">
+                  Dias de funcionamento
+                </label>
+                <div className="flex gap-1">
+                  {DAYS.map((day, i) => (
+                    <button key={i} onClick={() => toggleDay(i)}
+                      className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-colors cursor-pointer ${
+                        selectedDays.includes(i)
+                          ? 'bg-primary border-primary text-white'
+                          : 'bg-surface-container border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high'
+                      }`}>{day}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => handleSchedule(true)} disabled={saving}
+                  className="btn-primary justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+                  <span className="material-symbols-outlined text-lg">play_arrow</span>
+                  Ativar
+                </button>
+                <button onClick={() => handleSchedule(false)} disabled={saving}
+                  className="btn-ghost justify-center text-error border-error hover:bg-error/10 disabled:opacity-50">
+                  <span className="material-symbols-outlined text-lg">stop</span>
+                  Parar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Ações imediatas */}
+          <div className="border-t border-outline-variant/10 pt-4">
+            <h4 className="font-semibold mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-base text-primary">bolt</span>
+              Ações Imediatas
+            </h4>
+            <div className="space-y-3">
+              <button onClick={handleTrigger} disabled={triggering}
+                className="btn-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+                {triggering
+                  ? <><span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Disparando...</>
+                  : <><span className="material-symbols-outlined text-lg">send</span>Disparar Envio Agora ({batchSize} emails)</>}
+              </button>
+              <button onClick={handleStop}
+                className="btn-ghost w-full justify-center text-on-surface-variant border-outline-variant/20">
+                <span className="material-symbols-outlined text-lg">pause_circle</span>
+                Pausar Agendamento
+              </button>
+              <button onClick={handleClear}
+                className="btn-ghost w-full justify-center text-error border-error hover:bg-error/10">
+                <span className="material-symbols-outlined text-lg">delete_sweep</span>
+                Limpar Lista de Leads da Planilha
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Modal>
   )
 }
 
