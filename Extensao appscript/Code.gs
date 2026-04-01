@@ -1,163 +1,369 @@
 /*******************************************************
- * CONFIGURAÇÕES GERAIS
+ * PROSPECTAHUB — AppScript Integration v2
+ * Controle completo via API (doPost/doGet)
+ * + Sidebar local para operação manual
+ *******************************************************/
+
+/*******************************************************
+ * CONFIGURAÇÕES PADRÃO (overrideáveis via /configure)
  *******************************************************/
 const RECIPIENT_COL  = "EMAIL";
 const EMAIL_SENT_COL = "STATUS";
 
-// --- ESTRATÉGIA "CONTA-GOTAS" (MICRO-LOTES) ---
-const DAILY_LIMIT = 80;       // Meta total do dia
-const HOURLY_BATCH_SIZE = 20; // Envia apenas 15 por hora (Super Seguro)
-const MIN_HOUR = 8;           // Começa as 08:00 da manhã
-const MAX_HOUR = 16;          // Para as 16:00 (4h da tarde)
+const DEFAULT_DAILY_LIMIT       = 80;
+const DEFAULT_HOURLY_BATCH_SIZE = 20;
+const DEFAULT_MIN_HOUR          = 8;
+const DEFAULT_MAX_HOUR          = 16;
 
 /*******************************************************
  * MENU E UI
  *******************************************************/
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu("📨 Enviar Email")
+    .createMenu("📨 Prospecta HUB")
     .addItem("Abrir Painel", "openPanel")
     .addToUi();
 }
 
 function openPanel() {
   const html = HtmlService.createHtmlOutputFromFile("Sidebar")
-    .setTitle("Prospecção Email PRO")
-    .setWidth(500); 
+    .setTitle("Prospecta HUB")
+    .setWidth(500);
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
 /*******************************************************
- * FUNÇÕES DE API (COTA E DADOS)
+ * HELPERS
  *******************************************************/
-function getQuotaOnly() {
-  return MailApp.getRemainingDailyQuota();
+function jsonResponse(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-function getStoredSettings() {
-  const props = PropertiesService.getScriptProperties();
-  return {
-    subject: props.getProperty('AUTO_SUBJECT') || '',
-    hour: props.getProperty('AUTO_HOUR') || '8', 
-    days: props.getProperty('AUTO_DAYS') || '[]',
-    active: props.getProperty('AUTO_ACTIVE') === 'true'
-  };
+function getProps() {
+  return PropertiesService.getScriptProperties();
 }
 
 /*******************************************************
- * 1. LÓGICA DE AGENDAMENTO (HORÁRIO INTELIGENTE)
+ * API ENTRY POINTS
  *******************************************************/
 
-function saveSchedule(config) {
-  const props = PropertiesService.getScriptProperties();
-  
-  props.setProperty('AUTO_SUBJECT', config.subject);
-  props.setProperty('AUTO_DAYS', JSON.stringify(config.days));
-  props.setProperty('AUTO_ACTIVE', config.active); 
-  
-  deleteTriggers_(); // Limpa gatilhos antigos
+/**
+ * POST /exec — dispatcher de ações
+ * Payload: { action: string, ...params }
+ *
+ * Actions disponíveis:
+ *   add_leads    — envia leads para a planilha
+ *   configure    — reconfigura limites e horários
+ *   schedule     — ativa/desativa agendamento
+ *   trigger_send — dispara envio imediato
+ *   stop         — para o agendamento
+ *   clear        — limpa a lista de leads
+ *   get_stats    — retorna stats completos
+ *   get_settings — retorna configurações atuais
+ */
+function doPost(e) {
+  try {
+    const payload = JSON.parse(e.postData.contents);
+    const action = payload.action || 'add_leads';
 
-  if (config.active === true || config.active === "true") {
-    // --- GATILHO DE 1 EM 1 HORA ---
-    ScriptApp.newTrigger('autoExecuteHourly')
-      .timeBased()
-      .everyHours(1) 
-      .create();
-      
-    // Reseta o contador do dia ao ativar
-    props.setProperty('DAILY_SENT_COUNT', '0');
-    props.setProperty('LAST_RUN_DATE', new Date().toDateString());
-
-    return `✅ Agendado! O robô verificará a cada 1 hora (entre ${MIN_HOUR}h e ${MAX_HOUR}h).`;
-  } else {
-    return "🛑 Agendamento desativado com sucesso.";
-  }
-}
-
-function deleteTriggers_() {
-  const triggers = ScriptApp.getProjectTriggers();
-  for (let i = 0; i < triggers.length; i++) {
-    const func = triggers[i].getHandlerFunction();
-    if (func === 'autoExecuteHourly' || func === 'autoExecute') {
-      ScriptApp.deleteTrigger(triggers[i]);
+    switch (action) {
+      case 'add_leads':    return handleAddLeads(payload);
+      case 'configure':    return handleConfigure(payload);
+      case 'schedule':     return handleSchedule(payload);
+      case 'trigger_send': return handleTriggerSend(payload);
+      case 'stop':         return handleStop();
+      case 'clear':        return handleClear();
+      case 'get_stats':    return handleGetStats();
+      case 'get_settings': return handleGetSettings();
+      default:
+        return jsonResponse({ success: false, error: 'Ação desconhecida: ' + action });
     }
+  } catch (err) {
+    return jsonResponse({ success: false, error: err.message });
   }
 }
 
 /**
- * FUNÇÃO QUE RODA DE HORA EM HORA (SERVER-SIDE)
+ * GET /exec — retorna stats ou settings
+ * Params: ?action=stats|settings
  */
+function doGet(e) {
+  const action = (e.parameter && e.parameter.action) || 'stats';
+  switch (action) {
+    case 'settings': return handleGetSettings();
+    default:         return handleGetStats();
+  }
+}
+
+/*******************************************************
+ * HANDLERS
+ *******************************************************/
+
+/**
+ * add_leads — adiciona leads à planilha
+ * Payload: { leads: [{EMPRESA, EMAIL, TELEFONE, CIDADE, WEBSITE}] }
+ */
+function handleAddLeads(payload) {
+  const leads = payload.leads || [];
+  if (!leads.length) {
+    return jsonResponse({ success: false, error: 'Nenhum lead recebido' });
+  }
+
+  const sheet = SpreadsheetApp.getActiveSheet();
+
+  // Garante cabeçalho
+  if (sheet.getLastRow() === 0 || sheet.getLastColumn() === 0) {
+    sheet.appendRow(['EMPRESA', 'EMAIL', 'TELEFONE', 'CIDADE', 'WEBSITE', 'STATUS']);
+  }
+
+  leads.forEach(lead => {
+    sheet.appendRow([
+      lead.EMPRESA  || '',
+      lead.EMAIL    || '',
+      lead.TELEFONE || '',
+      lead.CIDADE   || '',
+      lead.WEBSITE  || '',
+      '', // STATUS vazio = pronto para envio
+    ]);
+  });
+
+  SpreadsheetApp.flush();
+
+  return jsonResponse({ success: true, rows_added: leads.length });
+}
+
+/**
+ * configure — reconfigura parâmetros de envio
+ * Payload: {
+ *   daily_limit?:       number,
+ *   hourly_batch_size?: number,
+ *   min_hour?:          number,
+ *   max_hour?:          number,
+ *   subject?:           string
+ * }
+ */
+function handleConfigure(payload) {
+  const props = getProps();
+  const updates = {};
+
+  if (payload.daily_limit !== undefined) {
+    props.setProperty('DAILY_LIMIT', String(payload.daily_limit));
+    updates.daily_limit = payload.daily_limit;
+  }
+  if (payload.hourly_batch_size !== undefined) {
+    props.setProperty('HOURLY_BATCH_SIZE', String(payload.hourly_batch_size));
+    updates.hourly_batch_size = payload.hourly_batch_size;
+  }
+  if (payload.min_hour !== undefined) {
+    props.setProperty('MIN_HOUR', String(payload.min_hour));
+    updates.min_hour = payload.min_hour;
+  }
+  if (payload.max_hour !== undefined) {
+    props.setProperty('MAX_HOUR', String(payload.max_hour));
+    updates.max_hour = payload.max_hour;
+  }
+  if (payload.subject !== undefined) {
+    props.setProperty('AUTO_SUBJECT', payload.subject);
+    updates.subject = payload.subject;
+  }
+
+  return jsonResponse({ success: true, updated: updates });
+}
+
+/**
+ * schedule — ativa ou reconfigura o agendamento automático
+ * Payload: {
+ *   active: boolean,
+ *   days?:  number[],  // 0=Dom, 1=Seg ... 6=Sab
+ *   subject?: string
+ * }
+ */
+function handleSchedule(payload) {
+  const props = getProps();
+
+  if (payload.subject) props.setProperty('AUTO_SUBJECT', payload.subject);
+  if (payload.days)    props.setProperty('AUTO_DAYS', JSON.stringify(payload.days));
+
+  const active = payload.active === true || payload.active === 'true';
+  props.setProperty('AUTO_ACTIVE', String(active));
+
+  deleteTriggers_();
+
+  if (active) {
+    ScriptApp.newTrigger('autoExecuteHourly')
+      .timeBased()
+      .everyHours(1)
+      .create();
+
+    props.setProperty('DAILY_SENT_COUNT', '0');
+    props.setProperty('LAST_RUN_DATE', new Date().toDateString());
+
+    return jsonResponse({ success: true, message: 'Agendamento ativado (a cada 1 hora)' });
+  } else {
+    return jsonResponse({ success: true, message: 'Agendamento desativado' });
+  }
+}
+
+/**
+ * trigger_send — dispara envio imediato de um lote
+ * Payload: { limit?: number }  — padrão: HOURLY_BATCH_SIZE
+ */
+function handleTriggerSend(payload) {
+  const props = getProps();
+  const subject = props.getProperty('AUTO_SUBJECT');
+  if (!subject) {
+    return jsonResponse({ success: false, error: 'Assunto não configurado. Use a ação configure primeiro.' });
+  }
+
+  const batchSize = payload.limit
+    ? Number(payload.limit)
+    : Number(props.getProperty('HOURLY_BATCH_SIZE') || DEFAULT_HOURLY_BATCH_SIZE);
+
+  const before = countRows_();
+  processBatchServerSide_(subject, batchSize);
+  const after  = countRows_();
+
+  const sent = before.pending - after.pending;
+  return jsonResponse({ success: true, sent, pending_after: after.pending });
+}
+
+/**
+ * stop — para o agendamento (sem limpar dados)
+ */
+function handleStop() {
+  const props = getProps();
+  props.setProperty('AUTO_ACTIVE', 'false');
+  deleteTriggers_();
+  return jsonResponse({ success: true, message: 'Envios parados' });
+}
+
+/**
+ * clear — limpa todos os leads da planilha (mantém cabeçalho)
+ */
+function handleClear() {
+  const sheet = SpreadsheetApp.getActiveSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+  }
+  return jsonResponse({ success: true, message: 'Lista limpa' });
+}
+
+/**
+ * get_stats — retorna estatísticas completas
+ */
+function handleGetStats() {
+  const props   = getProps();
+  const rows    = countRows_();
+  const dailySent = Number(props.getProperty('DAILY_SENT_COUNT') || 0);
+  const dailyLimit = Number(props.getProperty('DAILY_LIMIT') || DEFAULT_DAILY_LIMIT);
+
+  return jsonResponse({
+    success:        true,
+    total:          rows.total,
+    sent:           rows.sent,
+    pending:        rows.pending,
+    errors:         rows.errors,
+    quota_gmail:    MailApp.getRemainingDailyQuota(),
+    daily_sent:     dailySent,
+    daily_limit:    dailyLimit,
+    daily_remaining: Math.max(0, dailyLimit - dailySent),
+    schedule_active: props.getProperty('AUTO_ACTIVE') === 'true',
+    last_run_date:  props.getProperty('LAST_RUN_DATE') || null,
+  });
+}
+
+/**
+ * get_settings — retorna configurações atuais
+ */
+function handleGetSettings() {
+  const props = getProps();
+  return jsonResponse({
+    success:           true,
+    subject:           props.getProperty('AUTO_SUBJECT')        || '',
+    daily_limit:       Number(props.getProperty('DAILY_LIMIT')        || DEFAULT_DAILY_LIMIT),
+    hourly_batch_size: Number(props.getProperty('HOURLY_BATCH_SIZE')  || DEFAULT_HOURLY_BATCH_SIZE),
+    min_hour:          Number(props.getProperty('MIN_HOUR')            || DEFAULT_MIN_HOUR),
+    max_hour:          Number(props.getProperty('MAX_HOUR')            || DEFAULT_MAX_HOUR),
+    days:              JSON.parse(props.getProperty('AUTO_DAYS')       || '[]'),
+    active:            props.getProperty('AUTO_ACTIVE')          === 'true',
+  });
+}
+
+/*******************************************************
+ * AUTOMAÇÃO HORÁRIA (TRIGGER INTERNO)
+ *******************************************************/
+
 function autoExecuteHourly() {
-  const props = PropertiesService.getScriptProperties();
-  
-  // 1. Verifica se está ativo
+  const props = getProps();
+
   if (props.getProperty('AUTO_ACTIVE') !== 'true') return;
 
-  // 2. Verifica Dia da Semana
-  const now = new Date();
-  const todayWeek = now.getDay(); // 0=Dom, 1=Seg...
+  const now        = new Date();
+  const todayWeek  = now.getDay();
   const allowedDays = JSON.parse(props.getProperty('AUTO_DAYS') || '[]');
-  
+
   if (!allowedDays.includes(todayWeek)) {
     console.log("Hoje não é dia de envio configurado.");
     return;
   }
 
-  // 3. Verifica Horário Comercial (AGORA ATÉ AS 16h)
   const currentHour = now.getHours();
-  // Se for antes das 8 ou depois/igual a 16 (4h da tarde), não roda.
-  if (currentHour < MIN_HOUR || currentHour >= MAX_HOUR) {
-    console.log(`Fora do horário comercial (${currentHour}h). O robô está dormindo...`);
+  const minHour = Number(props.getProperty('MIN_HOUR') || DEFAULT_MIN_HOUR);
+  const maxHour = Number(props.getProperty('MAX_HOUR') || DEFAULT_MAX_HOUR);
+
+  if (currentHour < minHour || currentHour >= maxHour) {
+    console.log(`Fora do horário (${currentHour}h). Limite: ${minHour}h–${maxHour}h`);
     return;
   }
 
-  // 4. Controle de Cota Diária (Reset e Verificação)
-  const todayDateStr = now.toDateString();
-  const lastRunDate = props.getProperty('LAST_RUN_DATE');
-  let dailyCount = Number(props.getProperty('DAILY_SENT_COUNT') || 0);
+  const todayStr   = now.toDateString();
+  const lastRun    = props.getProperty('LAST_RUN_DATE');
+  let dailyCount   = Number(props.getProperty('DAILY_SENT_COUNT') || 0);
+  const dailyLimit = Number(props.getProperty('DAILY_LIMIT') || DEFAULT_DAILY_LIMIT);
+  const batchSize  = Number(props.getProperty('HOURLY_BATCH_SIZE') || DEFAULT_HOURLY_BATCH_SIZE);
 
-  if (lastRunDate !== todayDateStr) {
-    console.log("Novo dia detectado. Zerando contador diário.");
+  if (lastRun !== todayStr) {
     dailyCount = 0;
-    props.setProperty('LAST_RUN_DATE', todayDateStr);
+    props.setProperty('LAST_RUN_DATE', todayStr);
     props.setProperty('DAILY_SENT_COUNT', '0');
   }
 
-  if (dailyCount >= DAILY_LIMIT) {
-    console.log(`Meta diária atingida (${dailyCount}/${DAILY_LIMIT}). Até amanhã!`);
+  if (dailyCount >= dailyLimit) {
+    console.log(`Meta diária atingida (${dailyCount}/${dailyLimit}).`);
     return;
   }
 
   const subject = props.getProperty('AUTO_SUBJECT');
   if (!subject) return;
 
-  // 5. Calcula lote
-  let remaining = DAILY_LIMIT - dailyCount;
-  let batchToRun = Math.min(remaining, HOURLY_BATCH_SIZE);
+  const remaining  = dailyLimit - dailyCount;
+  const batchToRun = Math.min(remaining, batchSize);
 
-  console.log(`Iniciando lote horário. Meta Dia: ${dailyCount}/${DAILY_LIMIT}. Lote Atual: ${batchToRun}`);
-
-  // 6. Executa o envio
-  processBatchServerSide_(subject, batchToRun); 
+  console.log(`Lote horário: ${batchToRun} emails. Dia: ${dailyCount}/${dailyLimit}`);
+  processBatchServerSide_(subject, batchToRun);
 }
 
-/**
- * MOTOR DE ENVIO LENTO E SEGURO (DELAY AUMENTADO)
- */
+/*******************************************************
+ * MOTOR DE ENVIO
+ *******************************************************/
+
 function processBatchServerSide_(subjectLine, maxEmails) {
-  const sheet = SpreadsheetApp.getActiveSheet();
-  const data = sheet.getDataRange().getDisplayValues();
+  const sheet   = SpreadsheetApp.getActiveSheet();
+  const data    = sheet.getDataRange().getDisplayValues();
   const headers = data[0];
-  const props = PropertiesService.getScriptProperties();
-  
-  const emailIdx = headers.indexOf(RECIPIENT_COL);
+  const props   = getProps();
+
+  const emailIdx  = headers.indexOf(RECIPIENT_COL);
   const statusIdx = headers.indexOf(EMAIL_SENT_COL);
-  
+
   let template;
   try {
     template = getGmailTemplateFromDrafts_(subjectLine);
   } catch (e) {
-    console.error("Erro Crítico: " + e.message);
+    console.error("Template não encontrado: " + e.message);
     return;
   }
 
@@ -165,53 +371,44 @@ function processBatchServerSide_(subjectLine, maxEmails) {
   let currentDailyCount = Number(props.getProperty('DAILY_SENT_COUNT') || 0);
 
   for (let i = 1; i < data.length; i++) {
-    
     if (sentInThisBatch >= maxEmails) break;
 
-    if (data[i][emailIdx] && data[i][statusIdx] === "") {
-      
+    if (data[i][emailIdx] && data[i][statusIdx] === '') {
       const rowData = data[i];
-      const rowObj = headers.reduce((obj, header, k) => {
-        obj[header] = rowData[k];
-        return obj;
-      }, {});
+      const rowObj  = headers.reduce((obj, header, k) => { obj[header] = rowData[k]; return obj; }, {});
 
       try {
         const msgObj = fillInTemplateFromObject_(template.message, rowObj);
-        
+
         GmailApp.sendEmail(
           rowObj[RECIPIENT_COL],
           msgObj.subject,
           msgObj.text,
           {
-            htmlBody: msgObj.html,
-            name: "Davi de Araújo", // SEU NOME
-            attachments: template.attachments,
-            inlineImages: template.inlineImages
+            htmlBody:     msgObj.html,
+            name:         props.getProperty('SENDER_NAME') || 'Prospecta HUB',
+            attachments:  template.attachments,
+            inlineImages: template.inlineImages,
           }
         );
-        
-        // Sucesso
-        sheet.getRange(i + 1, statusIdx + 1).setValue("OK_AUTO");
-        SpreadsheetApp.flush(); 
-        
+
+        sheet.getRange(i + 1, statusIdx + 1).setValue('OK_AUTO');
+        SpreadsheetApp.flush();
+
         sentInThisBatch++;
         currentDailyCount++;
-        
         props.setProperty('DAILY_SENT_COUNT', String(currentDailyCount));
 
-        // Delay 10-15s
-        const longDelay = Math.floor(Math.random() * 5000) + 10000; 
-        console.log(`Email enviado. Total Dia: ${currentDailyCount}. Aguardando ${longDelay}ms...`);
-        Utilities.sleep(longDelay);
+        const delay = Math.floor(Math.random() * 5000) + 10000;
+        Utilities.sleep(delay);
 
       } catch (e) {
         const errorMsg = e.message.toLowerCase();
-        sheet.getRange(i + 1, statusIdx + 1).setValue("ERRO: " + e.message);
-        
-        if (errorMsg.includes("limit") || errorMsg.includes("quota") || errorMsg.includes("many times")) {
-           console.log("⛔ Cota atingida ou bloqueio temporário. Parando.");
-           break;
+        sheet.getRange(i + 1, statusIdx + 1).setValue('ERRO: ' + e.message);
+
+        if (errorMsg.includes('limit') || errorMsg.includes('quota') || errorMsg.includes('many times')) {
+          console.log('Cota atingida ou bloqueio. Parando.');
+          break;
         }
       }
     }
@@ -219,106 +416,172 @@ function processBatchServerSide_(subjectLine, maxEmails) {
 }
 
 /*******************************************************
- * 2. PREPARAÇÃO DO ENVIO MANUAL (MANTIDO)
+ * ENVIO MANUAL (CHAMADO PELO SIDEBAR)
  *******************************************************/
+
 function getPendingEmails(limit) {
-  const sheet = SpreadsheetApp.getActiveSheet();
-  const data = sheet.getDataRange().getDisplayValues();
-  const headers = data[0];
+  const sheet    = SpreadsheetApp.getActiveSheet();
+  const data     = sheet.getDataRange().getDisplayValues();
+  const headers  = data[0];
   const emailIdx = headers.indexOf(RECIPIENT_COL);
   const statusIdx = headers.indexOf(EMAIL_SENT_COL);
-  let pendingRows = [];
-  const maxEmails = limit ? Number(limit) : 9999; 
-   
+  const maxEmails = limit ? Number(limit) : 9999;
+  const pending   = [];
+
   for (let i = 1; i < data.length; i++) {
-    if (pendingRows.length >= maxEmails) break;
-    if (data[i][emailIdx] && data[i][statusIdx] === "") {
-      pendingRows.push(i + 1); 
+    if (pending.length >= maxEmails) break;
+    if (data[i][emailIdx] && data[i][statusIdx] === '') {
+      pending.push(i + 1);
     }
   }
-  return { total: pendingRows.length, rows: pendingRows, quota: MailApp.getRemainingDailyQuota() };
+
+  return { total: pending.length, rows: pending, quota: MailApp.getRemainingDailyQuota() };
 }
 
-/*******************************************************
- * 3. AÇÃO: ENVIA UM ÚNICO EMAIL (MANUAL)
- *******************************************************/
 function sendSingleEmail(rowIndex, config) {
-  const sheet = SpreadsheetApp.getActiveSheet();
+  const sheet   = SpreadsheetApp.getActiveSheet();
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const rowData = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getDisplayValues()[0];
-
-  const rowObj = headers.reduce((obj, header, i) => {
-    obj[header] = rowData[i];
-    return obj;
-  }, {});
-
-  const recipient = rowObj[RECIPIENT_COL];
-  const sentIndex = headers.indexOf(EMAIL_SENT_COL) + 1; 
+  const rowObj  = headers.reduce((obj, header, i) => { obj[header] = rowData[i]; return obj; }, {});
+  const recipient  = rowObj[RECIPIENT_COL];
+  const sentIndex  = headers.indexOf(EMAIL_SENT_COL) + 1;
 
   try {
-    if (!recipient) return { success: false, error: "Email vazio" };
+    if (!recipient) return { success: false, error: 'Email vazio' };
     const template = getGmailTemplateFromDrafts_(config.subjectLine);
-    const msgObj = fillInTemplateFromObject_(template.message, rowObj);
+    const msgObj   = fillInTemplateFromObject_(template.message, rowObj);
 
     GmailApp.sendEmail(recipient, msgObj.subject, msgObj.text, {
-      htmlBody: msgObj.html,
-      name: "Davi de Araújo", 
-      attachments: template.attachments,
-      inlineImages: template.inlineImages
+      htmlBody:     msgObj.html,
+      name:         getProps().getProperty('SENDER_NAME') || 'Prospecta HUB',
+      attachments:  template.attachments,
+      inlineImages: template.inlineImages,
     });
 
-    sheet.getRange(rowIndex, sentIndex).setValue("OK");
-    
-    // Delay manual
+    sheet.getRange(rowIndex, sentIndex).setValue('OK');
     const delay = randomDelay(Number(config.minDelay), Number(config.maxDelay));
     Utilities.sleep(delay);
-    return { success: true, email: recipient };
 
+    return { success: true, email: recipient };
   } catch (e) {
-    sheet.getRange(rowIndex, sentIndex).setValue("ERRO: " + e.message);
+    sheet.getRange(rowIndex, sentIndex).setValue('ERRO: ' + e.message);
     return { success: false, email: recipient, error: e.message };
   }
 }
 
 /*******************************************************
- * UTILITÁRIOS
+ * FUNÇÕES PARA O SIDEBAR LOCAL
  *******************************************************/
-function randomDelay(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function getQuotaOnly() {
+  return MailApp.getRemainingDailyQuota();
+}
+
+function getStoredSettings() {
+  const props = getProps();
+  return {
+    subject:           props.getProperty('AUTO_SUBJECT')        || '',
+    hour:              props.getProperty('MIN_HOUR')            || '8',
+    days:              props.getProperty('AUTO_DAYS')           || '[]',
+    active:            props.getProperty('AUTO_ACTIVE')         === 'true',
+    daily_limit:       props.getProperty('DAILY_LIMIT')         || '80',
+    hourly_batch_size: props.getProperty('HOURLY_BATCH_SIZE')   || '20',
+    max_hour:          props.getProperty('MAX_HOUR')            || '16',
+    sender_name:       props.getProperty('SENDER_NAME')         || '',
+  };
+}
+
+function saveSchedule(config) {
+  const props = getProps();
+
+  if (config.subject)           props.setProperty('AUTO_SUBJECT',        config.subject);
+  if (config.days)              props.setProperty('AUTO_DAYS',            JSON.stringify(config.days));
+  if (config.daily_limit)       props.setProperty('DAILY_LIMIT',          String(config.daily_limit));
+  if (config.hourly_batch_size) props.setProperty('HOURLY_BATCH_SIZE',    String(config.hourly_batch_size));
+  if (config.min_hour)          props.setProperty('MIN_HOUR',             String(config.min_hour));
+  if (config.max_hour)          props.setProperty('MAX_HOUR',             String(config.max_hour));
+  if (config.sender_name)       props.setProperty('SENDER_NAME',          config.sender_name);
+
+  const active = config.active === true || config.active === 'true';
+  props.setProperty('AUTO_ACTIVE', String(active));
+
+  deleteTriggers_();
+
+  if (active) {
+    ScriptApp.newTrigger('autoExecuteHourly').timeBased().everyHours(1).create();
+    props.setProperty('DAILY_SENT_COUNT', '0');
+    props.setProperty('LAST_RUN_DATE', new Date().toDateString());
+    return `✅ Agendado! O robô verifica a cada 1 hora (${config.min_hour || 8}h–${config.max_hour || 16}h).`;
+  } else {
+    return '🛑 Agendamento desativado.';
+  }
+}
+
+function clearData() {
+  const result = handleClear();
+  const obj    = JSON.parse(result.getContent());
+  return obj.success ? '✅ Lista limpa com sucesso! (Cabeçalho mantido)' : 'Erro: ' + obj.message;
+}
 
 function sendTest(config) {
   try {
     const template = getGmailTemplateFromDrafts_(config.subjectLine);
     GmailApp.sendEmail(config.to, template.message.subject, template.message.text, {
       htmlBody: template.message.html,
-      name: "Teste Sender",
-      attachments: template.attachments,
-      inlineImages: template.inlineImages
+      name:     getProps().getProperty('SENDER_NAME') || 'Prospecta HUB',
+      attachments:  template.attachments,
+      inlineImages: template.inlineImages,
     });
-    return "✅ Teste enviado com sucesso!";
+    return '✅ Teste enviado com sucesso!';
   } catch (e) { throw new Error(e.message); }
 }
 
-function clearData() {
-  const sheet = SpreadsheetApp.getActiveSheet();
-  const lastRow = sheet.getLastRow();
-  const lastCol = sheet.getLastColumn();
-  if (lastRow <= 1) return "A lista já está vazia!";
-  sheet.getRange(2, 1, lastRow - 1, lastCol).clearContent();
-  return "✅ Lista limpa com sucesso! (Cabeçalho mantido)";
+/*******************************************************
+ * UTILITÁRIOS INTERNOS
+ *******************************************************/
+
+function countRows_() {
+  const sheet     = SpreadsheetApp.getActiveSheet();
+  const data      = sheet.getDataRange().getDisplayValues();
+  if (data.length <= 1) return { total: 0, sent: 0, pending: 0, errors: 0 };
+
+  const headers   = data[0];
+  const statusIdx = headers.indexOf(EMAIL_SENT_COL);
+  let sent = 0, pending = 0, errors = 0;
+
+  for (let i = 1; i < data.length; i++) {
+    const s = statusIdx >= 0 ? data[i][statusIdx] : '';
+    if (s === 'OK' || s === 'OK_AUTO') sent++;
+    else if (s.startsWith('ERRO')) errors++;
+    else pending++;
+  }
+
+  return { total: data.length - 1, sent, pending, errors };
 }
 
-/*******************************************************
- * MOTOR DE TEMPLATE (INTERNO)
- *******************************************************/
+function deleteTriggers_() {
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(t => {
+    const fn = t.getHandlerFunction();
+    if (fn === 'autoExecuteHourly' || fn === 'autoExecute') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+}
+
+function randomDelay(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 function getGmailTemplateFromDrafts_(subject_line) {
   const drafts = GmailApp.getDrafts();
-  const draft = drafts.find(d => d.getMessage().getSubject() === subject_line);
-  if (!draft) throw new Error("Rascunho com assunto '" + subject_line + "' não encontrado.");
+  const draft  = drafts.find(d => d.getMessage().getSubject() === subject_line);
+  if (!draft) throw new Error("Rascunho '" + subject_line + "' não encontrado no Gmail.");
 
-  const msg = draft.getMessage();
-  const attachments = msg.getAttachments({includeInlineImages: false});
-  const inlineImgs = msg.getAttachments({includeInlineImages: true, includeAttachments: false});
-  const htmlBody = msg.getBody();
+  const msg         = draft.getMessage();
+  const attachments = msg.getAttachments({ includeInlineImages: false });
+  const inlineImgs  = msg.getAttachments({ includeInlineImages: true, includeAttachments: false });
+  const htmlBody    = msg.getBody();
 
   const imgMap = {};
   inlineImgs.forEach(img => imgMap[img.getName()] = img);
@@ -331,101 +594,21 @@ function getGmailTemplateFromDrafts_(subject_line) {
   }
 
   return {
-    message: { subject: subject_line, text: msg.getPlainBody(), html: htmlBody },
-    attachments: attachments,
-    inlineImages: inlineImagesObj
+    message:      { subject: subject_line, text: msg.getPlainBody(), html: htmlBody },
+    attachments:  attachments,
+    inlineImages: inlineImagesObj,
   };
 }
 
 function fillInTemplateFromObject_(template, data) {
   let str = JSON.stringify(template);
   str = str.replace(/{{[^{}]+}}/g, key => {
-    const name = key.replace(/[{}]+/g, "").trim();
-    return escapeData_(data[name] || "");
+    const name = key.replace(/[{}]+/g, '').trim();
+    return escapeData_(data[name] || '');
   });
   return JSON.parse(str);
 }
 
 function escapeData_(str) {
   return String(str).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '<br>');
-}
-
-/*******************************************************
- * WEBHOOK: recebe leads do Prospectahub via POST
- * Deploy: Extensões > Apps Script > Implantar > Novo Deploy
- *         Tipo: App da Web, Acesso: Qualquer pessoa
- *******************************************************/
-function doPost(e) {
-  try {
-    const payload = JSON.parse(e.postData.contents);
-    const leads = payload.leads || [];
-
-    if (!leads.length) {
-      return ContentService.createTextOutput(
-        JSON.stringify({ success: false, error: 'No leads received' })
-      ).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    const sheet = SpreadsheetApp.getActiveSheet();
-
-    // Ensure header row exists
-    const lastCol = sheet.getLastColumn();
-    if (sheet.getLastRow() === 0 || lastCol === 0) {
-      sheet.appendRow(['EMPRESA', 'EMAIL', 'TELEFONE', 'CIDADE', 'WEBSITE', 'STATUS']);
-    }
-
-    leads.forEach(lead => {
-      sheet.appendRow([
-        lead.EMPRESA || '',
-        lead.EMAIL || '',
-        lead.TELEFONE || '',
-        lead.CIDADE || '',
-        lead.WEBSITE || '',
-        '', // STATUS vazio = pronto para envio
-      ]);
-    });
-
-    SpreadsheetApp.flush();
-
-    return ContentService.createTextOutput(
-      JSON.stringify({ success: true, rows_added: leads.length })
-    ).setMimeType(ContentService.MimeType.JSON);
-
-  } catch (err) {
-    return ContentService.createTextOutput(
-      JSON.stringify({ success: false, error: err.message })
-    ).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-/**
- * Retorna estatísticas da planilha (chamável via GET no webapp URL)
- */
-function doGet(e) {
-  const sheet = SpreadsheetApp.getActiveSheet();
-  const data = sheet.getDataRange().getDisplayValues();
-  if (data.length <= 1) {
-    return ContentService.createTextOutput(
-      JSON.stringify({ total: 0, sent: 0, pending: 0, quota: MailApp.getRemainingDailyQuota() })
-    ).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  const headers = data[0];
-  const statusIdx = headers.indexOf(EMAIL_SENT_COL);
-  let sent = 0, pending = 0;
-
-  for (let i = 1; i < data.length; i++) {
-    const status = statusIdx >= 0 ? data[i][statusIdx] : '';
-    if (status === 'OK' || status === 'OK_AUTO') sent++;
-    else pending++;
-  }
-
-  return ContentService.createTextOutput(
-    JSON.stringify({
-      total: data.length - 1,
-      sent,
-      pending,
-      quota: MailApp.getRemainingDailyQuota(),
-    })
-  ).setMimeType(ContentService.MimeType.JSON);
 }
