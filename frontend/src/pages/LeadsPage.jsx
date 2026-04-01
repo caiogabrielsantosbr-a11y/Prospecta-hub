@@ -837,6 +837,10 @@ function WebhookControlModal({ webhook, onClose }) {
   const [maxHour, setMaxHour] = useState(16)
   const [selectedDays, setSelectedDays] = useState([])
 
+  const [reportEmail, setReportEmail] = useState('')
+  const [reportHour, setReportHour] = useState(17)
+  const [savingReport, setSavingReport] = useState(false)
+
   const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
   useEffect(() => { loadData() }, [])
@@ -857,6 +861,7 @@ function WebhookControlModal({ webhook, onClose }) {
         fetch(webhook.webhook_url + '?action=stats').then(r => r.json()),
         fetch(webhook.webhook_url + '?action=settings').then(r => r.json()),
       ])
+      const reportRes = await fetch(webhook.webhook_url + '?action=report_config').then(r => r.json()).catch(() => ({}))
       setStats(statsRes)
       if (settingsRes.success !== false) {
         setSubject(settingsRes.subject || '')
@@ -866,6 +871,10 @@ function WebhookControlModal({ webhook, onClose }) {
         setMinHour(settingsRes.min_hour || 8)
         setMaxHour(settingsRes.max_hour || 16)
         setSelectedDays(settingsRes.days || [])
+      }
+      if (reportRes.success !== false) {
+        setReportEmail(reportRes.report_email || '')
+        setReportHour(reportRes.report_hour || 17)
       }
     } catch {
       toast.error('Erro ao conectar com a planilha. Verifique a URL do webhook.')
@@ -929,6 +938,25 @@ function WebhookControlModal({ webhook, onClose }) {
       const res = await apiPost({ action: 'clear' })
       if (res.success) { toast.success('Lista limpa!'); loadData() }
     } catch { toast.error('Erro') }
+  }
+
+  const configureReport = async (enabled) => {
+    if (enabled && !reportEmail.trim()) { toast.error('Informe o email para receber o relatório'); return }
+    setSavingReport(true)
+    try {
+      const res = await apiPost({
+        action: 'configure_report',
+        recipient_email: reportEmail,
+        enabled,
+        hour: reportHour,
+      })
+      if (res.success) {
+        toast.success(enabled ? 'Relatório diário ativado!' : 'Relatório diário desativado')
+      } else {
+        toast.error(res.error || 'Erro ao configurar relatório')
+      }
+    } catch { toast.error('Erro ao conectar com a planilha') }
+    finally { setSavingReport(false) }
   }
 
   const toggleDay = (d) => {
@@ -1104,6 +1132,61 @@ function WebhookControlModal({ webhook, onClose }) {
                 <span className="material-symbols-outlined text-lg">delete_sweep</span>
                 Limpar Lista de Leads da Planilha
               </button>
+            </div>
+          </div>
+
+          {/* Relatório Diário */}
+          <div className="border-t border-outline-variant/10 pt-4">
+            <h4 className="font-semibold mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-base text-primary">summarize</span>
+              Relatório Diário por Email
+            </h4>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-on-surface-variant mb-1">
+                  Email para receber o relatório
+                </label>
+                <input
+                  type="email"
+                  value={reportEmail}
+                  onChange={e => setReportEmail(e.target.value)}
+                  placeholder="relatorio@email.com"
+                  className="input-field w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-on-surface-variant mb-1">
+                  Hora de envio ({reportHour}:00)
+                </label>
+                <input
+                  type="range"
+                  min={0} max={23}
+                  value={reportHour}
+                  onChange={e => setReportHour(Number(e.target.value))}
+                  className="w-full accent-primary"
+                />
+                <div className="flex justify-between text-xs text-on-surface-variant mt-1">
+                  <span>0h</span><span>12h</span><span>23h</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => configureReport(true)}
+                  disabled={savingReport}
+                  className="btn-primary justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-lg">check_circle</span>
+                  Ativar Relatório
+                </button>
+                <button
+                  onClick={() => configureReport(false)}
+                  disabled={savingReport}
+                  className="btn-ghost justify-center text-on-surface-variant border-outline-variant/20 disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-lg">cancel</span>
+                  Desativar
+                </button>
+              </div>
             </div>
           </div>
         </div>

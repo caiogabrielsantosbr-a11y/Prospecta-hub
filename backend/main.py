@@ -87,12 +87,14 @@ from modules.gmap.router import router as gmap_router
 from modules.facebook_ads.router import router as facebook_router
 from modules.locations.router import router as locations_router
 from modules.leads.router import router as leads_router
+from modules.gmail.router import router as gmail_router
 
 app.include_router(emails_router, prefix="/api/emails", tags=["Emails"])
 app.include_router(gmap_router, prefix="/api/gmap", tags=["Google Maps"])
 app.include_router(facebook_router, prefix="/api/facebook", tags=["Facebook ADS"])
 app.include_router(locations_router)
 app.include_router(leads_router, prefix="/api")
+app.include_router(gmail_router, prefix="/api/gmail", tags=["Gmail"])
 
 # ── Task Management Endpoints ────────────────────────────────
 @app.get("/api/tasks")

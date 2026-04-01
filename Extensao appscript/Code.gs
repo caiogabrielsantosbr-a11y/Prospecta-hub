@@ -76,7 +76,9 @@ function doPost(e) {
       case 'stop':         return handleStop();
       case 'clear':        return handleClear();
       case 'get_stats':    return handleGetStats();
-      case 'get_settings': return handleGetSettings();
+      case 'get_settings':      return handleGetSettings();
+      case 'configure_report':  return handleConfigureReport(payload);
+      case 'get_report_config': return handleGetReportConfig();
       default:
         return jsonResponse({ success: false, error: 'Ação desconhecida: ' + action });
     }
@@ -92,8 +94,9 @@ function doPost(e) {
 function doGet(e) {
   const action = (e.parameter && e.parameter.action) || 'stats';
   switch (action) {
-    case 'settings': return handleGetSettings();
-    default:         return handleGetStats();
+    case 'settings':      return handleGetSettings();
+    case 'report_config': return handleGetReportConfig();
+    default:              return handleGetStats();
   }
 }
 
@@ -537,6 +540,98 @@ function sendTest(config) {
 }
 
 /*******************************************************
+ * RELATÓRIO DIÁRIO
+ *******************************************************/
+
+/**
+ * configure_report — configura relatório diário por email
+ * Payload: { recipient_email?, enabled?, hour? }
+ */
+function handleConfigureReport(payload) {
+  const props = getProps();
+
+  if (payload.recipient_email !== undefined)
+    props.setProperty('REPORT_EMAIL', payload.recipient_email);
+  if (payload.enabled !== undefined)
+    props.setProperty('REPORT_ENABLED', String(payload.enabled === true || payload.enabled === 'true'));
+  if (payload.hour !== undefined)
+    props.setProperty('REPORT_HOUR', String(payload.hour));
+
+  // Recria trigger do relatório
+  deleteTriggerByName_('sendDailyReport');
+  const enabled = props.getProperty('REPORT_ENABLED') === 'true';
+  if (enabled) {
+    const hour = Number(props.getProperty('REPORT_HOUR') || 17);
+    ScriptApp.newTrigger('sendDailyReport').timeBased().atHour(hour).everyDays(1).create();
+  }
+
+  return jsonResponse({
+    success: true,
+    report_enabled: enabled,
+    report_email:   props.getProperty('REPORT_EMAIL') || '',
+    report_hour:    Number(props.getProperty('REPORT_HOUR') || 17),
+  });
+}
+
+/**
+ * get_report_config — retorna configuração atual do relatório
+ */
+function handleGetReportConfig() {
+  const props = getProps();
+  return jsonResponse({
+    success:        true,
+    report_enabled: props.getProperty('REPORT_ENABLED') === 'true',
+    report_email:   props.getProperty('REPORT_EMAIL')   || '',
+    report_hour:    Number(props.getProperty('REPORT_HOUR') || 17),
+  });
+}
+
+/**
+ * sendDailyReport — enviado via trigger diário
+ */
+function sendDailyReport() {
+  const props = getProps();
+  if (props.getProperty('REPORT_ENABLED') !== 'true') return;
+
+  const recipient = props.getProperty('REPORT_EMAIL');
+  if (!recipient) return;
+
+  const rows       = countRows_();
+  const daily      = Number(props.getProperty('DAILY_SENT_COUNT') || 0);
+  const limit      = Number(props.getProperty('DAILY_LIMIT')      || DEFAULT_DAILY_LIMIT);
+  const quota      = MailApp.getRemainingDailyQuota();
+  const sheetName  = SpreadsheetApp.getActiveSpreadsheet().getName();
+  const date       = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:520px">
+      <h2 style="color:#1a73e8">Relatório Diário — ${sheetName}</h2>
+      <p><strong>Data:</strong> ${date}</p>
+      <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%">
+        <tr style="background:#f1f3f4">
+          <td><strong>Emails enviados hoje</strong></td>
+          <td><strong>${daily}</strong> / ${limit}</td>
+        </tr>
+        <tr><td>Total na planilha</td><td>${rows.total}</td></tr>
+        <tr><td>Pendentes</td><td>${rows.pending}</td></tr>
+        <tr><td>Erros</td><td>${rows.errors}</td></tr>
+        <tr style="background:#f1f3f4"><td>Cota Gmail restante</td><td>${quota}</td></tr>
+      </table>
+      <p style="color:#999;font-size:11px;margin-top:16px">
+        Enviado automaticamente pelo Prospecta HUB
+      </p>
+    </div>
+  `;
+
+  GmailApp.sendEmail(
+    recipient,
+    `Relatório Diário — ${sheetName} (${date})`,
+    `Relatório do dia ${date}: ${daily}/${limit} enviados, ${rows.pending} pendentes, cota Gmail ${quota}.`,
+    { htmlBody: html }
+  );
+}
+
+/*******************************************************
  * UTILITÁRIOS INTERNOS
  *******************************************************/
 
@@ -560,12 +655,13 @@ function countRows_() {
 }
 
 function deleteTriggers_() {
-  const triggers = ScriptApp.getProjectTriggers();
-  triggers.forEach(t => {
-    const fn = t.getHandlerFunction();
-    if (fn === 'autoExecuteHourly' || fn === 'autoExecute') {
-      ScriptApp.deleteTrigger(t);
-    }
+  deleteTriggerByName_('autoExecuteHourly');
+  deleteTriggerByName_('autoExecute');
+}
+
+function deleteTriggerByName_(funcName) {
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === funcName) ScriptApp.deleteTrigger(t);
   });
 }
 
