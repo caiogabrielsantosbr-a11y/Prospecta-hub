@@ -54,7 +54,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       {/* Background Glow */}
       <div className="bg-glow-primary" />
-      <div className="bg-glow-secondary" />
+      <div className="fixed bottom-0 left-0 w-[300px] h-[300px] bg-primary/[0.03] rounded-full blur-[100px] pointer-events-none -z-10" />
 
       <div className="w-full max-w-md">
         {/* Header */}

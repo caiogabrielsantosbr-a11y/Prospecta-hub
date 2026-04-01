@@ -76,9 +76,9 @@ function AppLayout() {
         position="bottom-right"
         toastOptions={{
           style: {
-            background: '#1a1919',
-            color: '#fff',
-            border: '1px solid rgba(73, 72, 71, 0.15)',
+            background: 'var(--color-surface-container)',
+            color: 'var(--color-on-surface)',
+            border: '1px solid var(--color-outline-variant)',
             fontFamily: 'Manrope, sans-serif',
             fontSize: '0.875rem',
           },
