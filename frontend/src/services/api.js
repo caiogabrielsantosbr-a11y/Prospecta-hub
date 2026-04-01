@@ -2,6 +2,7 @@
  * API client for communicating with the FastAPI backend.
  */
 import useConfigStore from '../store/useConfigStore'
+import { supabase } from '../config/supabase'
 
 /**
  * Get the base URL from the configuration store
@@ -17,6 +18,17 @@ function getBaseUrl() {
 }
 
 /**
+ * Get the current Supabase session token for backend auth
+ */
+async function getAuthHeader() {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.access_token) {
+    return { 'Authorization': `Bearer ${session.access_token}` }
+  }
+  return {}
+}
+
+/**
  * Make an HTTP request to the backend API
  * @param {string} path - API endpoint path (e.g., '/tasks')
  * @param {object} options - Fetch options
@@ -25,10 +37,11 @@ function getBaseUrl() {
 async function request(path, options = {}) {
   const baseUrl = getBaseUrl()
   const url = `${baseUrl}/api${path}`
-  
+  const authHeader = await getAuthHeader()
+
   try {
     const res = await fetch(url, {
-      headers: { 'Content-Type': 'application/json', ...options.headers },
+      headers: { 'Content-Type': 'application/json', ...authHeader, ...options.headers },
       ...options,
     })
     

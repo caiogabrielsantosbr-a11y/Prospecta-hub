@@ -1,20 +1,45 @@
 /**
- * Dashboard — main overview page with stats, charts, and logs.
+ * Dashboard — main overview page with stats from Supabase + backend.
  */
 import { useState, useEffect } from 'react'
 import { api } from '../services/api'
 import useTaskStore from '../store/useTaskStore'
+import { leadsService, gsheetsService } from '../services/supabase'
 
 export default function Dashboard() {
-  const [stats, setStats] = useState(null)
+  const [backendStats, setBackendStats] = useState(null)
+  const [leadStats, setLeadStats] = useState(null)
+  const [sendStats, setSendStats] = useState(null)
   const tasks = useTaskStore((s) => s.tasks)
   const activeTasks = tasks.filter(t => t.status === 'running' || t.status === 'paused')
 
+  const loadSupabaseStats = async () => {
+    try {
+      const [ls, ss] = await Promise.all([
+        leadsService.getStats(),
+        gsheetsService.getSendStats(),
+      ])
+      setLeadStats(ls)
+      setSendStats(ss)
+    } catch (e) {
+      console.error('Stats error:', e)
+    }
+  }
+
+  const loadBackendStats = async () => {
+    try {
+      const data = await api.getDashboardStats()
+      setBackendStats(data)
+    } catch (_) {}
+  }
+
   useEffect(() => {
-    api.getDashboardStats().then(setStats).catch(() => {})
+    loadSupabaseStats()
+    loadBackendStats()
     const interval = setInterval(() => {
-      api.getDashboardStats().then(setStats).catch(() => {})
-    }, 10000)
+      loadSupabaseStats()
+      loadBackendStats()
+    }, 30000)
     return () => clearInterval(interval)
   }, [])
 
@@ -26,12 +51,58 @@ export default function Dashboard() {
         <h2 className="text-3xl font-bold tracking-tight">Painel de Controle</h2>
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard label="Total de Leads" value={stats?.total_leads ?? '—'} trend="+12.4%" icon="trending_up" />
-        <StatCard label="Processos Ativos" value={activeTasks.length} bars />
-        <StatCard label="Emails Extraídos" value={stats?.emails_found ?? '—'} progress={85} />
+      {/* Stat Cards — row 1 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          label="Total de Leads"
+          value={leadStats?.total ?? '—'}
+          icon="groups"
+          color="text-primary"
+        />
+        <StatCard
+          label="Com Email"
+          value={leadStats?.with_email ?? '—'}
+          icon="email"
+          color="text-secondary"
+        />
+        <StatCard
+          label="Com Telefone"
+          value={leadStats?.with_phone ?? '—'}
+          icon="phone"
+          color="text-tertiary"
+        />
+        <StatCard
+          label="Processos Ativos"
+          value={activeTasks.length}
+          icon="bolt"
+          color="text-primary"
+          bars
+        />
       </div>
+
+      {/* Stat Cards — row 2 (GSheets) */}
+      {sendStats && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard
+            label="Enviados Hoje"
+            value={sendStats.today}
+            icon="today"
+            color="text-primary"
+          />
+          <StatCard
+            label="Enviados esta Semana"
+            value={sendStats.week}
+            icon="date_range"
+            color="text-secondary"
+          />
+          <StatCard
+            label="Enviados este Mês"
+            value={sendStats.month}
+            icon="calendar_month"
+            color="text-tertiary"
+          />
+        </div>
+      )}
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -39,14 +110,35 @@ export default function Dashboard() {
         <div className="lg:col-span-2 glass-card p-8 rounded-lg">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h4 className="text-lg font-bold">Fontes de Dados</h4>
-              <p className="text-on-surface-variant text-sm">Distribuição por módulo</p>
+              <h4 className="text-lg font-bold">Visão de Leads</h4>
+              <p className="text-on-surface-variant text-sm">Qualidade do banco de dados</p>
             </div>
           </div>
           <div className="space-y-6">
-            <SourceBar label="GMap Business" value={stats?.gmap_leads ?? 0} total={stats?.total_leads || 1} color="bg-primary" />
-            <SourceBar label="Facebook Leads" value={stats?.facebook_leads ?? 0} total={stats?.total_leads || 1} color="bg-secondary" />
-            <SourceBar label="Extração de Email" value={stats?.emails_found ?? 0} total={stats?.total_leads || 1} color="bg-on-surface-variant" />
+            <SourceBar
+              label="Com Telefone"
+              value={leadStats?.with_phone ?? 0}
+              total={leadStats?.total || 1}
+              color="bg-primary"
+            />
+            <SourceBar
+              label="Com Email"
+              value={leadStats?.with_email ?? 0}
+              total={leadStats?.total || 1}
+              color="bg-secondary"
+            />
+            <SourceBar
+              label="Com Website"
+              value={leadStats?.with_website ?? 0}
+              total={leadStats?.total || 1}
+              color="bg-tertiary"
+            />
+            <SourceBar
+              label="Sem Telefone"
+              value={leadStats?.without_phone ?? 0}
+              total={leadStats?.total || 1}
+              color="bg-error"
+            />
           </div>
         </div>
 
@@ -62,7 +154,7 @@ export default function Dashboard() {
                 <div key={i} className="flex gap-3">
                   <span className="text-on-surface-variant shrink-0">{log.time}</span>
                   <span className={`${log.level === 'error' ? 'text-error' : log.level === 'success' ? 'text-primary' : 'text-secondary'}`}>
-                    [{log.level === 'error' ? 'FALHA' : log.level === 'success' ? 'SUCESSO' : 'PENDENTE'}]
+                    [{log.level === 'error' ? 'FALHA' : log.level === 'success' ? 'SUCESSO' : 'INFO'}]
                   </span>
                   <span className="text-on-surface/80">{log.message}</span>
                 </div>
@@ -93,29 +185,24 @@ export default function Dashboard() {
 
 /* ── Sub-Components ───────────────────────────────────────── */
 
-function StatCard({ label, value, trend, icon, bars, progress }) {
+function StatCard({ label, value, icon, color = 'text-primary', bars }) {
   return (
     <div className="glass-card p-6 rounded-lg relative overflow-hidden group hover:bg-surface-container-highest transition-all duration-500">
       <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-all" />
-      <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider mb-2">{label}</p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">{label}</p>
+        <span className={`material-symbols-outlined text-xl ${color}`}>{icon}</span>
+      </div>
       <div className="flex items-end justify-between">
-        <h3 className="text-3xl font-extrabold tracking-tighter">{typeof value === 'number' ? value.toLocaleString() : value}</h3>
-        {trend && (
-          <span className="text-primary text-xs font-bold flex items-center">
-            {trend} <span className="material-symbols-outlined text-xs">{icon}</span>
-          </span>
-        )}
+        <h3 className="text-3xl font-extrabold tracking-tighter">
+          {typeof value === 'number' ? value.toLocaleString() : value}
+        </h3>
         {bars && (
           <div className="flex gap-1 h-4 items-end">
             <div className="w-1 bg-primary/40 h-2 rounded-full" />
             <div className="w-1 bg-primary h-4 rounded-full" />
             <div className="w-1 bg-primary/60 h-3 rounded-full" />
             <div className="w-1 bg-primary/80 h-2 rounded-full" />
-          </div>
-        )}
-        {progress !== undefined && (
-          <div className="w-16 h-1 rounded-full bg-surface-container-highest overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-primary-container to-primary" style={{ width: `${progress}%` }} />
           </div>
         )}
       </div>
@@ -132,7 +219,7 @@ function SourceBar({ label, value, total, color }) {
           <span className={`w-2 h-2 rounded-full ${color}`} />
           {label}
         </span>
-        <span>{pct}%</span>
+        <span>{value?.toLocaleString() ?? 0} ({pct}%)</span>
       </div>
       <div className="w-full h-2 bg-surface-container rounded-full overflow-hidden">
         <div className={`h-full ${color} transition-all duration-700`} style={{ width: `${pct}%` }} />

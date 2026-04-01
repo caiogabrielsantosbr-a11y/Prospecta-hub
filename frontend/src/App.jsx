@@ -15,8 +15,8 @@ import TaskManagerBar from './components/layout/TaskManagerBar'
 import Dashboard from './pages/Dashboard'
 import GMapPage from './pages/GMapPage'
 import FacebookAdsPage from './pages/FacebookAdsPage'
-import EmailDispatchPage from './pages/EmailDispatchPage'
 import LeadsPage from './pages/LeadsPage'
+import InboxPage from './pages/InboxPage'
 import AdminConfigPage from './pages/AdminConfigPage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
@@ -60,8 +60,8 @@ function AppLayout() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/gmap" element={<GMapPage />} />
           <Route path="/facebook" element={<FacebookAdsPage />} />
-          <Route path="/dispatch" element={<EmailDispatchPage />} />
           <Route path="/leads" element={<LeadsPage />} />
+          <Route path="/inbox" element={<InboxPage />} />
           <Route path="/admin/config" element={<AdminConfigPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Routes>

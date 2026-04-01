@@ -5,10 +5,11 @@ Uses Playwright to scrape business data from Google Maps.
 import json
 import os
 from typing import Optional
-from fastapi import APIRouter, Body, Query
+from fastapi import APIRouter, Body, Depends, Query
 from services.task_manager import task_manager, TaskInfo
 from modules.gmap.worker import gmap_worker
 from database.supabase_client import get_supabase_client
+from middleware.auth import get_optional_user
 
 router = APIRouter()
 
@@ -70,13 +71,15 @@ async def start_gmap(
     delay: int = Body(2000),
     headless: bool = Body(True),
     extractEmails: bool = Body(True),
+    user_id: Optional[str] = Depends(get_optional_user),
 ):
     config = {
         "searchTerm": searchTerm,
         "cities": cities,
         "delay": delay,
         "headless": headless,
-        "extractEmails": extractEmails
+        "extractEmails": extractEmails,
+        "user_id": user_id,
     }
     task_id = await task_manager.create_task("gmap", config, gmap_worker)
     return {"task_id": task_id, "total": len(cities)}

@@ -22,6 +22,7 @@ export default function GMapPage() {
   const [headless, setHeadless] = useState(true) // Navegador oculto por padrão
   const [extractEmails, setExtractEmails] = useState(true) // Extração de email ativada por padrão
   const [isLoadingLocations, setIsLoadingLocations] = useState(false) // Track location loading state
+  const [isStarting, setIsStarting] = useState(false) // Prevent double-click
   const [downloadProgress, setDownloadProgress] = useState({ show: false, estimatedSize: null, startTime: null }) // Track download progress
   const [liveStats, setLiveStats] = useState({
     queue: 0,
@@ -354,6 +355,8 @@ export default function GMapPage() {
   }
 
   const handleStart = async () => {
+    if (isStarting || currentTask?.status === 'running') return
+
     // Reset stats when starting a new extraction
     setLiveStats({
       queue: 0,
@@ -361,25 +364,28 @@ export default function GMapPage() {
       leads: 0,
       errors: 0,
     })
-    
+
     // If no cities are selected, select all in order
     let citiesToExtract = Object.entries(selectedCities)
       .filter(([_, selected]) => selected)
       .map(([city]) => city)
-    
+
     // If none selected, use all cities in order
     if (citiesToExtract.length === 0) {
       citiesToExtract = Object.keys(selectedCities)
     }
-    
+
     if (!searchTerm || !citiesToExtract.length) return
-    
+
+    setIsStarting(true)
     try {
       const res = await api.startGmapExtraction(searchTerm, citiesToExtract, delay * 1000, headless, extractEmails)
       setTaskId(res.task_id)
       setIsPaused(false)
-    } catch (err) { 
-      console.error(err) 
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsStarting(false)
     }
   }
 
@@ -654,13 +660,13 @@ export default function GMapPage() {
 
             {/* Action Buttons */}
             <div className="flex gap-3 pt-2">
-              <button 
+              <button
                 onClick={handleStart}
-                disabled={currentTask?.status === 'running'}
+                disabled={isStarting || currentTask?.status === 'running'}
                 className="btn-primary flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined text-lg">play_arrow</span>
-                INICIAR PROCESSO
+                {isStarting ? 'INICIANDO...' : 'INICIAR PROCESSO'}
               </button>
             </div>
 

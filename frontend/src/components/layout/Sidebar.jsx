@@ -7,8 +7,8 @@ const NAV_ITEMS = [
   { path: '/', icon: 'dashboard', label: 'Painel' },
   { path: '/gmap', icon: 'map', label: 'Google Maps' },
   { path: '/facebook', icon: 'ads_click', label: 'Facebook ADS' },
-  { path: '/dispatch', icon: 'forward_to_inbox', label: 'Disparo de Email' },
   { path: '/leads', icon: 'groups', label: 'Leads' },
+  { path: '/inbox', icon: 'inbox', label: 'Inbox Gmail' },
   { path: '/profile', icon: 'person', label: 'Perfil' },
   { path: '/admin/config', icon: 'settings', label: 'Configurações' },
 ]

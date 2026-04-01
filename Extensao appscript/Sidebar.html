@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- ESTILO GERAL --- */
+
+        body {
+            background: #0d0d0d;
+            color: #e0e0e0;
+            font-family: "Inter", sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+
+
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-direction: column;
+        }
+
+        .help-btn {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            width: 100%;
+            height: 30px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+
+        .help-btn:hover {
+            background: #0055ff;
+            border-color: #0055ff;
+        }
+
+
+
+        .card {
+
+            background: #1c1c1c;
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid #333;
+
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+
+        }
+
+
+
+        /* SELETOR DE DIAS */
+
+        .week-selector {
+            display: flex;
+            justify-content: space-between;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .day-check {
+            display: none;
+        }
+
+        .day-label {
+
+            flex: 1;
+            text-align: center;
+            padding: 8px 0;
+            background: #2a2a2a;
+            border: 1px solid #444;
+
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            color: #777;
+            transition: 0.2s;
+
+        }
+
+        .day-check:checked+.day-label {
+            background: #0055ff;
+            color: white;
+            border-color: #0055ff;
+        }
+
+
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #aaa;
+            font-weight: 600;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            border-radius: 6px;
+
+            border: 1px solid #333;
+            background: #111;
+            color: #fff;
+            margin-bottom: 12px;
+            font-size: 14px;
+
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #0055ff;
+        }
+
+
+
+        button.action-btn {
+
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 8px;
+
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+
+        }
+
+
+
+        .btn-primary {
+            background: #0055ff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0044cc;
+        }
+
+        .btn-success {
+            background: #00d26a;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #00b058;
+        }
+
+        .btn-stop {
+            background: #ff4444;
+            color: white;
+            display: none;
+        }
+
+        .btn-secondary {
+            background: #2a2a2a;
+            color: #ccc;
+            border: 1px solid #333;
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: #ff4444;
+            border: 1px solid #333;
+            font-size: 12px;
+            padding: 8px;
+        }
+
+
+
+        /* LOGS E MODAIS */
+
+        .progress-area {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #0055ff, #00aaff);
+            transition: width 0.3s ease;
+        }
+
+
+
+        .log-container {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .terminal {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 6px;
+            height: 120px;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #0f0;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            border-bottom: 1px solid #111;
+            padding-bottom: 2px;
+        }
+
+        .log-error {
+            color: #ff4444;
+        }
+
+
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+            background-color: #1e1e1e;
+            margin: 15% auto;
+            padding: 25px;
+            border: 1px solid #444;
+            width: 75%;
+            border-radius: 12px;
+            color: #eee;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .close-modal {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+
+
+        .help-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+        }
+
+        .help-list li {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: start;
+            gap: 10px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .code-snip {
+            background: #000;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #0f0;
+            border: 1px solid #333;
+        }
+    </style>
+
+</head>
+
+<body>
+
+
+
+    <div class="header-container">
+
+        <img style="width: 100%; border-radius: 8px;" src="https://i.imgur.com/unBigV0.jpeg" alt="Imagem" />
+
+        <button class="help-btn" onclick="openHelp()">Dúvidas?</button>
+
+    </div>
+
+
+
+    <div class="card" style="border-left: 4px solid #00d26a;">
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+
+            <div>
+
+                <label style="margin:0; color:#aaa;">Cota Disponível Hoje:</label>
+
+                <div id="quotaDisplay" style="font-size:24px; font-weight:bold; color:#fff;">...</div>
+
+            </div>
+
+            <button class="action-btn btn-secondary" style="width:auto; padding:8px 12px; margin:0;"
+                onclick="checkQuota()">🔄</button>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="card">
+
+        <label>Assunto do Rascunho (Gmail)</label>
+
+        <input id="subjectLine" type="text" placeholder="Ex: Proposta para {{EMPRESA}}">
+
+        <p style="font-size:11px; color:#555; margin:0;">Este assunto será usado tanto no envio manual quanto no
+            automático.</p>
+
+    </div>
+
+
+
+    <div class="card">
+
+        <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #fff;">🚀 Envio Manual (Agora)</h3>
+
+
+
+        <label>Delay entre envios (ms)</label>
+
+        <div style="display:flex; gap:10px;">
+
+            <input id="minDelay" type="number" value="1000" placeholder="Min">
+
+            <input id="maxDelay" type="number" value="3000" placeholder="Max">
+
+        </div>
+
+
+
+        <label>Limite (Lote)</label>
+
+        <input id="emailLimit" type="number" value="85" placeholder="Qtd">
+
+
+
+        <button id="btnStart" class="action-btn btn-primary" onclick="startBulkProcess()">Iniciar Agora</button>
+
+        <button id="btnStop" class="action-btn btn-stop" onclick="stopProcess()">PARAR TUDO</button>
+
+
+
+        <div id="progressArea" class="progress-area">
+
+            <div
+                style="display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-bottom: 5px;">
+
+                <span id="statusText">Iniciando...</span><span id="countText">0/0</span>
+
+            </div>
+
+            <div class="progress-track">
+                <div id="progressBar" class="progress-fill"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="card">
+
+        <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #fff;">⏰ Automação (Robô)</h3>
+
+        <p style="font-size:11px; color:#777; margin-bottom:10px;">O robô verificará a cada 1 hora para enviar pequenos
+            lotes.</p>
+
+
+
+        <label>Dias de Funcionamento:</label>
+
+        <div class="week-selector">
+
+            <input type="checkbox" id="d1" class="day-check" value="1"><label for="d1" class="day-label">S</label>
+
+            <input type="checkbox" id="d2" class="day-check" value="2"><label for="d2" class="day-label">T</label>
+
+            <input type="checkbox" id="d3" class="day-check" value="3"><label for="d3" class="day-label">Q</label>
+
+            <input type="checkbox" id="d4" class="day-check" value="4"><label for="d4" class="day-label">Q</label>
+
+            <input type="checkbox" id="d5" class="day-check" value="5"><label for="d5" class="day-label">S</label>
+
+            <input type="checkbox" id="d6" class="day-check" value="6"><label for="d6" class="day-label">S</label>
+
+            <input type="checkbox" id="d0" class="day-check" value="0"><label for="d0" class="day-label">D</label>
+
+        </div>
+
+
+
+        <label>Início da Operação (Referência):</label>
+
+        <select id="scheduleHour">
+
+            <option value="8" selected>A partir das 08:00</option>
+
+            <option value="9">A partir das 09:00</option>
+
+            <option value="10">A partir das 10:00</option>
+
+        </select>
+
+        <p style="font-size:10px; color:#555;">(O robô roda automaticamente de hora em hora entre 08h e 19h)</p>
+
+
+
+        <div style="display:flex; gap:10px;">
+
+            <button class="action-btn btn-success" onclick="saveAutoSchedule(true)">✅ Ativar Agenda</button>
+
+            <button class="action-btn btn-danger" onclick="saveAutoSchedule(false)">🛑 Parar Agenda</button>
+
+        </div>
+
+        <div id="scheduleMsg" style="font-size:11px; color:#aaa; margin-top:5px; text-align:center;"></div>
+
+    </div>
+
+
+
+    <div class="card">
+
+        <button class="action-btn btn-secondary" onclick="toggleLogs()">📜 Ver Logs / Console</button>
+
+        <div id="logContainer" class="log-container">
+
+            <div id="terminal" class="terminal">
+                <div style="color: #777;">> Sistema pronto.</div>
+            </div>
+
+        </div>
+
+        <br>
+
+        <label>Email de Teste</label>
+
+        <div style="display:flex; gap:10px;"><input id="testEmail" type="text" placeholder="seu@email.com"></div>
+
+        <button class="action-btn btn-secondary" onclick="sendTest()">📩 Teste Único</button>
+
+        <br>
+
+        <button class="action-btn btn-danger" onclick="clearData()">🧹 Limpar Lista</button>
+
+    </div>
+
+
+
+    <div id="helpModal" class="modal">
+
+        <div class="modal-content">
+
+            <span class="close-modal" onclick="closeHelp()">&times;</span>
+
+            <h2 style="margin-top:0; border-bottom:1px solid #444; padding-bottom:10px;">🎓 Ajuda</h2>
+
+            <ul class="help-list">
+
+                <li>
+
+                    <span>📝</span>
+
+                    <div><strong>Tags:</strong> Use <span class="code-snip">{{COLUNA}}</span> no seu rascunho. O nome
+                        deve ser igual ao da planilha (Maiúsculas importam!).</div>
+
+                </li>
+
+                <li>
+
+                    <span>⏰</span>
+
+                    <div><strong>Horário:</strong> O Robô agora roda de <strong>hora em hora</strong> enviando 15 emails
+                        por vez até bater a meta de 80.</div>
+
+                </li>
+
+                <li>
+
+                    <span>🔒</span>
+
+                    <div><strong>Segurança:</strong> Intervalos maiores entre emails para evitar bloqueios do Gmail.
+                    </div>
+
+                </li>
+
+            </ul>
+
+            <button class="action-btn btn-primary" onclick="closeHelp()">Entendi!</button>
+
+        </div>
+
+    </div>
+
+
+
+    <script>
+
+        let isRunning = false;
+
+
+
+        document.addEventListener('DOMContentLoaded', function () {
+
+            checkQuota();
+
+            loadSettings();
+
+        });
+
+
+
+        // --- FUNÇÕES DE AJUDA E LOGS ---
+
+        function openHelp() { document.getElementById('helpModal').style.display = "block"; }
+
+        function closeHelp() { document.getElementById('helpModal').style.display = "none"; }
+
+        window.onclick = function (event) { if (event.target == document.getElementById('helpModal')) closeHelp(); }
+
+
+
+        function logToTerminal(msg, isError = false) {
+
+            const term = document.getElementById('terminal');
+
+            const div = document.createElement('div');
+
+            div.className = isError ? 'log-entry log-error' : 'log-entry';
+
+            div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+
+            term.appendChild(div);
+
+            term.scrollTop = term.scrollHeight;
+
+        }
+
+        function toggleLogs() {
+
+            const c = document.getElementById('logContainer');
+
+            c.style.display = c.style.display === 'block' ? 'none' : 'block';
+
+        }
+
+
+
+        // --- CARREGAR SETTINGS ---
+
+        function loadSettings() {
+
+            google.script.run.withSuccessHandler(settings => {
+
+                if (settings.subject) document.getElementById('subjectLine').value = settings.subject;
+
+                if (settings.hour) document.getElementById('scheduleHour').value = settings.hour;
+
+                const days = JSON.parse(settings.days);
+
+                days.forEach(d => {
+
+                    const el = document.querySelector(`input[value="${d}"]`);
+
+                    if (el) el.checked = true;
+
+                });
+
+                const msgDiv = document.getElementById('scheduleMsg');
+
+                if (settings.active) {
+
+                    msgDiv.innerText = `🟢 Agendado (Hora em Hora).`;
+
+                    msgDiv.style.color = "#00d26a";
+
+                } else {
+
+                    msgDiv.innerText = "⚪ Agendamento inativo.";
+
+                }
+
+            }).getStoredSettings();
+
+        }
+
+
+
+        // --- SALVAR AGENDAMENTO ---
+
+        function saveAutoSchedule(isActive) {
+
+            const subject = document.getElementById('subjectLine').value;
+
+            const hour = document.getElementById('scheduleHour').value;
+
+
+
+            if (!subject) return alert("Defina o Assunto antes de agendar!");
+
+
+
+            const checkboxes = document.querySelectorAll('.day-check:checked');
+
+            const selectedDays = Array.from(checkboxes).map(cb => Number(cb.value));
+
+
+
+            if (isActive && selectedDays.length === 0) return alert("Selecione pelo menos um dia da semana!");
+
+
+
+            const config = { subject: subject, hour: hour, days: selectedDays, active: isActive };
+
+            const msgDiv = document.getElementById('scheduleMsg');
+
+            msgDiv.innerText = "Salvando...";
+
+
+
+            google.script.run
+
+                .withSuccessHandler(res => {
+
+                    alert(res);
+
+                    msgDiv.innerText = isActive ? `🟢 Ativo (Conta-Gotas)` : "🛑 Parado";
+
+                    msgDiv.style.color = isActive ? "#00d26a" : "#aaa";
+
+                })
+
+                .withFailureHandler(err => alert("Erro: " + err))
+
+                .saveSchedule(config);
+
+        }
+
+
+
+        // --- COTA ---
+
+        function checkQuota() {
+
+            const display = document.getElementById('quotaDisplay');
+
+            display.innerText = "...";
+
+            google.script.run.withSuccessHandler(q => {
+
+                display.innerText = q;
+
+                display.style.color = q > 85 ? "#00d26a" : "#ff4444";
+
+            }).getQuotaOnly();
+
+        }
+
+
+
+        // --- PROCESSO MANUAL ---
+
+        async function startBulkProcess() {
+
+            const subject = document.getElementById('subjectLine').value;
+
+            const min = document.getElementById('minDelay').value;
+
+            const max = document.getElementById('maxDelay').value;
+
+            const limit = document.getElementById('emailLimit').value;
+
+
+
+            if (!subject) return alert("Digite o assunto!");
+
+
+
+            document.getElementById('btnStart').style.display = 'none';
+
+            document.getElementById('btnStop').style.display = 'flex';
+
+            document.getElementById('progressArea').style.display = "block";
+
+            document.getElementById('logContainer').style.display = "block";
+
+            logToTerminal("Iniciando modo manual...");
+
+
+
+            google.script.run.withSuccessHandler(res => {
+
+                if (res.total === 0) { logToTerminal("Nada pendente."); resetUI(); return; }
+
+                if (res.total > res.quota) {
+
+                    if (!confirm(`⚠️ Cota Baixa!\nFila: ${res.total} | Cota: ${res.quota}\nContinuar?`)) { resetUI(); return; }
+
+                }
+
+                isRunning = true;
+
+                logToTerminal(`Enviando ${res.rows.length} emails...`);
+
+                processQueue(res.rows, { subjectLine: subject, minDelay: min, maxDelay: max });
+
+            }).getPendingEmails(limit);
+
+        }
+
+
+
+        function stopProcess() {
+
+            if (isRunning) {
+
+                isRunning = false;
+
+                logToTerminal("🛑 Solicitando parada...", true);
+
+            }
+
+        }
+
+
+
+        function processQueue(rows, config) {
+
+            const total = rows.length;
+
+            let processed = 0;
+
+            function next() {
+
+                if (!isRunning) { logToTerminal("Cancelado pelo usuário."); resetUI(); return; }
+
+                if (rows.length === 0) { logToTerminal("✅ Fim do lote!"); alert("Concluído!"); checkQuota(); resetUI(); return; }
+
+
+
+                const row = rows.shift();
+
+                updateProgress(processed, total);
+
+
+
+                google.script.run.withSuccessHandler(res => {
+
+                    processed++;
+
+                    updateProgress(processed, total);
+
+                    if (res.success) logToTerminal(`OK: ${res.email}`);
+
+                    else logToTerminal(`Erro: ${res.error}`, true);
+
+                    next();
+
+                }).withFailureHandler(err => { logToTerminal("Erro rede", true); processed++; next(); }).sendSingleEmail(row, config);
+
+            }
+
+            next();
+
+        }
+
+
+
+        function updateProgress(curr, total) {
+
+            const pct = Math.round((curr / total) * 100);
+
+            document.getElementById('progressBar').style.width = pct + "%";
+
+            document.getElementById('countText').innerText = `${curr}/${total}`;
+
+            const rem = total - curr;
+
+            document.getElementById('statusText').innerText = rem === 0 ? "Finalizado" : `Faltam: ${rem}`;
+
+        }
+
+
+
+        function resetUI() {
+
+            isRunning = false;
+
+            document.getElementById('btnStart').style.display = 'flex';
+
+            document.getElementById('btnStop').style.display = 'none';
+
+        }
+
+
+
+        function sendTest() {
+
+            const email = document.getElementById('testEmail').value;
+
+            const sub = document.getElementById('subjectLine').value;
+
+            if (!email || !sub) return alert("Preencha campos!");
+
+            logToTerminal(`Testando para ${email}...`);
+
+            google.script.run.withSuccessHandler(res => { alert(res); logToTerminal("Teste OK"); })
+
+                .withFailureHandler(err => { alert("Erro: " + err); logToTerminal("Erro no teste", true); })
+
+                .sendTest({ to: email, subjectLine: sub });
+
+        }
+
+
+
+        function clearData() {
+
+            google.script.run.withSuccessHandler(alert).clearData();
+
+        }
+
+    </script>
+
+</body>
+
+</html>

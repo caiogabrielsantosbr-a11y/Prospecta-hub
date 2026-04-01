@@ -379,6 +379,7 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
     delay = config.get("delay", 2000) / 1000
     headless = config.get("headless", True)  # Novo parâmetro para navegador visual
     extract_emails = config.get("extractEmails", True)  # Novo parâmetro para extração de email
+    user_id = config.get("user_id")  # User ID for multi-user isolation
 
     # Identify location set name from cities list
     location_set_name = load_location_set_name(cities)
@@ -523,7 +524,8 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
                                 'cidade': cidade,
                                 'url': url,
                                 'conjunto_de_locais': location_set_name,
-                                'task_id': info.id
+                                'task_id': info.id,
+                                'user_id': user_id,
                             }
                             success = await supabase_client.insert_lead(lead_data)
                             if success:

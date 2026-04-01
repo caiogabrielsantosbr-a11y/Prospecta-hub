@@ -44,18 +44,18 @@ LOCAIS_DIR = Path(__file__).parent.parent.parent / "locais"
 async def create_location_set(data: LocationSetCreate):
     """
     Create a new location set by uploading to Supabase Storage.
-    
+
     Validates:
     - Name length (3-100 characters)
     - Description length (max 500 characters)
     - Locations array has at least 1 location
     - Each location is a non-empty string
     - Trims whitespace from location strings
-    
+
     Returns:
-        dict: Created location set metadata with id, name, description, 
+        dict: Created location set metadata with id, name, description,
               file_path, location_count, and created_at
-    
+
     Raises:
         HTTPException 400: Validation errors (invalid lengths, empty locations, non-string values)
         HTTPException 409: Duplicate name error
@@ -64,8 +64,10 @@ async def create_location_set(data: LocationSetCreate):
     """
     try:
         supabase_client = get_supabase_client()
-        
-        # Check if Supabase integration is available
+
+        # Check if Supabase integration is available (try reload first)
+        if not supabase_client.is_available():
+            supabase_client.reload_credentials()
         if not supabase_client.is_available():
             raise HTTPException(
                 status_code=503,
@@ -202,8 +204,10 @@ async def get_all_locations():
     """Get all available location sets from Supabase"""
     try:
         supabase_client = get_supabase_client()
-        
-        # Check if Supabase integration is available
+
+        # Check if Supabase integration is available (try reload first)
+        if not supabase_client.is_available():
+            supabase_client.reload_credentials()
         if not supabase_client.is_available():
             # Fallback to file system for backward compatibility
             if not LOCAIS_DIR.exists():
@@ -263,7 +267,9 @@ async def preview_location_set(location_set_id: str, limit: int = 10):
     try:
         supabase_client = get_supabase_client()
         
-        # Check if Supabase integration is available
+        # Check if Supabase integration is available (try reload first)
+        if not supabase_client.is_available():
+            supabase_client.reload_credentials()
         if not supabase_client.is_available():
             raise HTTPException(
                 status_code=503,
@@ -272,7 +278,7 @@ async def preview_location_set(location_set_id: str, limit: int = 10):
                     "message": "Supabase integration is not available. Please configure SUPABASE_URL and SUPABASE_KEY."
                 }
             )
-        
+
         # Validate limit parameter
         if limit < 1:
             raise HTTPException(
@@ -392,7 +398,9 @@ async def get_location_set_full(location_set_id: str):
     try:
         supabase_client = get_supabase_client()
         
-        # Check if Supabase integration is available
+        # Check if Supabase integration is available (try reload first)
+        if not supabase_client.is_available():
+            supabase_client.reload_credentials()
         if not supabase_client.is_available():
             raise HTTPException(
                 status_code=503,
@@ -401,7 +409,7 @@ async def get_location_set_full(location_set_id: str):
                     "message": "Supabase integration is not available. Please configure SUPABASE_URL and SUPABASE_KEY."
                 }
             )
-        
+
         # Call get_location_set_full method
         full_data = await supabase_client.get_location_set_full(
             location_set_id=location_set_id
@@ -501,7 +509,9 @@ async def delete_location_set(location_set_id: str):
     try:
         supabase_client = get_supabase_client()
         
-        # Check if Supabase integration is available
+        # Check if Supabase integration is available (try reload first)
+        if not supabase_client.is_available():
+            supabase_client.reload_credentials()
         if not supabase_client.is_available():
             raise HTTPException(
                 status_code=503,
@@ -510,7 +520,7 @@ async def delete_location_set(location_set_id: str):
                     "message": "Supabase integration is not available. Please configure SUPABASE_URL and SUPABASE_KEY."
                 }
             )
-        
+
         # Call delete_location_set method
         success = await supabase_client.delete_location_set(
             location_set_id=location_set_id

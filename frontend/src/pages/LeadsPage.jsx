@@ -1,160 +1,142 @@
 /**
- * Leads Management Page — Complete lead management interface
- * Comunicação DIRETA com Supabase (não usa backend local)
+ * Leads Management Page — tabbed layout with Google Sheets integration
  */
 import { useState, useEffect } from 'react'
-import { leadsService } from '../services/supabase'
+import { leadsService, gsheetsService } from '../services/supabase'
 import toast from 'react-hot-toast'
 
 export default function LeadsPage() {
+  const [activeTab, setActiveTab] = useState('leads')
+
+  return (
+    <div className="p-8 space-y-6 max-w-[1800px]">
+      {/* Header */}
+      <div className="flex flex-col gap-1">
+        <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">GERENCIAMENTO</span>
+        <h2 className="text-3xl font-bold tracking-tight">Leads</h2>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-outline-variant/10">
+        {[
+          { id: 'leads', icon: 'groups', label: 'Leads' },
+          { id: 'gsheets', icon: 'table_chart', label: 'Google Sheets' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? 'border-primary text-primary'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-base">{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'leads' && <LeadsTab />}
+      {activeTab === 'gsheets' && <GSheetsTab />}
+    </div>
+  )
+}
+
+/* ── LEADS TAB ──────────────────────────────────────────────── */
+
+function LeadsTab() {
   const [leads, setLeads] = useState([])
   const [stats, setStats] = useState(null)
   const [conjuntos, setConjuntos] = useState([])
   const [cidades, setCidades] = useState([])
-  
-  // Filters
+
   const [selectedConjunto, setSelectedConjunto] = useState('')
   const [selectedCidade, setSelectedCidade] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
-  
-  // Pagination
+
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [limit] = useState(50)
-  
-  // UI State
+
   const [loading, setLoading] = useState(false)
   const [selectedLeads, setSelectedLeads] = useState(new Set())
   const [editingLead, setEditingLead] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showSendModal, setShowSendModal] = useState(false)
 
-  // Load initial data
+  useEffect(() => { loadStats(); loadConjuntos(); loadLeads() }, [])
+  useEffect(() => { loadLeads() }, [selectedConjunto, selectedCidade, searchTerm, page])
   useEffect(() => {
-    loadStats()
-    loadConjuntos()
-    loadLeads()
-  }, [])
-
-  // Reload leads when filters or page change
-  useEffect(() => {
-    loadLeads()
-  }, [selectedConjunto, selectedCidade, searchTerm, page])
-
-  // Load cidades when conjunto changes
-  useEffect(() => {
-    if (selectedConjunto) {
-      loadCidades(selectedConjunto)
-    } else {
-      setCidades([])
-      setSelectedCidade('')
-    }
+    if (selectedConjunto) loadCidades(selectedConjunto)
+    else { setCidades([]); setSelectedCidade('') }
   }, [selectedConjunto])
 
   const loadStats = async () => {
-    try {
-      const data = await leadsService.getStats()
-      setStats(data)
-    } catch (error) {
-      console.error('Error loading stats:', error)
-      toast.error('Erro ao carregar estatísticas')
-    }
+    try { setStats(await leadsService.getStats()) }
+    catch (e) { console.error(e) }
   }
 
   const loadConjuntos = async () => {
-    try {
-      const data = await leadsService.getConjuntos()
-      setConjuntos(data || [])
-    } catch (error) {
-      console.error('Error loading conjuntos:', error)
-    }
+    try { setConjuntos(await leadsService.getConjuntos() || []) }
+    catch (e) { console.error(e) }
   }
 
   const loadCidades = async (conjunto) => {
-    try {
-      const data = await leadsService.getCidades(conjunto)
-      setCidades(data || [])
-    } catch (error) {
-      console.error('Error loading cidades:', error)
-    }
+    try { setCidades(await leadsService.getCidades(conjunto) || []) }
+    catch (e) { console.error(e) }
   }
 
   const loadLeads = async () => {
     setLoading(true)
     try {
-      const offset = (page - 1) * limit
       const { leads: data, total: count } = await leadsService.getLeads({
-        limit,
-        offset,
+        limit, offset: (page - 1) * limit,
         conjunto: selectedConjunto || undefined,
         cidade: selectedCidade || undefined,
-        search: searchTerm || undefined
+        search: searchTerm || undefined,
       })
-      
       setLeads(data || [])
       setTotal(count || 0)
-    } catch (error) {
-      console.error('Error loading leads:', error)
+    } catch (e) {
+      console.error(e)
       toast.error('Erro ao carregar leads')
-      setLeads([])
-      setTotal(0)
+      setLeads([]); setTotal(0)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = async (leadId) => {
-    if (!confirm('Tem certeza que deseja excluir este lead?')) return
-    
+  const handleDelete = async (id) => {
+    if (!confirm('Excluir este lead?')) return
     try {
-      await leadsService.deleteLead(leadId)
-      toast.success('Lead excluído com sucesso')
-      loadLeads()
-      loadStats()
-    } catch (error) {
-      console.error('Error deleting lead:', error)
-      toast.error('Erro ao excluir lead')
-    }
+      await leadsService.deleteLead(id)
+      toast.success('Lead excluído')
+      loadLeads(); loadStats()
+    } catch (e) { toast.error('Erro ao excluir') }
   }
 
   const handleBulkDelete = async () => {
-    if (selectedLeads.size === 0) return
-    if (!confirm(`Tem certeza que deseja excluir ${selectedLeads.size} leads?`)) return
-    
+    if (!selectedLeads.size || !confirm(`Excluir ${selectedLeads.size} leads?`)) return
     try {
       await leadsService.deleteLeads([...selectedLeads])
       setSelectedLeads(new Set())
-      toast.success(`${selectedLeads.size} leads excluídos com sucesso`)
-      loadLeads()
-      loadStats()
-    } catch (error) {
-      console.error('Error deleting leads:', error)
-      toast.error('Erro ao excluir leads')
-    }
-  }
-
-  const handleEdit = (lead) => {
-    setEditingLead({ ...lead })
-    setShowEditModal(true)
+      toast.success(`${selectedLeads.size} leads excluídos`)
+      loadLeads(); loadStats()
+    } catch (e) { toast.error('Erro ao excluir') }
   }
 
   const handleSaveEdit = async () => {
     try {
       await leadsService.updateLead(editingLead.id, {
-        nome: editingLead.nome,
-        telefone: editingLead.telefone,
-        website: editingLead.website,
-        email: editingLead.email,
-        endereco: editingLead.endereco,
-        cidade: editingLead.cidade
+        nome: editingLead.nome, telefone: editingLead.telefone,
+        website: editingLead.website, email: editingLead.email,
+        endereco: editingLead.endereco, cidade: editingLead.cidade,
       })
-      setShowEditModal(false)
-      setEditingLead(null)
-      toast.success('Lead atualizado com sucesso')
+      setShowEditModal(false); setEditingLead(null)
+      toast.success('Lead atualizado')
       loadLeads()
-    } catch (error) {
-      console.error('Error updating lead:', error)
-      toast.error('Erro ao atualizar lead')
-    }
+    } catch (e) { toast.error('Erro ao atualizar') }
   }
 
   const handleExport = async () => {
@@ -162,37 +144,22 @@ export default function LeadsPage() {
       const data = await leadsService.exportLeads({
         conjunto: selectedConjunto || undefined,
         cidade: selectedCidade || undefined,
-        search: searchTerm || undefined
+        search: searchTerm || undefined,
       })
-      
-      // Convert to CSV
-      const csv = convertToCSV(data)
-      downloadCSV(csv, `leads-${Date.now()}.csv`)
+      downloadCSV(convertToCSV(data), `leads-${Date.now()}.csv`)
       toast.success(`${data.length} leads exportados`)
-    } catch (error) {
-      console.error('Error exporting leads:', error)
-      toast.error('Erro ao exportar leads')
-    }
+    } catch (e) { toast.error('Erro ao exportar') }
   }
 
   const convertToCSV = (data) => {
-    if (!data || data.length === 0) return ''
-    
+    if (!data?.length) return ''
     const headers = ['ID', 'Nome', 'Telefone', 'Email', 'Website', 'Endereço', 'Cidade', 'Conjunto', 'URL', 'Data']
-    const rows = data.map(lead => [
-      lead.id,
-      lead.nome,
-      lead.telefone || '',
-      lead.email || '',
-      lead.website || '',
-      lead.endereco || '',
-      lead.cidade || '',
-      lead.conjunto_de_locais || '',
-      lead.url || '',
-      new Date(lead.created_at).toLocaleString('pt-BR')
+    const rows = data.map(l => [
+      l.id, l.nome, l.telefone || '', l.email || '', l.website || '',
+      l.endereco || '', l.cidade || '', l.conjunto_de_locais || '', l.url || '',
+      new Date(l.created_at).toLocaleString('pt-BR'),
     ])
-    
-    return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(';')).join('\n')
+    return [headers, ...rows].map(r => r.map(c => `"${c}"`).join(';')).join('\n')
   }
 
   const downloadCSV = (csv, filename) => {
@@ -204,110 +171,71 @@ export default function LeadsPage() {
   }
 
   const toggleSelectAll = () => {
-    if (selectedLeads.size === leads.length) {
-      setSelectedLeads(new Set())
-    } else {
-      setSelectedLeads(new Set(leads.map(l => l.id)))
-    }
+    setSelectedLeads(selectedLeads.size === leads.length ? new Set() : new Set(leads.map(l => l.id)))
   }
 
   const toggleSelect = (id) => {
-    const newSelected = new Set(selectedLeads)
-    if (newSelected.has(id)) {
-      newSelected.delete(id)
-    } else {
-      newSelected.add(id)
-    }
-    setSelectedLeads(newSelected)
+    const s = new Set(selectedLeads)
+    s.has(id) ? s.delete(id) : s.add(id)
+    setSelectedLeads(s)
   }
 
   const totalPages = Math.ceil(total / limit)
 
   return (
-    <div className="p-8 space-y-8 max-w-[1800px]">
-      {/* Header */}
-      <div className="flex flex-col gap-1">
-        <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">GERENCIAMENTO</span>
-        <h2 className="text-3xl font-bold tracking-tight">Leads</h2>
-      </div>
-
-      {/* Stats Cards */}
+    <div className="space-y-6">
+      {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-          <StatCard label="Total de Leads" value={stats.total} icon="groups" />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <StatCard label="Total" value={stats.total} icon="groups" />
           <StatCard label="Com Telefone" value={stats.with_phone} icon="phone" color="text-primary" />
-          <StatCard label="Com Email" value={stats.with_email || 0} icon="email" color="text-secondary" />
+          <StatCard label="Com Email" value={stats.with_email} icon="email" color="text-secondary" />
           <StatCard label="Com Website" value={stats.with_website} icon="language" color="text-tertiary" />
           <StatCard label="Sem Telefone" value={stats.without_phone} icon="phone_disabled" color="text-error" />
           <StatCard label="Sem Website" value={stats.without_website} icon="link_off" color="text-on-surface-variant" />
         </div>
       )}
 
-      {/* Filters & Actions */}
+      {/* Filters */}
       <div className="glass-card p-6 rounded-lg space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Search */}
           <div className="md:col-span-2">
             <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Buscar</label>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value)
-                setPage(1)
-              }}
-              placeholder="Nome, telefone ou website..."
-              className="w-full"
-            />
+            <input type="text" value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }}
+              placeholder="Nome, telefone, email ou website..." className="w-full" />
           </div>
-
-          {/* Conjunto Filter */}
           <div>
             <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Conjunto</label>
-            <select
-              value={selectedConjunto}
-              onChange={(e) => {
-                setSelectedConjunto(e.target.value)
-                setPage(1)
-              }}
-              className="w-full"
-            >
+            <select value={selectedConjunto}
+              onChange={(e) => { setSelectedConjunto(e.target.value); setPage(1) }} className="w-full">
               <option value="">Todos</option>
-              {conjuntos.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
+              {conjuntos.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-
-          {/* Cidade Filter */}
           <div>
             <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Cidade</label>
-            <select
-              value={selectedCidade}
-              onChange={(e) => {
-                setSelectedCidade(e.target.value)
-                setPage(1)
-              }}
-              className="w-full"
-              disabled={!selectedConjunto}
-            >
+            <select value={selectedCidade}
+              onChange={(e) => { setSelectedCidade(e.target.value); setPage(1) }}
+              className="w-full" disabled={!selectedConjunto}>
               <option value="">Todas</option>
-              {cidades.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
+              {cidades.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="flex items-center justify-between pt-4 border-t border-outline-variant/10">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {selectedLeads.size > 0 && (
               <>
                 <span className="text-sm text-on-surface-variant">{selectedLeads.size} selecionado(s)</span>
+                <button onClick={() => setShowSendModal(true)} className="btn-primary">
+                  <span className="material-symbols-outlined text-sm">send</span>
+                  Enviar para Planilhas
+                </button>
                 <button onClick={handleBulkDelete} className="btn-ghost text-error border-error hover:bg-error/10">
                   <span className="material-symbols-outlined text-sm">delete</span>
-                  Excluir Selecionados
+                  Excluir
                 </button>
               </>
             )}
@@ -319,7 +247,7 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      {/* Leads Table */}
+      {/* Table */}
       <div className="glass-card rounded-lg overflow-hidden">
         {loading ? (
           <div className="p-12 text-center">
@@ -338,32 +266,21 @@ export default function LeadsPage() {
                 <thead className="bg-surface-container-high border-b border-outline-variant/10">
                   <tr>
                     <th className="p-4 text-left">
-                      <input
-                        type="checkbox"
+                      <input type="checkbox"
                         checked={selectedLeads.size === leads.length && leads.length > 0}
-                        onChange={toggleSelectAll}
-                        className="w-4 h-4"
-                      />
+                        onChange={toggleSelectAll} className="w-4 h-4" />
                     </th>
-                    <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Nome</th>
-                    <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Telefone</th>
-                    <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Email</th>
-                    <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Website</th>
-                    <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Cidade</th>
-                    <th className="p-4 text-left text-xs font-bold uppercase tracking-wider">Conjunto</th>
-                    <th className="p-4 text-right text-xs font-bold uppercase tracking-wider">Ações</th>
+                    {['Nome', 'Telefone', 'Email', 'Website', 'Cidade', 'Conjunto', 'Ações'].map(h => (
+                      <th key={h} className="p-4 text-left text-xs font-bold uppercase tracking-wider">{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {leads.map((lead) => (
                     <tr key={lead.id} className="border-b border-outline-variant/5 hover:bg-surface-container-low/30 transition-colors">
                       <td className="p-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedLeads.has(lead.id)}
-                          onChange={() => toggleSelect(lead.id)}
-                          className="w-4 h-4"
-                        />
+                        <input type="checkbox" checked={selectedLeads.has(lead.id)}
+                          onChange={() => toggleSelect(lead.id)} className="w-4 h-4" />
                       </td>
                       <td className="p-4">
                         <div className="font-semibold">{lead.nome}</div>
@@ -375,29 +292,23 @@ export default function LeadsPage() {
                             <span className="material-symbols-outlined text-sm">phone</span>
                             {lead.telefone}
                           </a>
-                        ) : (
-                          <span className="text-on-surface-variant text-sm">—</span>
-                        )}
+                        ) : <span className="text-on-surface-variant text-sm">—</span>}
                       </td>
                       <td className="p-4">
                         {lead.email ? (
                           <a href={`mailto:${lead.email}`} className="text-primary hover:underline flex items-center gap-1">
                             <span className="material-symbols-outlined text-sm">email</span>
-                            <span className="truncate max-w-[180px]">{lead.email}</span>
+                            <span className="truncate max-w-[160px] block">{lead.email}</span>
                           </a>
-                        ) : (
-                          <span className="text-on-surface-variant text-sm">—</span>
-                        )}
+                        ) : <span className="text-on-surface-variant text-sm">—</span>}
                       </td>
                       <td className="p-4">
                         {lead.website && lead.website !== 'Sem Website' ? (
                           <a href={lead.website} target="_blank" rel="noopener noreferrer" className="text-secondary hover:underline flex items-center gap-1">
                             <span className="material-symbols-outlined text-sm">language</span>
-                            <span className="truncate max-w-[200px]">{lead.website}</span>
+                            <span className="truncate max-w-[160px] block">{lead.website}</span>
                           </a>
-                        ) : (
-                          <span className="text-on-surface-variant text-sm">—</span>
-                        )}
+                        ) : <span className="text-on-surface-variant text-sm">—</span>}
                       </td>
                       <td className="p-4 text-sm">{lead.cidade || '—'}</td>
                       <td className="p-4">
@@ -408,28 +319,17 @@ export default function LeadsPage() {
                       <td className="p-4">
                         <div className="flex items-center justify-end gap-1">
                           {lead.url && (
-                            <a
-                              href={lead.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-2 rounded-lg hover:bg-surface-container-highest transition-all"
-                              title="Ver no Google Maps"
-                            >
+                            <a href={lead.url} target="_blank" rel="noopener noreferrer"
+                              className="p-2 rounded-lg hover:bg-surface-container-highest transition-all" title="Ver no Maps">
                               <span className="material-symbols-outlined text-sm text-on-surface-variant">map</span>
                             </a>
                           )}
-                          <button
-                            onClick={() => handleEdit(lead)}
-                            className="p-2 rounded-lg hover:bg-surface-container-highest transition-all"
-                            title="Editar"
-                          >
+                          <button onClick={() => { setEditingLead({ ...lead }); setShowEditModal(true) }}
+                            className="p-2 rounded-lg hover:bg-surface-container-highest transition-all">
                             <span className="material-symbols-outlined text-sm text-on-surface-variant">edit</span>
                           </button>
-                          <button
-                            onClick={() => handleDelete(lead.id)}
-                            className="p-2 rounded-lg hover:bg-surface-container-highest transition-all"
-                            title="Excluir"
-                          >
+                          <button onClick={() => handleDelete(lead.id)}
+                            className="p-2 rounded-lg hover:bg-surface-container-highest transition-all">
                             <span className="material-symbols-outlined text-sm text-error">delete</span>
                           </button>
                         </div>
@@ -440,28 +340,19 @@ export default function LeadsPage() {
               </table>
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between p-4 border-t border-outline-variant/10">
                 <div className="text-sm text-on-surface-variant">
-                  Mostrando {(page - 1) * limit + 1} a {Math.min(page * limit, total)} de {total} leads
+                  Mostrando {(page - 1) * limit + 1}–{Math.min(page * limit, total)} de {total} leads
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="p-2 rounded-lg hover:bg-surface-container-highest transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                    className="p-2 rounded-lg hover:bg-surface-container-highest disabled:opacity-30 disabled:cursor-not-allowed">
                     <span className="material-symbols-outlined">chevron_left</span>
                   </button>
-                  <span className="text-sm font-semibold px-4">
-                    Página {page} de {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="p-2 rounded-lg hover:bg-surface-container-highest transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
+                  <span className="text-sm font-semibold px-4">Página {page} de {totalPages}</span>
+                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                    className="p-2 rounded-lg hover:bg-surface-container-highest disabled:opacity-30 disabled:cursor-not-allowed">
                     <span className="material-symbols-outlined">chevron_right</span>
                   </button>
                 </div>
@@ -471,23 +362,451 @@ export default function LeadsPage() {
         )}
       </div>
 
-      {/* Edit Modal */}
       {showEditModal && editingLead && (
-        <EditLeadModal
-          lead={editingLead}
-          onSave={handleSaveEdit}
-          onClose={() => {
-            setShowEditModal(false)
-            setEditingLead(null)
-          }}
-          onChange={setEditingLead}
+        <EditLeadModal lead={editingLead} onSave={handleSaveEdit}
+          onClose={() => { setShowEditModal(false); setEditingLead(null) }}
+          onChange={setEditingLead} />
+      )}
+
+      {showSendModal && (
+        <SendToSheetsModal
+          leadIds={[...selectedLeads]}
+          onClose={() => setShowSendModal(false)}
+          onSent={() => { setShowSendModal(false); setSelectedLeads(new Set()) }}
         />
       )}
     </div>
   )
 }
 
-/* ── Sub-Components ───────────────────────────────────────── */
+/* ── GSHEETS TAB ────────────────────────────────────────────── */
+
+function GSheetsTab() {
+  const [webhooks, setWebhooks] = useState([])
+  const [history, setHistory] = useState([])
+  const [sendStats, setSendStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [showAddModal, setShowAddModal] = useState(false)
+
+  useEffect(() => { loadAll() }, [])
+
+  const loadAll = async () => {
+    setLoading(true)
+    try {
+      const [wh, hist, stats] = await Promise.all([
+        gsheetsService.getWebhooks(),
+        gsheetsService.getSendHistory({ limit: 20 }),
+        gsheetsService.getSendStats(),
+      ])
+      setWebhooks(wh)
+      setHistory(hist)
+      setSendStats(stats)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    if (!confirm('Excluir esta planilha?')) return
+    try {
+      await gsheetsService.deleteWebhook(id)
+      toast.success('Planilha removida')
+      loadAll()
+    } catch (e) { toast.error('Erro ao remover') }
+  }
+
+  const handleToggle = async (webhook) => {
+    try {
+      await gsheetsService.updateWebhook(webhook.id, { active: !webhook.active })
+      loadAll()
+    } catch (e) { toast.error('Erro ao atualizar') }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Send Stats */}
+      {sendStats && (
+        <div className="grid grid-cols-3 gap-4">
+          <StatCard label="Enviados Hoje" value={sendStats.today} icon="today" color="text-primary" />
+          <StatCard label="Esta Semana" value={sendStats.week} icon="date_range" color="text-secondary" />
+          <StatCard label="Este Mês" value={sendStats.month} icon="calendar_month" color="text-tertiary" />
+        </div>
+      )}
+
+      {/* Webhooks List */}
+      <div className="glass-card rounded-lg overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/10">
+          <h3 className="font-bold text-lg">Planilhas Cadastradas</h3>
+          <button onClick={() => setShowAddModal(true)} className="btn-primary">
+            <span className="material-symbols-outlined text-lg">add</span>
+            Adicionar Planilha
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="inline-block w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : webhooks.length === 0 ? (
+          <div className="p-12 text-center">
+            <span className="material-symbols-outlined text-6xl text-on-surface-variant opacity-30">table_chart</span>
+            <p className="mt-4 text-on-surface-variant">Nenhuma planilha cadastrada</p>
+            <p className="text-sm text-on-surface-variant opacity-60 mt-1">
+              Adicione uma planilha Google Sheets com webhook para enviar leads
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-outline-variant/5">
+            {webhooks.map(wh => (
+              <div key={wh.id} className="flex items-center gap-4 px-6 py-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{wh.name}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      wh.active ? 'bg-primary/20 text-primary' : 'bg-surface-container-high text-on-surface-variant'
+                    }`}>
+                      {wh.active ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
+                  {wh.description && <p className="text-sm text-on-surface-variant mt-0.5">{wh.description}</p>}
+                  <p className="text-xs text-on-surface-variant opacity-60 mt-1 truncate">{wh.webhook_url}</p>
+                </div>
+                <div className="text-right text-sm text-on-surface-variant shrink-0">
+                  <div>Limite: {wh.daily_limit}/dia</div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => handleToggle(wh)}
+                    className="p-2 rounded-lg hover:bg-surface-container-highest transition-all"
+                    title={wh.active ? 'Desativar' : 'Ativar'}>
+                    <span className="material-symbols-outlined text-sm text-on-surface-variant">
+                      {wh.active ? 'toggle_on' : 'toggle_off'}
+                    </span>
+                  </button>
+                  <button onClick={() => handleDelete(wh.id)}
+                    className="p-2 rounded-lg hover:bg-surface-container-highest transition-all">
+                    <span className="material-symbols-outlined text-sm text-error">delete</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Send History */}
+      {history.length > 0 && (
+        <div className="glass-card rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-outline-variant/10">
+            <h3 className="font-bold text-lg">Histórico de Envios</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-surface-container-high border-b border-outline-variant/10">
+                <tr>
+                  {['Data', 'Planilha', 'Leads', 'Status'].map(h => (
+                    <th key={h} className="p-4 text-left text-xs font-bold uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {history.map(h => (
+                  <tr key={h.id} className="border-b border-outline-variant/5 hover:bg-surface-container-low/30 transition-colors">
+                    <td className="p-4 text-sm">{new Date(h.sent_at).toLocaleString('pt-BR')}</td>
+                    <td className="p-4 text-sm">{h.webhook_name || h.gsheets_webhooks?.name || '—'}</td>
+                    <td className="p-4 text-sm font-semibold">{h.leads_sent}</td>
+                    <td className="p-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        h.status === 'success' ? 'bg-primary/20 text-primary' : 'bg-error/20 text-error'
+                      }`}>
+                        {h.status === 'success' ? 'Sucesso' : 'Erro'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {showAddModal && (
+        <AddWebhookModal onClose={() => setShowAddModal(false)} onAdded={loadAll} />
+      )}
+    </div>
+  )
+}
+
+/* ── MODALS ─────────────────────────────────────────────────── */
+
+function SendToSheetsModal({ leadIds, onClose, onSent }) {
+  const [webhooks, setWebhooks] = useState([])
+  const [selectedWebhooks, setSelectedWebhooks] = useState(new Set())
+  const [distribution, setDistribution] = useState('all')
+  const [sending, setSending] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    gsheetsService.getWebhooks()
+      .then(wh => { setWebhooks(wh.filter(w => w.active)); setLoading(false) })
+      .catch(e => { console.error(e); setLoading(false) })
+  }, [])
+
+  const toggleWebhook = (id) => {
+    const s = new Set(selectedWebhooks)
+    s.has(id) ? s.delete(id) : s.add(id)
+    setSelectedWebhooks(s)
+  }
+
+  const handleSend = async () => {
+    if (!selectedWebhooks.size) { toast.error('Selecione ao menos uma planilha'); return }
+    setSending(true)
+    try {
+      const leads = await leadsService.getLeadsByIds(leadIds)
+      const activeWebhooks = webhooks.filter(w => selectedWebhooks.has(w.id))
+
+      let assignments = []
+      if (distribution === 'all') {
+        assignments = activeWebhooks.map(w => ({ webhook: w, leads }))
+      } else if (distribution === 'equal') {
+        const chunkSize = Math.ceil(leads.length / activeWebhooks.length)
+        assignments = activeWebhooks.map((w, i) => ({
+          webhook: w, leads: leads.slice(i * chunkSize, (i + 1) * chunkSize)
+        }))
+      } else if (distribution === 'daily_limit') {
+        let remaining = [...leads]
+        assignments = activeWebhooks.map(w => {
+          const chunk = remaining.splice(0, w.daily_limit)
+          return { webhook: w, leads: chunk }
+        })
+      }
+
+      let totalSent = 0
+      for (const { webhook, leads: batch } of assignments) {
+        if (!batch.length) continue
+        try {
+          const payload = {
+            leads: batch.map(l => ({
+              EMPRESA: l.nome, EMAIL: l.email || '', TELEFONE: l.telefone || '',
+              CIDADE: l.cidade || '', WEBSITE: l.website || '',
+            })),
+            source: 'prospectahub',
+            sent_at: new Date().toISOString(),
+          }
+          const res = await fetch(webhook.webhook_url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+          const status = res.ok ? 'success' : 'error'
+          await gsheetsService.recordSend({
+            webhook_id: webhook.id, webhook_name: webhook.name,
+            leads_sent: batch.length, status,
+          })
+          if (res.ok) totalSent += batch.length
+        } catch (e) {
+          await gsheetsService.recordSend({
+            webhook_id: webhook.id, webhook_name: webhook.name,
+            leads_sent: 0, status: 'error', error_detail: e.message,
+          })
+        }
+      }
+
+      toast.success(`${totalSent} leads enviados para ${selectedWebhooks.size} planilha(s)`)
+      onSent()
+    } catch (e) {
+      console.error(e)
+      toast.error('Erro ao enviar leads')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const getPreview = () => {
+    const count = selectedWebhooks.size
+    if (!count) return 'Selecione planilhas'
+    if (distribution === 'all') return `${leadIds.length} leads → cada planilha`
+    if (distribution === 'equal') return `~${Math.ceil(leadIds.length / count)} leads/planilha`
+    if (distribution === 'daily_limit') {
+      const total = webhooks.filter(w => selectedWebhooks.has(w.id)).reduce((s, w) => s + w.daily_limit, 0)
+      return `Até ${Math.min(leadIds.length, total)} leads distribuídos`
+    }
+  }
+
+  return (
+    <Modal title="Enviar para Planilhas" onClose={onClose}>
+      {loading ? (
+        <div className="p-8 text-center">
+          <div className="inline-block w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : webhooks.length === 0 ? (
+        <div className="p-8 text-center text-on-surface-variant">
+          Nenhuma planilha ativa. Cadastre uma na aba Google Sheets.
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div>
+            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">
+              Planilhas de destino
+            </label>
+            <div className="space-y-2">
+              {webhooks.map(w => (
+                <label key={w.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-low cursor-pointer">
+                  <input type="checkbox" checked={selectedWebhooks.has(w.id)}
+                    onChange={() => toggleWebhook(w.id)} className="w-4 h-4" />
+                  <div className="flex-1">
+                    <div className="font-medium">{w.name}</div>
+                    {w.description && <div className="text-xs text-on-surface-variant">{w.description}</div>}
+                  </div>
+                  <span className="text-xs text-on-surface-variant">Limite: {w.daily_limit}/dia</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">
+              Modo de distribuição
+            </label>
+            <div className="space-y-2">
+              {[
+                { id: 'all', label: 'Todos para cada planilha', desc: 'Duplica os leads em todas as planilhas selecionadas' },
+                { id: 'equal', label: 'Distribuir igualmente', desc: 'Divide os leads entre as planilhas selecionadas' },
+                { id: 'daily_limit', label: 'Respeitar limite diário', desc: 'Não ultrapassa o limite configurado por planilha' },
+              ].map(opt => (
+                <label key={opt.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-surface-container-low cursor-pointer">
+                  <input type="radio" name="distribution" value={opt.id}
+                    checked={distribution === opt.id} onChange={() => setDistribution(opt.id)} className="mt-0.5" />
+                  <div>
+                    <div className="font-medium text-sm">{opt.label}</div>
+                    <div className="text-xs text-on-surface-variant">{opt.desc}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-surface-container rounded-lg p-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-base">info</span>
+              <span><strong>{leadIds.length} leads</strong> selecionados — {getPreview()}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-end gap-4 pt-4 border-t border-outline-variant/10 mt-4">
+        <button onClick={onClose} className="btn-ghost">Cancelar</button>
+        <button onClick={handleSend} disabled={sending || !selectedWebhooks.size}
+          className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+          {sending ? (
+            <><span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Enviando...</>
+          ) : (
+            <><span className="material-symbols-outlined text-lg">send</span>Enviar</>
+          )}
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+function AddWebhookModal({ onClose, onAdded }) {
+  const [form, setForm] = useState({ name: '', webhook_url: '', description: '', daily_limit: 80 })
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    if (!form.name || !form.webhook_url) { toast.error('Nome e URL são obrigatórios'); return }
+    setSaving(true)
+    try {
+      await gsheetsService.createWebhook(form)
+      toast.success('Planilha adicionada!')
+      onAdded(); onClose()
+    } catch (e) { toast.error('Erro ao salvar'); setSaving(false) }
+  }
+
+  return (
+    <Modal title="Adicionar Planilha" onClose={onClose}>
+      <div className="space-y-4">
+        <div>
+          <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Nome *</label>
+          <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+            placeholder="Ex: Planilha Prospecção SP" className="w-full" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">URL do Webhook *</label>
+          <input type="url" value={form.webhook_url} onChange={e => setForm({ ...form, webhook_url: e.target.value })}
+            placeholder="https://script.google.com/macros/s/.../exec" className="w-full" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Descrição</label>
+          <input type="text" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
+            placeholder="Planilha para campanha X" className="w-full" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Limite diário</label>
+          <input type="number" value={form.daily_limit} min={1}
+            onChange={e => setForm({ ...form, daily_limit: parseInt(e.target.value) || 80 })} className="w-full" />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end gap-4 pt-4 border-t border-outline-variant/10 mt-4">
+        <button onClick={onClose} className="btn-ghost">Cancelar</button>
+        <button onClick={handleSave} disabled={saving} className="btn-primary disabled:opacity-50">
+          <span className="material-symbols-outlined text-lg">save</span>
+          {saving ? 'Salvando...' : 'Salvar'}
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+function EditLeadModal({ lead, onSave, onClose, onChange }) {
+  return (
+    <Modal title="Editar Lead" onClose={onClose}>
+      <div className="space-y-4">
+        {[
+          { key: 'nome', label: 'Nome', type: 'text' },
+          { key: 'telefone', label: 'Telefone', type: 'text' },
+          { key: 'website', label: 'Website', type: 'text' },
+          { key: 'email', label: 'Email', type: 'email' },
+          { key: 'endereco', label: 'Endereço', type: 'text' },
+          { key: 'cidade', label: 'Cidade', type: 'text' },
+        ].map(({ key, label, type }) => (
+          <div key={key}>
+            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">{label}</label>
+            <input type={type} value={lead[key] || ''}
+              onChange={(e) => onChange({ ...lead, [key]: e.target.value })} className="w-full" />
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-end gap-4 pt-4 border-t border-outline-variant/10 mt-4">
+        <button onClick={onClose} className="btn-ghost">Cancelar</button>
+        <button onClick={onSave} className="btn-primary">
+          <span className="material-symbols-outlined text-lg">save</span>Salvar
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+function Modal({ title, onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}>
+      <div className="bg-surface-container rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.8)] border border-outline-variant/20 w-full max-w-2xl max-h-[85vh] overflow-hidden animate-scale-in"
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-8 py-6 border-b border-outline-variant/10">
+          <h3 className="text-2xl font-bold tracking-tight">{title}</h3>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface-container-highest transition-all">
+            <span className="material-symbols-outlined text-on-surface-variant">close</span>
+          </button>
+        </div>
+        <div className="p-8 overflow-y-auto max-h-[calc(85vh-160px)]">{children}</div>
+      </div>
+    </div>
+  )
+}
 
 function StatCard({ label, value, icon, color = 'text-primary' }) {
   return (
@@ -496,98 +815,7 @@ function StatCard({ label, value, icon, color = 'text-primary' }) {
         <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">{label}</span>
         <span className={`material-symbols-outlined ${color}`}>{icon}</span>
       </div>
-      <div className="text-2xl font-bold">{value?.toLocaleString() || 0}</div>
-    </div>
-  )
-}
-
-function EditLeadModal({ lead, onSave, onClose, onChange }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-      <div className="bg-surface-container rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.8)] border border-outline-variant/20 w-full max-w-2xl max-h-[80vh] overflow-hidden animate-scale-in" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-8 py-6 border-b border-outline-variant/10">
-          <h3 className="text-2xl font-bold tracking-tight">Editar Lead</h3>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface-container-highest transition-all">
-            <span className="material-symbols-outlined text-on-surface-variant">close</span>
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-8 space-y-4 overflow-y-auto max-h-[calc(80vh-180px)]">
-          <div>
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Nome</label>
-            <input
-              type="text"
-              value={lead.nome}
-              onChange={(e) => onChange({ ...lead, nome: e.target.value })}
-              className="w-full"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Telefone</label>
-            <input
-              type="text"
-              value={lead.telefone || ''}
-              onChange={(e) => onChange({ ...lead, telefone: e.target.value })}
-              className="w-full"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Website</label>
-            <input
-              type="text"
-              value={lead.website || ''}
-              onChange={(e) => onChange({ ...lead, website: e.target.value })}
-              className="w-full"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Email</label>
-            <input
-              type="email"
-              value={lead.email || ''}
-              onChange={(e) => onChange({ ...lead, email: e.target.value })}
-              className="w-full"
-              placeholder="email@exemplo.com"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Endereço</label>
-            <input
-              type="text"
-              value={lead.endereco || ''}
-              onChange={(e) => onChange({ ...lead, endereco: e.target.value })}
-              className="w-full"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Cidade</label>
-            <input
-              type="text"
-              value={lead.cidade || ''}
-              onChange={(e) => onChange({ ...lead, cidade: e.target.value })}
-              className="w-full"
-            />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-4 px-8 py-6 border-t border-outline-variant/10">
-          <button onClick={onClose} className="btn-ghost">
-            Cancelar
-          </button>
-          <button onClick={onSave} className="btn-primary">
-            <span className="material-symbols-outlined text-lg">save</span>
-            Salvar
-          </button>
-        </div>
-      </div>
+      <div className="text-2xl font-bold">{(value ?? 0).toLocaleString()}</div>
     </div>
   )
 }
