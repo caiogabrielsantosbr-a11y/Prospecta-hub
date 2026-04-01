@@ -24,6 +24,16 @@ data/
 *.swp
 *.swo
 *~
+.kiro/
+.agents/
+
+# Claude Code / MCP
+.claude/
+.mcp.json
+skills-lock.json
+
+# Tools
+ngrok.exe
 
 # OS
 .DS_Store
