@@ -32,7 +32,7 @@ async function edgeFn(fnName, { method = 'GET', params = {}, body } = {}) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(err.error || 'Erro na API')
+    throw new Error(err.error || err.message || err.msg || `Erro ${res.status}`)
   }
   return res.json()
 }
