@@ -9,29 +9,18 @@ export default function LeadsPage() {
   const [activeTab, setActiveTab] = useState('leads')
 
   return (
-    <div className="p-8 space-y-6 max-w-[1800px]">
-      {/* Header */}
-      <div className="flex flex-col gap-1">
-        <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">GERENCIAMENTO</span>
-        <h2 className="text-3xl font-bold tracking-tight">Leads</h2>
-      </div>
-
+    <div style={{ padding: 24 }}>
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-outline-variant/10">
+      <div className="pro-tabs">
         {[
-          { id: 'leads', icon: 'groups', label: 'Leads' },
-          { id: 'gsheets', icon: 'table_chart', label: 'Google Sheets' },
+          { id: 'leads', label: 'Leads' },
+          { id: 'gsheets', label: 'Google Sheets' },
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
-              activeTab === tab.id
-                ? 'border-primary text-primary'
-                : 'border-transparent text-on-surface-variant hover:text-on-surface'
-            }`}
+            className={`pro-tab ${activeTab === tab.id ? 'active' : ''}`}
           >
-            <span className="material-symbols-outlined text-base">{tab.icon}</span>
             {tab.label}
           </button>
         ))}
@@ -805,17 +794,16 @@ function EditLeadModal({ lead, onSave, onClose, onChange }) {
 
 function Modal({ title, onClose, children }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
-      onClick={onClose}>
-      <div className="bg-surface-container rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.8)] border border-outline-variant/20 w-full max-w-2xl max-h-[85vh] overflow-hidden animate-scale-in"
+    <div className="modal-overlay animate-fade-in" onClick={onClose}>
+      <div className="modal-container animate-scale-in" style={{ maxWidth: 640, maxHeight: '85vh', overflow: 'hidden' }}
         onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-8 py-6 border-b border-outline-variant/10">
-          <h3 className="font-condensed text-3xl font-bold">{title}</h3>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface-container-highest transition-all">
-            <span className="material-symbols-outlined text-on-surface-variant">close</span>
+        <div className="modal-header">
+          <div className="modal-title">{title}</div>
+          <button onClick={onClose} className="btn-icon">
+            <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
-        <div className="p-8 overflow-y-auto max-h-[calc(85vh-160px)]">{children}</div>
+        <div className="modal-body" style={{ overflowY: 'auto', maxHeight: 'calc(85vh - 160px)' }}>{children}</div>
       </div>
     </div>
   )
@@ -1197,12 +1185,12 @@ function WebhookControlModal({ webhook, onClose }) {
 
 function StatCard({ label, value, icon, color = 'text-primary' }) {
   return (
-    <div className="glass-card p-4 rounded-lg">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">{label}</span>
-        <span className={`material-symbols-outlined ${color}`}>{icon}</span>
+    <div className="stat-card">
+      <div className="sc-label">
+        {label}
+        <span className={`material-symbols-outlined ${color}`} style={{ fontSize: 18 }}>{icon}</span>
       </div>
-      <div className="text-2xl font-bold">{(value ?? 0).toLocaleString()}</div>
+      <div className="sc-val" style={{ fontSize: 22 }}>{(value ?? 0).toLocaleString()}</div>
     </div>
   )
 }

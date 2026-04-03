@@ -200,33 +200,30 @@ export default function LocationSetsModal({
   return (
     <>
       {/* Main Modal */}
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-surface-container rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+      <div className="modal-overlay" style={{ padding: 16 }}>
+        <div className="modal-container" style={{ maxWidth: 800, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-outline-variant/15">
+          <div className="modal-header">
             <div>
-              <h2 className="text-xl font-bold text-on-surface">
+              <div className="modal-title" style={{ fontSize: 18 }}>
                 Gerenciar Conjuntos de Locais
-              </h2>
-              <p className="text-sm text-on-surface-variant mt-1">
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--pro-muted)', marginTop: 2 }}>
                 Crie e gerencie coleções de localizações para extração
-              </p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {!showCreateForm && (
                 <button
                   onClick={() => setShowCreateForm(true)}
-                  className="btn-primary flex items-center gap-2"
+                  className="btn-primary"
                 >
-                  <span className="material-symbols-outlined text-lg">add</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
                   Criar Novo
                 </button>
               )}
-              <button
-                onClick={onClose}
-                className="text-on-surface-variant hover:text-on-surface transition-colors"
-              >
-                <span className="material-symbols-outlined text-2xl">close</span>
+              <button onClick={onClose} className="btn-icon">
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
               </button>
             </div>
           </div>
@@ -317,7 +314,7 @@ export default function LocationSetsModal({
                       setJsonError('')
                     }}
                     disabled={isCreating}
-                    className="btn-secondary"
+                    className="btn-ghost"
                   >
                     Cancelar
                   </button>
@@ -367,7 +364,7 @@ export default function LocationSetsModal({
                         <div className="ml-4 flex items-center gap-2">
                           <button
                             onClick={() => handlePreview(set.id)}
-                            className="btn-secondary flex items-center gap-2 text-xs"
+                            className="btn-ghost" style={{ fontSize: 12 }}
                           >
                             <span className="material-symbols-outlined text-base">visibility</span>
                             Preview
@@ -375,7 +372,7 @@ export default function LocationSetsModal({
                           
                           <button
                             onClick={() => handleDeleteClick(set)}
-                            className="btn-secondary text-error hover:bg-error/10 flex items-center gap-2 text-xs"
+                            className="btn-danger" style={{ fontSize: 12 }}
                           >
                             <span className="material-symbols-outlined text-base">delete</span>
                             Excluir
@@ -393,17 +390,14 @@ export default function LocationSetsModal({
 
       {/* Preview Modal */}
       {showPreviewModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-surface-container rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-outline-variant/15">
-              <h2 className="text-xl font-bold text-on-surface">
+        <div className="modal-overlay" style={{ zIndex: 60, padding: 16 }}>
+          <div className="modal-container" style={{ maxWidth: 640, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header">
+              <div className="modal-title" style={{ fontSize: 18 }}>
                 {isLoadingPreview ? 'Carregando...' : previewData?.name || 'Preview'}
-              </h2>
-              <button
-                onClick={() => setShowPreviewModal(false)}
-                className="text-on-surface-variant hover:text-on-surface transition-colors"
-              >
-                <span className="material-symbols-outlined text-2xl">close</span>
+              </div>
+              <button onClick={() => setShowPreviewModal(false)} className="btn-icon">
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
               </button>
             </div>
             
@@ -452,18 +446,18 @@ export default function LocationSetsModal({
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && locationSetToDelete && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-surface-container rounded-lg shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b border-outline-variant/15">
-              <h2 className="text-xl font-bold text-on-surface">
+        <div className="modal-overlay" style={{ zIndex: 60, padding: 16 }}>
+          <div className="modal-container" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <div className="modal-title" style={{ fontSize: 18 }}>
                 Confirmar Exclusão
-              </h2>
+              </div>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={isDeleting}
-                className="text-on-surface-variant hover:text-on-surface transition-colors"
+                className="btn-icon"
               >
-                <span className="material-symbols-outlined text-2xl">close</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
               </button>
             </div>
             
@@ -505,7 +499,7 @@ export default function LocationSetsModal({
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={isDeleting}
-                className="btn-secondary flex-1"
+                className="btn-ghost" style={{ flex: 1 }}
               >
                 Cancelar
               </button>

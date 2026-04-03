@@ -417,119 +417,76 @@ export default function GMapPage() {
 
   return (
     <>
-      <div className="p-8 space-y-6 max-w-[1800px]">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex flex-col gap-1">
-          <h2 className="font-condensed text-4xl font-bold">
-            Extrator Google Maps
-          </h2>
-          <p className="text-on-surface-variant text-sm">
-            Extração automática de leads de empresas locais via inteligência do Google Maps.
-          </p>
+      <div style={{ padding: 24 }}>
+      {/* Stats Dark Grid — 4 cols */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
+        <div className="stat-card-dark">
+          <div className="sc-label">Fila</div>
+          <div className="sc-val" style={{ fontSize: 24 }}>{stats.queue.toLocaleString()}</div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${currentTask?.status === 'running' ? 'bg-primary animate-pulse' : 'bg-on-surface-variant'}`} />
-          <span className="text-xs font-bold uppercase tracking-wider text-primary">
-            {currentTask?.status === 'running' ? 'EXECUTANDO' : 'OCIOSO'}
-          </span>
+        <div className="stat-card-dark">
+          <div className="sc-label" style={{ color: 'var(--pro-success)' }}>Concluídos</div>
+          <div className="sc-val" style={{ fontSize: 24, color: 'var(--pro-success)' }}>{stats.done.toLocaleString()}</div>
         </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard 
-          icon="schedule" 
-          label="FILA" 
-          value={stats.queue.toLocaleString()} 
-          iconColor="text-[#c6e44c]"
-        />
-        <StatCard 
-          icon="check_circle" 
-          label="CONCLUÍDOS" 
-          value={stats.done.toLocaleString()} 
-          iconColor="text-[#4a9eff]"
-        />
-        <StatCard 
-          icon="group" 
-          label="LEADS" 
-          value={stats.leads.toLocaleString()} 
-          iconColor="text-[#c6e44c]"
-        />
-        <StatCard 
-          icon="error" 
-          label="ERROS" 
-          value={stats.errors.toString().padStart(2, '0')} 
-          iconColor="text-[#ff4a4a]"
-        />
+        <div className="stat-card-dark">
+          <div className="sc-label">Leads</div>
+          <div className="sc-val" style={{ fontSize: 24 }}>{stats.leads.toLocaleString()}</div>
+        </div>
+        <div className="stat-card-dark">
+          <div className="sc-label" style={{ color: '#f87171' }}>Erros</div>
+          <div className="sc-val" style={{ fontSize: 24, color: '#f87171' }}>{stats.errors.toString().padStart(2, '0')}</div>
+        </div>
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Left Column - Config */}
-        <div className="space-y-6">
+        <div>
           {/* Extractor Config */}
-          <div className="glass-card p-6 rounded-lg space-y-6">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">tune</span>
-              <h4 className="text-sm font-bold tracking-wider uppercase">Configuração do Extrator</h4>
+          <div className="form-section" style={{ marginBottom: 16 }}>
+            <div className="fs-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="10" y2="18"/></svg>
+              Configuração do Extrator
             </div>
 
             {/* Search Term */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                TERMO DE BUSCA
-              </label>
+            <div style={{ marginBottom: 12 }}>
+              <div className="field-label">Termo de Busca</div>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Ex: Dentistas em São Paulo"
-                className="w-full !bg-surface-container-high !border-outline-variant/30 text-sm"
+                style={{ width: '100%' }}
               />
             </div>
 
             {/* Delay */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                ATRASO (S)
-              </label>
+            <div style={{ marginBottom: 12 }}>
+              <div className="field-label">Atraso (s)</div>
               <input
                 type="number"
                 value={delay}
                 onChange={(e) => setDelay(parseInt(e.target.value) || 0)}
-                className="w-full !bg-surface-container-high !border-outline-variant/30 text-sm"
+                style={{ width: '100%' }}
               />
             </div>
 
-            {/* Switches */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Navegador Visual */}
-              <div className="flex items-center justify-between p-3 rounded-lg bg-surface-container-high border border-outline-variant/20 transition-all hover:border-outline-variant/40">
-                <div className="flex flex-col">
-                  <span className="text-xs font-semibold">{headless ? 'Navegador Oculto' : 'Navegador Visual'}</span>
-                  <span className="text-[10px] text-on-surface-variant">{headless ? 'Modo headless' : 'Modo visível'}</span>
+            {/* Toggle Switches */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+              <div style={{ flex: 1, background: 'var(--pro-surface3)', border: '0.5px solid var(--pro-border)', borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--pro-text)' }}>{headless ? 'Navegador Oculto' : 'Navegador Visual'}</div>
+                  <div style={{ fontSize: 10, color: 'var(--pro-muted)' }}>{headless ? 'Modo headless' : 'Modo visível'}</div>
                 </div>
-                <button
-                  onClick={() => setHeadless(!headless)}
-                  className={`switch-container ${headless ? 'inactive' : 'active'}`}
-                >
-                  <span className={`switch-thumb ${headless ? 'inactive' : 'active'}`} />
-                </button>
+                <div className={`pro-toggle ${!headless ? 'on' : ''}`} onClick={() => setHeadless(!headless)} />
               </div>
-
-              {/* Extração de Email */}
-              <div className="flex items-center justify-between p-3 rounded-lg bg-surface-container-high border border-outline-variant/20 transition-all hover:border-outline-variant/40">
-                <div className="flex flex-col">
-                  <span className="text-xs font-semibold">{extractEmails ? 'Extração Ativa' : 'Extração Desativada'}</span>
-                  <span className="text-[10px] text-on-surface-variant">{extractEmails ? 'Buscando emails' : 'Sem extração'}</span>
+              <div style={{ flex: 1, background: 'var(--pro-surface3)', border: '0.5px solid var(--pro-border)', borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--pro-text)' }}>{extractEmails ? 'Extração Ativa' : 'Extração Desativada'}</div>
+                  <div style={{ fontSize: 10, color: 'var(--pro-muted)' }}>{extractEmails ? 'Buscando emails' : 'Sem extração'}</div>
                 </div>
-                <button
-                  onClick={() => setExtractEmails(!extractEmails)}
-                  className={`switch-container ${extractEmails ? 'active' : 'inactive'}`}
-                >
-                  <span className={`switch-thumb ${extractEmails ? 'active' : 'inactive'}`} />
-                </button>
+                <div className={`pro-toggle ${extractEmails ? 'on' : ''}`} onClick={() => setExtractEmails(!extractEmails)} />
               </div>
             </div>
 
@@ -659,134 +616,89 @@ export default function GMapPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={handleStart}
-                disabled={isStarting || currentTask?.status === 'running'}
-                className="btn-primary flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span className="material-symbols-outlined text-lg">play_arrow</span>
-                {isStarting ? 'INICIANDO...' : 'INICIAR PROCESSO'}
-              </button>
-            </div>
+            <button
+              onClick={handleStart}
+              disabled={isStarting || currentTask?.status === 'running'}
+              className="btn-primary"
+              style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              {isStarting ? 'Iniciando...' : 'Iniciar Processo'}
+            </button>
 
-            <div className="flex gap-3">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <button 
                 onClick={handlePause}
                 disabled={!currentTask || currentTask.status !== 'running'}
-                className="flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-surface-container border border-outline-variant/20 text-on-surface hover:bg-surface-container-high hover:border-outline-variant/40 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                className="btn-ghost"
+                style={{ justifyContent: 'center', opacity: (!currentTask || currentTask.status !== 'running') ? 0.4 : 1 }}
               >
-                <span className="material-symbols-outlined text-2xl font-bold">pause</span>
-                <span className="text-base font-bold tracking-widest uppercase">PAUSAR</span>
+                Pausar
               </button>
               <button 
                 onClick={handleStop}
                 disabled={!currentTask}
-                className="flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-surface-container border border-error/30 text-error hover:bg-error/10 hover:border-error/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                className="btn-ghost"
+                style={{ justifyContent: 'center', opacity: !currentTask ? 0.4 : 1 }}
               >
-                <span className="material-symbols-outlined text-2xl font-bold">stop</span>
-                <span className="text-base font-bold tracking-widest uppercase">PARAR</span>
+                Parar
               </button>
             </div>
           </div>
         </div>
 
         {/* Right Column - Map & Logs */}
-        <div className="space-y-6">
+        <div>
           {/* Live Map Preview */}
-          <div className="glass-card rounded-lg overflow-hidden relative" style={{ height: '400px' }}>
-            <div className="absolute inset-0 bg-[#0a0f0a] flex items-center justify-center">
-              {/* Map Grid Background */}
-              <div className="absolute inset-0 opacity-20" style={{
-                backgroundImage: `
-                  linear-gradient(rgba(198, 228, 76, 0.1) 1px, transparent 1px),
-                  linear-gradient(90deg, rgba(198, 228, 76, 0.1) 1px, transparent 1px)
-                `,
-                backgroundSize: '40px 40px'
-              }} />
-              
-              {/* Animated Location Markers */}
-              {mapMarkers.map((marker) => (
-                <div 
-                  key={marker.id}
-                  className="absolute w-8 h-8 flex items-center justify-center transition-all duration-1000 ease-out"
-                  style={{ 
-                    left: `${marker.x}%`, 
-                    top: `${marker.y}%`,
-                    animation: 'fadeInScale 1s ease-out'
-                  }}
-                >
-                  <span className="material-symbols-outlined text-primary text-2xl animate-pulse drop-shadow-[0_0_10px_rgba(198,228,76,0.6)]">
-                    location_on
-                  </span>
-                </div>
-              ))}
+          <div className="map-preview" style={{ height: 200, marginBottom: 12 }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 30% 50%, rgba(232,89,60,0.06) 0%, transparent 60%), radial-gradient(circle at 70% 30%, rgba(196,24,90,0.05) 0%, transparent 50%)' }} />
+            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.15 }} viewBox="0 0 400 200" preserveAspectRatio="none">
+              <path d="M0 50 L400 50 M0 100 L400 100 M0 150 L400 150 M100 0 L100 200 M200 0 L200 200 M300 0 L300 200" stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" fill="none"/>
+            </svg>
+            
+            {/* Map Pins */}
+            {mapMarkers.map((marker) => (
+              <div key={marker.id} className="map-pin" style={{ top: `${marker.y}%`, left: `${marker.x}%` }} />
+            ))}
 
-              {/* Center Location Label */}
-              <div className="absolute top-6 left-6 bg-surface-container/90 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-outline-variant/20 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                <span className="text-[10px] font-bold text-on-surface uppercase tracking-wider">
-                  VISUALIZAÇÃO AO VIVO: {currentLocation.toUpperCase()}
-                </span>
-              </div>
-
-              {/* Large Center Pin with pulse animation */}
-              <div className="relative animate-pulse-slow">
-                <span className="material-symbols-outlined text-primary text-8xl drop-shadow-[0_0_30px_rgba(198,228,76,0.8)]">
-                  location_on
-                </span>
-                {/* Ripple effect */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-32 h-32 rounded-full border-2 border-primary/30 animate-ping" />
-                </div>
-              </div>
+            {/* Live badge */}
+            <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(10,10,10,0.85)', border: '0.5px solid var(--pro-border2)', padding: '4px 10px', borderRadius: 6, fontSize: 10, color: 'var(--pro-orange)', display: 'flex', alignItems: 'center', gap: 5, fontWeight: 600 }}>
+              <div className="live-dot" />
+              Visualização ao Vivo: {currentLocation}
             </div>
           </div>
 
-          {/* Terminal Intelligence Log */}
-          <div className="glass-card rounded-lg flex flex-col" style={{ height: '280px' }}>
-            <div className="p-4 border-b border-outline-variant/10 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-sm">terminal</span>
-                <h4 className="text-[10px] font-bold tracking-widest uppercase">Log de Inteligência do Terminal</h4>
+          {/* Terminal Log */}
+          <div className="pro-terminal" style={{ height: 240, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div className="term-head">
+              <div className="term-dots">
+                <div className="term-dot" style={{ background: '#f87171' }} />
+                <div className="term-dot" style={{ background: '#fbbf24' }} />
+                <div className="term-dot" style={{ background: '#4ade80' }} />
               </div>
-              <div className="flex gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-error" />
-                <span className="w-2 h-2 rounded-full bg-secondary" />
-                <span className="w-2 h-2 rounded-full bg-primary" />
-              </div>
+              <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.5)', letterSpacing: '0.1em' }}>LOG DO TERMINAL</span>
             </div>
             
-            <div className="flex-1 p-4 font-mono text-[10px] space-y-2 custom-scrollbar overflow-y-auto bg-surface-container/30">
+            <div style={{ flex: 1, overflow: 'auto' }} className="custom-scrollbar">
               {currentTask?.logs?.length > 0 ? (
                 currentTask.logs.slice(-15).map((log, i) => (
-                  <div key={i} className="flex gap-3 animate-slide-up">
-                    <span className="text-on-surface-variant shrink-0">[{log.time}]</span>
-                    <span className={`font-bold ${
-                      log.level === 'error' ? 'text-error' : 
-                      log.level === 'success' ? 'text-primary' : 
-                      'text-secondary'
-                    }`}>
-                      {log.level === 'error' ? 'FALHA' : log.level === 'success' ? 'SUCESSO' : 'PENDENTE'}:
-                    </span>
-                    <span className="text-on-surface/80">{log.message}</span>
+                  <div key={i} className="term-line">
+                    [{log.time}] <span className="hl">{log.level === 'error' ? 'FALHA' : log.level === 'success' ? 'SUCESSO' : 'PENDENTE'}:</span> {log.message}
                   </div>
                 ))
               ) : (
                 <>
-                  <LogLine time="09:41:02" level="success" message="INICIALIZANDO PROSPECTA HUB V4..." />
-                  <LogLine time="09:41:03" level="success" message="PROXY ESTABELECIDO: Conexão segura via Node-774." />
-                  <LogLine time="09:41:05" level="pending" message="MOTOR DE BUSCA: Procurando 'Dentistas' em SP." />
-                  <LogLine time="09:41:08" level="success" message="DADOS ENCONTRADOS: 40 localizações indexadas." />
-                  <LogLine time="09:41:10" level="success" message="EXTRAINDO: Clínica Sorriso Real - +55 11 9982..." />
-                  <LogLine time="09:41:12" level="success" message="EXTRAINDO: Odonto Master - +55 11 9772..." />
-                  <LogLine time="09:41:15" level="pending" message="AGUARDANDO ATRASO: 5 segundos para limitação de taxa." />
-                  <LogLine time="09:41:20" level="success" message="EXTRAINDO: Dental Care Sul - +55 11 9662..." />
-                  <LogLine time="09:41:22" level="success" message="LEAD SALVO: Lead #2801 adicionado a 'Dentistas_SP_01'." />
-                  <LogLine time="09:41:23" level="success" message="EXTRAINDO: Pró-Riso Paulista - +55 11 9662..." />
-                  <LogLine time="09:41:25" level="success" message="MAPEAMENTO: Coordenada 23.5505° S, 46.6333° W confirmada." />
+                  <div className="term-line">[09:41:02] <span className="hl">SUCESSO:</span> Inicializando PROSPECTA V4...</div>
+                  <div className="term-line">[09:41:03] <span className="hl">SUCESSO:</span> Proxy estabelecido</div>
+                  <div className="term-line" style={{ color: 'rgba(251,191,36,0.7)' }}>[09:41:05] PENDENTE: Motor de busca iniciado</div>
+                  <div className="term-line">[09:41:08] <span className="hl">SUCESSO:</span> 48 localizações indexadas</div>
+                  <div className="term-line">[09:41:10] <span className="hl">SUCESSO:</span> Extraindo: Clínica Sorriso Real</div>
                 </>
               )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--pro-border)' }}>
+              <span style={{ color: 'rgba(232,89,60,0.7)' }}>›</span>
+              <div className="term-cursor" />
             </div>
           </div>
         </div>
@@ -827,31 +739,4 @@ export default function GMapPage() {
   )
 }
 
-/* ── Sub-Components ───────────────────────────────────────── */
-
-function StatCard({ icon, label, value, iconColor }) {
-  return (
-    <div className="bg-[#1a1d1a] rounded-xl p-5 flex items-center gap-4 border border-white/5">
-      <div className={`w-12 h-12 rounded-lg bg-[#0f120f] flex items-center justify-center ${iconColor} border border-white/5`}>
-        <span className="material-symbols-outlined text-2xl">{icon}</span>
-      </div>
-      <div className="flex-1">
-        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{label}</p>
-        <p className="font-condensed text-4xl font-bold text-white">{value}</p>
-      </div>
-    </div>
-  )
-}
-
-function LogLine({ time, level, message }) {
-  const levelColor = level === 'error' ? 'text-error' : level === 'success' ? 'text-primary' : 'text-secondary'
-  const levelText = level === 'error' ? 'FALHA' : level === 'success' ? 'SUCESSO' : 'PENDENTE'
-  
-  return (
-    <div className="flex gap-3 animate-slide-up">
-      <span className="text-on-surface-variant shrink-0">[{time}]</span>
-      <span className={`font-bold ${levelColor}`}>{levelText}:</span>
-      <span className="text-on-surface/80">{message}</span>
-    </div>
-  )
-}
+/* Sub-components removed — stat cards and log lines are now inline using CSS design tokens */

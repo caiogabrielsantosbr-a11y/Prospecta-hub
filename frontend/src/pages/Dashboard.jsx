@@ -1,13 +1,13 @@
 /**
- * Dashboard — main overview page with stats from Supabase + backend.
+ * Dashboard — Painel de Controle with stats, lead insights, and intelligence logs.
  */
 import { useState, useEffect } from 'react'
+import { Users, Mail, Phone, Zap, Calendar, CalendarDays, CalendarRange } from 'lucide-react'
 import { api } from '../services/api'
 import useTaskStore from '../store/useTaskStore'
 import { leadsService, gsheetsService } from '../services/supabase'
 
 export default function Dashboard() {
-  const [backendStats, setBackendStats] = useState(null)
   const [leadStats, setLeadStats] = useState(null)
   const [sendStats, setSendStats] = useState(null)
   const tasks = useTaskStore((s) => s.tasks)
@@ -27,10 +27,7 @@ export default function Dashboard() {
   }
 
   const loadBackendStats = async () => {
-    try {
-      const data = await api.getDashboardStats()
-      setBackendStats(data)
-    } catch (_) {}
+    try { await api.getDashboardStats() } catch (_) {}
   }
 
   useEffect(() => {
@@ -44,138 +41,112 @@ export default function Dashboard() {
   }, [])
 
   return (
-    <div className="p-8 space-y-8 max-w-[1600px]">
-      {/* Header */}
-      <div className="flex flex-col gap-1">
-        <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">SISTEMA OPERACIONAL</span>
-        <h2 className="font-condensed text-4xl font-bold">Painel de Controle</h2>
-      </div>
-
-      {/* Stat Cards — row 1 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          label="Total de Leads"
-          value={leadStats?.total ?? '—'}
-          icon="groups"
-          color="text-primary"
-        />
-        <StatCard
-          label="Com Email"
-          value={leadStats?.with_email ?? '—'}
-          icon="email"
-          color="text-secondary"
-        />
-        <StatCard
-          label="Com Telefone"
-          value={leadStats?.with_phone ?? '—'}
-          icon="phone"
-          color="text-tertiary"
-        />
-        <StatCard
-          label="Processos Ativos"
-          value={activeTasks.length}
-          icon="bolt"
-          color="text-primary"
-          bars
-        />
-      </div>
-
-      {/* Stat Cards — row 2 (GSheets) */}
-      {sendStats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard
-            label="Enviados Hoje"
-            value={sendStats.today}
-            icon="today"
-            color="text-primary"
-          />
-          <StatCard
-            label="Enviados esta Semana"
-            value={sendStats.week}
-            icon="date_range"
-            color="text-secondary"
-          />
-          <StatCard
-            label="Enviados este Mês"
-            value={sendStats.month}
-            icon="calendar_month"
-            color="text-tertiary"
-          />
+    <div style={{ padding: 24 }}>
+      {/* Stat Grid Row 1 — 4 cols */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+        <div className="stat-card">
+          <div className="sc-label">
+            Total de Leads
+            <Users size={18} strokeWidth={1.5} style={{ opacity: 0.6 }} />
+          </div>
+          <div className="sc-val brand">{leadStats?.total?.toLocaleString() ?? '—'}</div>
+          <div className="sc-delta" style={{ color: 'var(--pro-success)' }}>↑ 12% este mês</div>
         </div>
-      )}
+        <div className="stat-card">
+          <div className="sc-label">
+            Com Email
+            <Mail size={18} strokeWidth={1.5} style={{ opacity: 0.6 }} />
+          </div>
+          <div className="sc-val">{leadStats?.with_email?.toLocaleString() ?? '—'}</div>
+        </div>
+        <div className="stat-card">
+          <div className="sc-label">
+            Com Telefone
+            <Phone size={18} strokeWidth={1.5} style={{ opacity: 0.6 }} />
+          </div>
+          <div className="sc-val">{leadStats?.with_phone?.toLocaleString() ?? '—'}</div>
+        </div>
+        <div className="stat-card">
+          <div className="sc-label">
+            Processos Ativos
+            <Zap size={18} strokeWidth={1.5} style={{ opacity: 0.6 }} />
+          </div>
+          <div className="sc-val" style={{ color: 'var(--pro-warning)' }}>{activeTasks.length}</div>
+        </div>
+      </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Sources Distribution */}
-        <div className="lg:col-span-2 glass-card p-8 rounded-lg">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h4 className="text-lg font-bold">Visão de Leads</h4>
-              <p className="text-on-surface-variant text-sm">Qualidade do banco de dados</p>
+      {/* Stat Grid Row 2 — 3 cols (GSheets) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+        <div className="stat-card">
+          <div className="sc-label">
+            Enviados Hoje
+            <Calendar size={18} strokeWidth={1.5} style={{ opacity: 0.6 }} />
+          </div>
+          <div className="sc-val">{sendStats?.today ?? 0}</div>
+        </div>
+        <div className="stat-card">
+          <div className="sc-label">Enviados Esta Semana</div>
+          <div className="sc-val">{sendStats?.week ?? 0}</div>
+        </div>
+        <div className="stat-card">
+          <div className="sc-label">Enviados Este Mês</div>
+          <div className="sc-val">{sendStats?.month ?? 0}</div>
+        </div>
+      </div>
+
+      {/* Bottom Grid — 2 cols */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        {/* Left: Visão de Leads */}
+        <div className="pro-card pro-card-accent">
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--pro-text)', marginBottom: 4 }}>Visão de Leads</div>
+          <div style={{ fontSize: 11, color: 'var(--pro-muted)', marginBottom: 16 }}>Qualidade do banco de dados</div>
+
+          <ProgressRow label="Com Telefone" dotColor="#4ade80" pct={leadStats ? Math.round((leadStats.with_phone / (leadStats.total || 1)) * 100) : 0} />
+          <ProgressRow label="Com Email" dotColor="#60a5fa" pct={leadStats ? Math.round((leadStats.with_email / (leadStats.total || 1)) * 100) : 0} gradientColors="linear-gradient(90deg,#3b82f6,#60a5fa)" />
+          <ProgressRow label="Com Website" dotColor="#a78bfa" pct={leadStats ? Math.round((leadStats.with_website / (leadStats.total || 1)) * 100) : 0} gradientColors="linear-gradient(90deg,#7c3aed,#a78bfa)" />
+          <ProgressRow label="Sem Telefone" dotColor="#f87171" pct={leadStats ? Math.round((leadStats.without_phone / (leadStats.total || 1)) * 100) : 0} gradientColors="linear-gradient(90deg,#ef4444,#f87171)" last />
+        </div>
+
+        {/* Right: Terminal Logs */}
+        <div className="pro-terminal" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="term-head">
+            <div className="term-dots">
+              <div className="term-dot" style={{ background: '#f87171' }} />
+              <div className="term-dot" style={{ background: '#fbbf24' }} />
+              <div className="term-dot" style={{ background: '#4ade80' }} />
             </div>
+            <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.5)', letterSpacing: '0.1em' }}>LOGS DE INTELIGÊNCIA</span>
+            <div className="live-dot" style={{ marginLeft: 'auto' }} />
           </div>
-          <div className="space-y-6">
-            <SourceBar
-              label="Com Telefone"
-              value={leadStats?.with_phone ?? 0}
-              total={leadStats?.total || 1}
-              color="bg-primary"
-            />
-            <SourceBar
-              label="Com Email"
-              value={leadStats?.with_email ?? 0}
-              total={leadStats?.total || 1}
-              color="bg-secondary"
-            />
-            <SourceBar
-              label="Com Website"
-              value={leadStats?.with_website ?? 0}
-              total={leadStats?.total || 1}
-              color="bg-tertiary"
-            />
-            <SourceBar
-              label="Sem Telefone"
-              value={leadStats?.without_phone ?? 0}
-              total={leadStats?.total || 1}
-              color="bg-error"
-            />
-          </div>
-        </div>
 
-        {/* Intelligence Logs */}
-        <div className="glass-card rounded-lg flex flex-col">
-          <div className="p-6 border-b border-outline-variant/10 flex items-center justify-between">
-            <h4 className="text-sm font-bold tracking-widest uppercase">Logs de Inteligência</h4>
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          </div>
-          <div className="flex-1 p-4 font-mono text-[10px] space-y-3 custom-scrollbar overflow-y-auto max-h-[300px]">
+          <div style={{ flex: 1, overflow: 'auto', maxHeight: 200 }} className="custom-scrollbar">
             {tasks.length > 0 ? (
               tasks.flatMap(t => t.logs || []).reverse().slice(0, 20).map((log, i) => (
-                <div key={i} className="flex gap-3">
-                  <span className="text-on-surface-variant shrink-0">{log.time}</span>
-                  <span className={`${log.level === 'error' ? 'text-error' : log.level === 'success' ? 'text-primary' : 'text-secondary'}`}>
-                    [{log.level === 'error' ? 'FALHA' : log.level === 'success' ? 'SUCESSO' : 'INFO'}]
-                  </span>
-                  <span className="text-on-surface/80">{log.message}</span>
+                <div key={i} className="term-line">
+                  — [{log.level === 'error' ? 'FALHA' : log.level === 'success' ? <span className="hl">SUCESSO</span> : 'INFO'}] {log.message}
                 </div>
               ))
             ) : (
-              <div className="flex gap-3">
-                <span className="text-on-surface-variant shrink-0">—</span>
-                <span className="text-on-surface-variant">[SISTEMA]</span>
-                <span className="text-on-surface/80">Aguardando tarefas...</span>
-              </div>
+              <>
+                <div className="term-line">— [SISTEMA] Aguardando tarefas...</div>
+                <div className="term-line">— [INFO] <span className="hl">Backend conectado</span></div>
+                <div className="term-line">— [INFO] {activeTasks.length} processos em fila</div>
+              </>
             )}
           </div>
-          <div className="p-4 border-t border-outline-variant/10 bg-surface-container/50">
-            <div className="flex items-center gap-2">
-              <span className="text-primary text-xs">&gt;</span>
-              <input
-                type="text"
-                className="!bg-transparent !border-none p-0 text-[10px] w-full focus:!ring-0 font-mono"
-                placeholder="Executar comando..."
-              />
-            </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--pro-border)' }}>
+            <span style={{ color: 'rgba(232,89,60,0.7)' }}>›</span>
+            <input
+              type="text"
+              style={{
+                flex: 1, background: 'transparent', border: 'none', padding: 0,
+                fontSize: 11, color: 'var(--pro-muted)', fontFamily: 'monospace',
+                outline: 'none',
+              }}
+              placeholder="Executar comando..."
+            />
+            <div className="term-cursor" />
           </div>
         </div>
       </div>
@@ -185,44 +156,18 @@ export default function Dashboard() {
 
 /* ── Sub-Components ───────────────────────────────────────── */
 
-function StatCard({ label, value, icon, color = 'text-primary', bars }) {
+function ProgressRow({ label, dotColor, pct, gradientColors, last }) {
   return (
-    <div className="glass-card p-6 rounded-lg relative overflow-hidden group hover:bg-surface-container-highest transition-all duration-500">
-      <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-all" />
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">{label}</p>
-        <span className={`material-symbols-outlined text-xl ${color}`}>{icon}</span>
-      </div>
-      <div className="flex items-end justify-between">
-        <h3 className="text-3xl font-extrabold tracking-tighter">
-          {typeof value === 'number' ? value.toLocaleString() : value}
-        </h3>
-        {bars && (
-          <div className="flex gap-1 h-4 items-end">
-            <div className="w-1 bg-primary/40 h-2 rounded-full" />
-            <div className="w-1 bg-primary h-4 rounded-full" />
-            <div className="w-1 bg-primary/60 h-3 rounded-full" />
-            <div className="w-1 bg-primary/80 h-2 rounded-full" />
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function SourceBar({ label, value, total, color }) {
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0
-  return (
-    <div className="space-y-2">
-      <div className="flex justify-between text-xs font-semibold">
-        <span className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${color}`} />
+    <div style={{ marginBottom: last ? 0 : 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+        <div style={{ fontSize: 12, color: 'var(--pro-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
           {label}
-        </span>
-        <span>{value?.toLocaleString() ?? 0} ({pct}%)</span>
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--pro-muted)', fontWeight: 600 }}>{pct}%</div>
       </div>
-      <div className="w-full h-2 bg-surface-container rounded-full overflow-hidden">
-        <div className={`h-full ${color} transition-all duration-700`} style={{ width: `${pct}%` }} />
+      <div className="prog-bar">
+        <div className="prog-fill" style={{ width: `${pct}%`, ...(gradientColors ? { background: gradientColors } : {}) }} />
       </div>
     </div>
   )

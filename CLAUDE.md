@@ -1,8 +1,9 @@
-# Prospectahub — Guia para Claude
+# ProspectaHub — Guia para Claude
 
-## O que é esse projeto
+## Identidade do projeto
 
-**Prospectahub** (Plataforma Prospect) é uma plataforma de prospecção de leads unificada. Ela extrai leads de múltiplas fontes (Google Maps, Facebook Ads, extração de emails) e fornece ferramentas para gestão e disparo de emails.
+**Nome:** ProspectaHub
+**Descrição:** Plataforma de prospecção de leads unificada com integração a API local de scraping, gestão de leads e disparo de emails
 
 **Repositório:** https://github.com/caiogabrielsantosbr-a11y/Prospecta-hub
 
@@ -15,12 +16,63 @@ Frontend (React/Vite)         → hospedado na Vercel
         ↓ JWT Auth
 Backend FastAPI (local)       → roda na máquina do dev, exposto via ngrok
         ↓ Supabase SDK
-Supabase (PostgreSQL + Auth + Storage)   → cloud
+Supabase (PostgreSQL + Auth + Storage + Edge Functions)   → cloud
 ```
 
 O backend FastAPI **não está hospedado em produção** — roda localmente e é exposto via **ngrok** para que o frontend em produção (Vercel) consiga acessá-lo.
 
 A URL do ngrok é configurada dinamicamente no frontend via painel admin (tabela `app_settings` no Supabase), sem necessidade de rebuild.
+
+---
+
+## Stack Completa
+
+| Camada | Tecnologia |
+|--------|-----------|
+| Frontend framework | React 19 |
+| Build tool | Vite 8 |
+| Styling | TailwindCSS 4 |
+| State management | Zustand 5 |
+| Routing | react-router-dom 7 |
+| Real-time | Socket.IO client 4.8 |
+| Charts | Recharts 3 |
+| Backend framework | FastAPI 0.115+ |
+| Backend server | Uvicorn |
+| ORM | SQLAlchemy 2.0 async |
+| DB drivers | asyncpg (Postgres), aiosqlite (SQLite dev) |
+| Scraping | Playwright 1.49 + BeautifulSoup4 |
+| HTTP client | httpx |
+| Cloud DB/Auth/Storage | Supabase |
+| Edge Functions | Deno/TypeScript |
+| Deploy frontend | Vercel |
+| Tunnel dev | ngrok |
+
+---
+
+## Regras Obrigatórias de Edição (economizar tokens)
+
+1. **NUNCA reescreva arquivos inteiros** — edite apenas o trecho necessário
+2. **NUNCA explique o que foi feito após executar** — só execute
+3. **NUNCA repita código já existente no contexto** — referencie por nome de função/arquivo
+4. **Edições sempre cirúrgicas** — use Edit (str_replace) ou edição de bloco específico
+5. **Se a tarefa não estiver clara, pergunte:** "Qual arquivo e qual comportamento exato?" antes de agir
+6. Use `/clear` entre tarefas não relacionadas
+
+---
+
+## Módulos do Projeto
+
+| Módulo | Localização | Descrição |
+|--------|------------|-----------|
+| `api-client` | `frontend/src/services/api.js` | Chamadas fetch para API local de scraping (Google Maps, Facebook Ads, emails) |
+| `leads` | `backend/modules/leads/`, `frontend/src/pages/LeadsPage.jsx` | Gestão de leads e conjuntos de localização |
+| `campaigns` | `backend/modules/email_dispatch/`, `frontend/src/pages/EmailDispatchPage.jsx` | Disparo de emails SMTP |
+| `gmail` | `backend/modules/gmail/`, `frontend/src/pages/InboxPage.jsx` + Edge Functions `gmail-accounts`, `gmail-messages`, `gmail-callback` | Inbox integrada, classificação Gemini, resposta automática |
+| `admin` | `frontend/src/pages/AdminConfigPage.jsx`, `frontend/src/pages/ProfilePage.jsx` | Configuração ngrok URL, perfil de usuário, chave Gemini API |
+| `gmap` | `backend/modules/gmap/`, `frontend/src/pages/GMapPage.jsx` | Scraping Google Maps via Playwright |
+| `facebook` | `backend/modules/facebook_ads/`, `frontend/src/pages/FacebookAdsPage.jsx` | Scraping Facebook Ads |
+| `emails` | `backend/modules/emails/`, `frontend/src/pages/EmailExtractorPage.jsx` | Extração de emails |
+| `locations` | `backend/modules/locations/`, `frontend/src/pages/LocationSetsPage.jsx` | Conjuntos de localização para buscas |
 
 ---
 
@@ -43,6 +95,7 @@ Prospectahub/
 │   │   ├── emails/           # Extração de emails
 │   │   ├── email_dispatch/   # Disparo de emails (SMTP)
 │   │   ├── facebook_ads/     # Facebook Ads scraping
+│   │   ├── gmail/            # Gmail API (substituído por Edge Functions)
 │   │   ├── leads/            # Gestão de leads
 │   │   └── locations/        # Conjuntos de localização
 │   ├── services/
@@ -72,35 +125,16 @@ Prospectahub/
 │   ├── vite.config.js
 │   └── .env / .env.example
 │
+├── Extensao appscript/       # Google Apps Script (GSheets integration)
+│   ├── Code.gs               # Dispatcher + relatório diário
+│   └── Sidebar.html
+│
 ├── docs/                     # Documentação de referência
 ├── vercel.json               # Deploy config da Vercel
 ├── package.json              # Root: script "dev" (concurrently backend+frontend)
 ├── start.bat / start.sh      # Scripts para iniciar o dev server
 └── CLAUDE.md                 # Este arquivo
 ```
-
----
-
-## Stack Técnica
-
-| Camada | Tecnologia |
-|--------|-----------|
-| Frontend framework | React 19 |
-| Build tool | Vite 8 |
-| Styling | TailwindCSS 4 |
-| State management | Zustand 5 |
-| Routing | react-router-dom 7 |
-| Real-time | Socket.IO (client 4.8) |
-| Charts | Recharts 3 |
-| Backend framework | FastAPI 0.115+ |
-| Backend server | Uvicorn |
-| ORM | SQLAlchemy 2.0 async |
-| DB drivers | asyncpg (Postgres), aiosqlite (SQLite dev) |
-| Scraping | Playwright 1.49 + BeautifulSoup4 |
-| HTTP client | httpx |
-| Cloud DB/Auth/Storage | Supabase |
-| Deploy frontend | Vercel |
-| Tunnel dev | ngrok |
 
 ---
 
@@ -115,46 +149,21 @@ Prospectahub/
 | `/facebook` | FacebookAdsPage.jsx | Scraping Facebook Ads |
 | `/emails` | EmailExtractorPage.jsx | Extração de emails |
 | `/dispatch` | EmailDispatchPage.jsx | Campanha de email |
-| `/leads` | LeadsPage.jsx | Gestão de leads |
+| `/leads` | LeadsPage.jsx | Gestão de leads + relatório diário |
 | `/locations` | LocationSetsPage.jsx | Conjuntos de localização |
+| `/inbox` | InboxPage.jsx | Gmail inbox integrada |
 | `/admin` | AdminConfigPage.jsx | Config da URL do backend |
 | `/auth/callback` | AuthCallbackPage.jsx | OAuth callback |
 
 ---
 
-## Endpoints do Backend
+## Edge Functions Supabase (Deno/TypeScript)
 
-**ATENÇÃO:** A maioria dos routers está **comentada/desabilitada** em `main.py` (debug temporário). Só estão ativos:
-
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| GET | `/api/health` | Health check |
-| GET | `/api/dashboard/stats` | Estatísticas do dashboard (mock por enquanto) |
-
-Routers disponíveis mas desabilitados (em `modules/`):
-- `POST /api/emails/...` — extração de emails
-- `GET/POST /api/gmap/...` — Google Maps scraping
-- `GET/POST /api/facebook/...` — Facebook Ads
-- `GET/POST /api/dispatch/...` — disparo de email
-- `GET/POST /api/locations/...` — location sets
-- `GET /api/leads/...` — leads
-
----
-
-## Modelos do Banco de Dados (SQLAlchemy ORM)
-
-| Modelo | Tabela | Descrição |
-|--------|--------|-----------|
-| `GMapLead` | `gmap_leads` | Leads do Google Maps |
-| `FacebookAdsLead` | `facebook_ads_leads` | Leads do Facebook |
-| `EmailResult` | `email_results` | Emails extraídos |
-| `TaskRecord` | `task_records` | Histórico de tasks |
-| `EmailDispatch` | `email_dispatches` | Fila de disparo |
-| `DMTemplate` | `dm_templates` | Templates de DM |
-| `ApproachScript` | `approach_scripts` | Scripts de abordagem |
-
-Tabela Supabase adicional:
-- `app_settings` — configurações globais (URL do backend, etc.)
+| Função | verify_jwt | Descrição |
+|--------|-----------|-----------|
+| `gmail-accounts` | false | Listar/conectar/remover contas Gmail (OAuth2) |
+| `gmail-messages` | false | Ler/listar mensagens, responder, classificar com Gemini |
+| `gmail-callback` | false | Callback OAuth Google → salva tokens, fecha popup |
 
 ---
 
@@ -163,7 +172,17 @@ Tabela Supabase adicional:
 - Supabase Auth (JWT)
 - Frontend usa `AuthContext.jsx` + `@supabase/supabase-js`
 - Backend valida JWT no `middleware/auth.py`
+- Edge Functions: `verify_jwt: false` + validação interna via `supabase.auth.getUser(token)`
 - Upload de avatar: Supabase Storage (bucket `avatars`)
+
+---
+
+## Supabase
+
+- **Projeto ID:** `gyenypsxpidmsxabjhqg`
+- **MCP configurado:** `.claude/settings.json` aponta para `mcp.supabase.com`
+- Use `mcp__supabase__execute_sql` para queries diretas
+- Use `mcp__supabase__list_tables` para ver schema
 
 ---
 
@@ -189,64 +208,40 @@ VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
 VITE_SUPABASE_KEY=sua-anon-key
 ```
 
+### Supabase Secrets (Edge Functions)
+```
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+GEMINI_API_KEY=   # fallback; usuário pode configurar o próprio via app_settings
+```
+
 ---
 
 ## Como Rodar em Desenvolvimento
 
 ```bash
-# Setup inicial (uma vez)
-npm run setup
-
-# Iniciar tudo (backend + frontend juntos)
-npm run dev
-
-# Ou separados
-npm run dev:backend   # FastAPI em localhost:8000
-npm run dev:frontend  # React/Vite em localhost:5173
+npm run setup   # setup inicial (uma vez)
+npm run dev     # backend + frontend juntos
 ```
 
-Para expor o backend localmente via ngrok:
+Para expor o backend via ngrok:
 ```bash
 ./ngrok.exe http 8000
-# Copiar a URL gerada e colar no Admin Panel do frontend
+# Copiar URL e colar no Admin Panel
 ```
 
 ---
 
-## Deploy
+## Estado Atual
 
-- **Frontend:** Vercel — config em `vercel.json`
-  - Build: `cd frontend && npm run build`
-  - Output: `frontend/dist/`
-  - Rewrites para SPA: `"source": "/(.*)" → "/index.html"`
-- **Backend:** Roda localmente + ngrok (não há deploy em cloud atualmente)
+- Auth (login, perfil, avatar) funcionando
+- Gmail Inbox migrado para Edge Functions (OAuth2 + Gemini)
+- Routers do backend comentados em `main.py` (debug temporário)
+- Socket.IO temporariamente desabilitado
+- Dashboard stats ainda mockado
 
----
-
-## Estado Atual do Projeto
-
-O backend está em fase de estabilização. Os routers estão comentados em `main.py` para debug. O fluxo principal de auth (login, perfil, avatar) já funciona. As features de scraping (GMap, Facebook) precisam ter os routers reabilitados e testados.
-
-**Próximos passos prováveis:**
-1. Reabilitar routers um a um e testar
-2. Reabilitar Socket.IO para updates em tempo real
+**Próximos passos:**
+1. Reabilitar routers backend um a um
+2. Reabilitar Socket.IO
 3. Conectar dashboard stats ao Supabase real
-4. Configurar deploy do backend (Railway, Fly.io, ou similar)
-
----
-
-## Supabase
-
-- **Projeto ID:** `gyenypsxpidmsxabjhqg`
-- **MCP configurado:** `.claude/settings.json` aponta para `mcp.supabase.com`
-- Use `mcp__supabase__execute_sql` para queries diretas
-- Use `mcp__supabase__list_tables` para ver schema
-
----
-
-## Notas Importantes
-
-- O `DATABASE_URL` usa **SQLite** por padrão (dev local), mas o objetivo é usar o **Supabase PostgreSQL** via `supabase_client.py`
-- Socket.IO está temporariamente desabilitado em `main.py` (comentado para debug)
-- `TaskManagerBar.jsx` no frontend ainda referencia o sistema de tasks que está desabilitado
-- O arquivo `start.bat` / `start.sh` é o jeito mais fácil de subir o ambiente
+4. Deploy do backend (Railway, Fly.io ou similar)

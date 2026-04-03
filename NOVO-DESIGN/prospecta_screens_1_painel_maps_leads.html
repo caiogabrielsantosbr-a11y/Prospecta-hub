@@ -1,0 +1,494 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+--p-orange:#E8593C;--p-pink:#C4185A;--p-black:#0D0D0D;--p-surface:#161616;--p-surface2:#1F1F1F;--p-surface3:#272727;
+--p-border:rgba(255,255,255,0.08);--p-border2:rgba(255,255,255,0.14);--p-text:#F0EEE9;--p-muted:rgba(240,238,233,0.5);--p-muted2:rgba(240,238,233,0.28);
+--p-grad-bg:linear-gradient(135deg,#E8593C,#C4185A);
+--p-success:#4ade80;--p-warning:#fbbf24;--p-danger:#f87171;
+}
+body{font-family:'Barlow',sans-serif;background:#0D0D0D;color:#F0EEE9}
+
+.screen-wrap{margin-bottom:40px;border:0.5px solid var(--p-border2);border-radius:16px;overflow:hidden}
+.screen-label{background:#1a1a1a;padding:10px 20px;font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--p-muted);border-bottom:0.5px solid var(--p-border)}
+.screen{display:flex;height:580px;overflow:hidden}
+
+.sidebar{width:200px;flex-shrink:0;background:var(--p-surface);border-right:0.5px solid var(--p-border);display:flex;flex-direction:column;padding:0}
+.sb-logo{padding:20px 18px 16px;border-bottom:0.5px solid var(--p-border)}
+.logo-text{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;letter-spacing:-0.01em}
+.logo-pro{background:var(--p-grad-bg);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-specta{color:var(--p-text)}
+.sb-tagline{font-size:10px;color:var(--p-muted2);margin-top:2px;letter-spacing:0.06em}
+.sb-nav{flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:500;color:var(--p-muted);cursor:pointer;transition:all 0.15s}
+.nav-item:hover{background:rgba(255,255,255,0.05);color:var(--p-text)}
+.nav-item.active{background:rgba(232,89,60,0.12);color:#F07A5F}
+.nav-item.active .ni{opacity:1;color:#E8593C}
+.ni{width:16px;height:16px;opacity:0.5;flex-shrink:0}
+.sb-bottom{padding:12px 10px}
+.btn-novo{width:100%;padding:10px;border-radius:8px;background:var(--p-grad-bg);border:none;color:#fff;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+
+.main{flex:1;background:var(--p-black);overflow-y:auto;display:flex;flex-direction:column}
+.topbar{height:52px;flex-shrink:0;border-bottom:0.5px solid var(--p-border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:var(--p-surface)}
+.tb-left{display:flex;flex-direction:column}
+.tb-eyebrow{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--p-muted);font-weight:600}
+.tb-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--p-text);line-height:1.1}
+.tb-right{display:flex;align-items:center;gap:12px}
+.status-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:100px;background:rgba(248,113,113,0.12);font-size:11px;color:#f87171;font-weight:600}
+.status-dot{width:6px;height:6px;border-radius:50%;background:#f87171}
+.status-pill.connected{background:rgba(74,222,128,0.12);color:#4ade80}
+.status-pill.connected .status-dot{background:#4ade80}
+.avatar-btn{width:30px;height:30px;border-radius:50%;background:var(--p-grad-bg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+
+.content{padding:24px;flex:1}
+
+.stat-grid{display:grid;gap:12px;margin-bottom:20px}
+.stat-grid-4{grid-template-columns:repeat(4,1fr)}
+.stat-grid-3{grid-template-columns:repeat(3,1fr)}
+.stat-card{background:var(--p-surface2);border:0.5px solid var(--p-border);border-radius:12px;padding:16px 18px}
+.sc-label{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--p-muted);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.sc-icon{width:18px;height:18px;opacity:0.6}
+.sc-val{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:700;color:var(--p-text);line-height:1}
+.sc-val.brand{background:var(--p-grad-bg);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sc-delta{font-size:11px;margin-top:4px;color:var(--p-muted)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.card{background:var(--p-surface2);border:0.5px solid var(--p-border);border-radius:12px;padding:18px}
+.card-title{font-size:13px;font-weight:700;color:var(--p-text);margin-bottom:4px}
+.card-sub{font-size:11px;color:var(--p-muted);margin-bottom:16px}
+.card-accent{border-left:2px solid var(--p-orange)}
+
+.prog-row{margin-bottom:12px}
+.prog-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.prog-label{font-size:12px;color:var(--p-text);display:flex;align-items:center;gap:6px}
+.prog-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.prog-pct{font-size:11px;color:var(--p-muted);font-weight:600}
+.prog-bar{height:3px;background:rgba(255,255,255,0.08);border-radius:100px;overflow:hidden}
+.prog-fill{height:100%;background:var(--p-grad-bg);border-radius:100px}
+
+.terminal{background:#0a0a0a;border:0.5px solid var(--p-border);border-radius:12px;padding:16px;font-family:'Courier New',monospace;font-size:11px;color:#4ade80}
+.term-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;border-bottom:0.5px solid var(--p-border);padding-bottom:10px}
+.term-dots{display:flex;gap:5px}
+.td{width:8px;height:8px;border-radius:50%}
+.term-line{line-height:1.6;color:rgba(74,222,128,0.7)}
+.term-line span{color:#E8593C}
+.term-prompt{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--p-border)}
+.term-cursor{width:7px;height:12px;background:#E8593C;display:inline-block;animation:blink 1s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.term-input{flex:1;font-size:11px;color:var(--p-muted);font-family:monospace}
+
+.form-section{background:var(--p-surface2);border:0.5px solid var(--p-border);border-radius:12px;padding:18px;margin-bottom:16px}
+.fs-title{font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--p-muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.field-label{font-size:11px;font-weight:600;color:var(--p-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.06em}
+.field-input{width:100%;padding:9px 12px;background:var(--p-surface3);border:0.5px solid var(--p-border2);border-radius:8px;color:var(--p-text);font-size:13px;font-family:'Barlow',sans-serif;outline:none}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.toggle-row{display:flex;gap:12px}
+.toggle-item{flex:1;background:var(--p-surface3);border:0.5px solid var(--p-border);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center}
+.tl-text{font-size:12px;font-weight:600;color:var(--p-text)}
+.tl-sub{font-size:10px;color:var(--p-muted)}
+.toggle{width:32px;height:18px;background:rgba(255,255,255,0.1);border-radius:100px;position:relative;flex-shrink:0}
+.toggle.on{background:var(--p-orange)}
+.toggle::after{content:'';position:absolute;width:12px;height:12px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform 0.2s}
+.toggle.on::after{transform:translateX(14px)}
+
+.geo-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.geo-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--p-surface3);border:0.5px solid var(--p-border);border-radius:6px;font-size:12px;color:var(--p-muted);cursor:pointer}
+.geo-item.sel{border-color:var(--p-orange);color:var(--p-text);background:rgba(232,89,60,0.08)}
+.geo-cb{width:14px;height:14px;border-radius:3px;border:0.5px solid;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px}
+.geo-item.sel .geo-cb{background:var(--p-orange);border-color:var(--p-orange);color:#fff}
+
+.btn-primary{padding:10px 20px;background:var(--p-grad-bg);border:none;border-radius:8px;color:#fff;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;width:100%;justify-content:center}
+.btn-secondary{padding:9px 16px;background:transparent;border:0.5px solid var(--p-border2);border-radius:8px;color:var(--p-muted);font-size:13px;font-family:'Barlow',sans-serif;cursor:pointer}
+
+.map-preview{background:#111;border-radius:8px;height:200px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:12px;border:0.5px solid var(--p-border)}
+.map-bg{position:absolute;inset:0;background:radial-gradient(circle at 30% 50%, rgba(232,89,60,0.06) 0%, transparent 60%), radial-gradient(circle at 70% 30%, rgba(196,24,90,0.05) 0%, transparent 50%)}
+.map-grid-lines{position:absolute;inset:0;opacity:0.15}
+.map-pin{position:absolute;width:10px;height:10px;background:var(--p-orange);border-radius:50%;border:1.5px solid rgba(232,89,60,0.4)}
+.map-pin::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;border:1px solid rgba(232,89,60,0.25);top:-6px;left:-6px}
+.map-live-badge{position:absolute;top:10px;left:10px;background:rgba(10,10,10,0.85);border:0.5px solid var(--p-border2);padding:4px 10px;border-radius:6px;font-size:10px;color:var(--p-orange);display:flex;align-items:center;gap:5px;font-weight:600}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--p-orange);animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+
+.stat-dark{background:#0a0a0a;border:0.5px solid var(--p-border);border-radius:10px;padding:14px 16px}
+.stat-grid-dark{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+
+.filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.filter-input{flex:1;min-width:180px;padding:9px 12px;background:var(--p-surface2);border:0.5px solid var(--p-border2);border-radius:8px;color:var(--p-text);font-size:13px;font-family:'Barlow',sans-serif}
+.filter-select{padding:9px 12px;background:var(--p-surface2);border:0.5px solid var(--p-border2);border-radius:8px;color:var(--p-muted);font-size:13px;font-family:'Barlow',sans-serif;min-width:110px}
+.export-btn{padding:9px 14px;background:rgba(232,89,60,0.12);border:0.5px solid rgba(232,89,60,0.3);border-radius:8px;color:#F07A5F;font-size:12px;font-weight:600;font-family:'Barlow',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px}
+
+.leads-table{width:100%;border-collapse:collapse;font-size:12px}
+.leads-table th{text-align:left;padding:8px 12px;color:var(--p-muted);font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;border-bottom:0.5px solid var(--p-border)}
+.leads-table td{padding:10px 12px;border-bottom:0.5px solid rgba(255,255,255,0.04);color:var(--p-text)}
+.leads-table tr:hover td{background:rgba(255,255,255,0.02)}
+.empty-state{text-align:center;padding:40px;color:var(--p-muted)}
+.empty-icon{width:36px;height:36px;border-radius:50%;background:var(--p-surface3);display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+
+.tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:0.5px solid var(--p-border)}
+.tab{padding:9px 16px;font-size:13px;font-weight:600;color:var(--p-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px;display:flex;align-items:center;gap:7px}
+.tab.active{color:#F07A5F;border-bottom-color:var(--p-orange)}
+
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:10px;font-weight:700}
+.badge-ok{background:rgba(74,222,128,0.12);color:#4ade80}
+.badge-warn{background:rgba(251,191,36,0.12);color:#fbbf24}
+.badge-err{background:rgba(248,113,113,0.12);color:#f87171}
+.badge-brand{background:rgba(232,89,60,0.12);color:#F07A5F}
+
+.sheet-card{background:var(--p-surface2);border:0.5px solid var(--p-border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
+.sc-info{}
+.sc-name{font-size:14px;font-weight:600;color:var(--p-text);margin-bottom:2px;display:flex;align-items:center;gap:8px}
+.sc-desc{font-size:11px;color:var(--p-muted)}
+.sc-actions{display:flex;align-items:center;gap:8px}
+.ic-btn{width:30px;height:30px;border-radius:6px;background:var(--p-surface3);border:0.5px solid var(--p-border);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ic-del{background:rgba(248,113,113,0.08);border-color:rgba(248,113,113,0.2)}
+
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sh-title{font-size:14px;font-weight:700;color:var(--p-text)}
+</style>
+
+<div style="padding:20px;background:#0D0D0D">
+
+<!-- SCREEN 1: PAINEL -->
+<div class="screen-wrap">
+  <div class="screen-label">01 — Painel de controle</div>
+  <div class="screen">
+    <div class="sidebar">
+      <div class="sb-logo">
+        <div class="logo-text"><span class="logo-pro">PRO</span><span class="logo-specta">SPECTA</span></div>
+        <div class="sb-tagline">Prospecting Suite</div>
+      </div>
+      <div class="sb-nav">
+        <div class="nav-item active">
+          <svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Painel
+        </div>
+        <div class="nav-item">
+          <svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+          Google Maps
+        </div>
+        <div class="nav-item">
+          <svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          Facebook ADS
+        </div>
+        <div class="nav-item">
+          <svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Leads
+        </div>
+        <div class="nav-item">
+          <svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Inbox Gmail
+        </div>
+        <div class="nav-item" style="margin-top:auto">
+          <svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>
+          Perfil
+        </div>
+        <div class="nav-item">
+          <svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+          Configurações
+        </div>
+      </div>
+      <div class="sb-bottom">
+        <button class="btn-novo">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo Prospecto
+        </button>
+      </div>
+    </div>
+    <div class="main">
+      <div class="topbar">
+        <div class="tb-left">
+          <div class="tb-eyebrow">Sistema Operacional</div>
+          <div class="tb-title">Painel de Controle</div>
+        </div>
+        <div class="tb-right">
+          <div class="status-pill">
+            <div class="status-dot"></div>
+            Desconectado
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(240,238,233,0.4)" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <div class="avatar-btn">DA</div>
+        </div>
+      </div>
+      <div class="content">
+        <div class="stat-grid stat-grid-4" style="margin-bottom:12px">
+          <div class="stat-card">
+            <div class="sc-label">Total de Leads <svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            <div class="sc-val brand">1.247</div>
+            <div class="sc-delta" style="color:#4ade80">↑ 12% este mês</div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">Com Email <svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+            <div class="sc-val">892</div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">Com Telefone <svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6.29 6.29l.94-.94a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+            <div class="sc-val">1.034</div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">Processos Ativos <svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            <div class="sc-val" style="color:#fbbf24">3</div>
+          </div>
+        </div>
+        <div class="stat-grid stat-grid-3" style="margin-bottom:20px">
+          <div class="stat-card"><div class="sc-label">Enviados Hoje</div><div class="sc-val">48</div></div>
+          <div class="stat-card"><div class="sc-label">Enviados Esta Semana</div><div class="sc-val">312</div></div>
+          <div class="stat-card"><div class="sc-label">Enviados Este Mês</div><div class="sc-val">1.840</div></div>
+        </div>
+        <div class="grid2">
+          <div class="card card-accent">
+            <div class="card-title">Visão de Leads</div>
+            <div class="card-sub">Qualidade do banco de dados</div>
+            <div class="prog-row">
+              <div class="prog-head"><div class="prog-label"><div class="prog-dot" style="background:#4ade80"></div>Com Telefone</div><div class="prog-pct">83%</div></div>
+              <div class="prog-bar"><div class="prog-fill" style="width:83%"></div></div>
+            </div>
+            <div class="prog-row">
+              <div class="prog-head"><div class="prog-label"><div class="prog-dot" style="background:#60a5fa"></div>Com Email</div><div class="prog-pct">71%</div></div>
+              <div class="prog-bar"><div class="prog-fill" style="width:71%;background:linear-gradient(90deg,#3b82f6,#60a5fa)"></div></div>
+            </div>
+            <div class="prog-row">
+              <div class="prog-head"><div class="prog-label"><div class="prog-dot" style="background:#a78bfa"></div>Com Website</div><div class="prog-pct">54%</div></div>
+              <div class="prog-bar"><div class="prog-fill" style="width:54%;background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div></div>
+            </div>
+            <div class="prog-row" style="margin-bottom:0">
+              <div class="prog-head"><div class="prog-label"><div class="prog-dot" style="background:#f87171"></div>Sem Telefone</div><div class="prog-pct">17%</div></div>
+              <div class="prog-bar"><div class="prog-fill" style="width:17%;background:linear-gradient(90deg,#ef4444,#f87171)"></div></div>
+            </div>
+          </div>
+          <div class="terminal">
+            <div class="term-head">
+              <div class="term-dots"><div class="td" style="background:#f87171"></div><div class="td" style="background:#fbbf24"></div><div class="td" style="background:#4ade80"></div></div>
+              <span style="font-size:10px;color:rgba(74,222,128,0.5);letter-spacing:0.1em">LOGS DE INTELIGÊNCIA</span>
+              <div class="live-dot" style="margin-left:auto"></div>
+            </div>
+            <div class="term-line">— [SISTEMA] Aguardando tarefas...</div>
+            <div class="term-line">— [INFO] <span>Backend conectado</span></div>
+            <div class="term-line">— [INFO] 3 processos em fila</div>
+            <div class="term-prompt">
+              <span style="color:rgba(232,89,60,0.7)">›</span>
+              <span class="term-input">Executar comando...</span>
+              <div class="term-cursor"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: GOOGLE MAPS EXTRACTOR -->
+<div class="screen-wrap">
+  <div class="screen-label">02 — Extrator Google Maps</div>
+  <div class="screen">
+    <div class="sidebar">
+      <div class="sb-logo">
+        <div class="logo-text"><span class="logo-pro">PRO</span><span class="logo-specta">SPECTA</span></div>
+        <div class="sb-tagline">Prospecting Suite</div>
+      </div>
+      <div class="sb-nav">
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Painel</div>
+        <div class="nav-item active"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>Google Maps</div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>Facebook ADS</div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Leads</div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Inbox Gmail</div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>Perfil</div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>Configurações</div>
+      </div>
+      <div class="sb-bottom"><button class="btn-novo"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novo Prospecto</button></div>
+    </div>
+    <div class="main">
+      <div class="topbar">
+        <div class="tb-left">
+          <div class="tb-eyebrow">Extração Automática</div>
+          <div class="tb-title">Google Maps Extractor</div>
+        </div>
+        <div class="tb-right">
+          <div class="status-pill"><div class="status-dot"></div>Ocioso</div>
+          <div class="avatar-btn">DA</div>
+        </div>
+      </div>
+      <div class="content">
+        <div class="stat-grid-dark" style="margin-bottom:16px">
+          <div class="stat-dark"><div class="sc-label" style="color:var(--p-muted)">Fila</div><div class="sc-val" style="font-size:24px">0</div></div>
+          <div class="stat-dark"><div class="sc-label" style="color:#4ade80">Concluídos</div><div class="sc-val" style="font-size:24px;color:#4ade80">0</div></div>
+          <div class="stat-dark"><div class="sc-label" style="color:var(--p-muted)">Leads</div><div class="sc-val" style="font-size:24px">0</div></div>
+          <div class="stat-dark"><div class="sc-label" style="color:#f87171">Erros</div><div class="sc-val" style="font-size:24px;color:#f87171">00</div></div>
+        </div>
+        <div class="grid2">
+          <div>
+            <div class="form-section">
+              <div class="fs-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="10" y2="18"/></svg>
+                Configuração do Extrator
+              </div>
+              <div style="margin-bottom:12px">
+                <div class="field-label">Termo de Busca</div>
+                <input class="field-input" type="text" value="Ex: Dentistas em São Paulo">
+              </div>
+              <div class="field-row" style="margin-bottom:12px">
+                <div>
+                  <div class="field-label">Atraso (s)</div>
+                  <input class="field-input" type="text" value="5">
+                </div>
+                <div>
+                  <div class="field-label">Limite</div>
+                  <input class="field-input" type="text" value="500">
+                </div>
+              </div>
+              <div class="toggle-row" style="margin-bottom:12px">
+                <div class="toggle-item">
+                  <div><div class="tl-text">Navegador Oculto</div><div class="tl-sub">Modo headless</div></div>
+                  <div class="toggle"></div>
+                </div>
+                <div class="toggle-item">
+                  <div><div class="tl-text">Extração Ativa</div><div class="tl-sub">Buscando emails</div></div>
+                  <div class="toggle on"></div>
+                </div>
+              </div>
+              <div class="field-label" style="margin-bottom:8px">Geografias Alvo</div>
+              <div class="geo-grid">
+                <div class="geo-item sel"><div class="geo-cb">✓</div>São Paulo, SP</div>
+                <div class="geo-item"><div class="geo-cb" style="border-color:var(--p-border2)"></div>Rio de Janeiro, RJ</div>
+                <div class="geo-item sel"><div class="geo-cb">✓</div>Curitiba, PR</div>
+                <div class="geo-item"><div class="geo-cb" style="border-color:var(--p-border2)"></div>Belo Horizonte, MG</div>
+                <div class="geo-item"><div class="geo-cb" style="border-color:var(--p-border2)"></div>Porto Alegre, RS</div>
+                <div class="geo-item"><div class="geo-cb" style="border-color:var(--p-border2)"></div>Salvador, BA</div>
+              </div>
+            </div>
+            <button class="btn-primary" style="margin-bottom:8px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Iniciar Processo
+            </button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <button class="btn-secondary" style="opacity:0.4">Pausar</button>
+              <button class="btn-secondary" style="opacity:0.4">Parar</button>
+            </div>
+          </div>
+          <div>
+            <div class="map-preview">
+              <div class="map-bg"></div>
+              <svg class="map-grid-lines" style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 400 200" preserveAspectRatio="none"><path d="M0 50 L400 50 M0 100 L400 100 M0 150 L400 150 M100 0 L100 200 M200 0 L200 200 M300 0 L300 200" stroke="rgba(255,255,255,0.06)" stroke-width="0.5" fill="none"/></svg>
+              <div class="map-live-badge"><div class="live-dot"></div>Visualização ao Vivo: São Paulo, BR</div>
+              <div class="map-pin" style="top:40%;left:35%"></div>
+              <div class="map-pin" style="top:25%;left:60%"></div>
+              <div class="map-pin" style="top:60%;left:52%"></div>
+              <div class="map-pin" style="top:45%;left:75%"></div>
+              <div class="map-pin" style="top:70%;left:28%"></div>
+            </div>
+            <div class="terminal" style="height:168px;overflow:hidden">
+              <div class="term-head">
+                <div class="term-dots"><div class="td" style="background:#f87171"></div><div class="td" style="background:#fbbf24"></div><div class="td" style="background:#4ade80"></div></div>
+                <span style="font-size:10px;color:rgba(74,222,128,0.5);letter-spacing:0.1em">LOG DO TERMINAL</span>
+              </div>
+              <div class="term-line">[09:41:02] <span>SUCESSO:</span> Inicializando PROSPECTA V4...</div>
+              <div class="term-line">[09:41:03] <span>SUCESSO:</span> Proxy estabelecido</div>
+              <div class="term-line" style="color:rgba(251,191,36,0.7)">[09:41:05] PENDENTE: Motor de busca iniciado</div>
+              <div class="term-line">[09:41:08] <span>SUCESSO:</span> 48 localizações indexadas</div>
+              <div class="term-line">[09:41:10] <span>SUCESSO:</span> Extraindo: Clínica Sorriso Real</div>
+              <div class="term-prompt"><span style="color:rgba(232,89,60,0.7)">›</span><div class="term-cursor"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: LEADS -->
+<div class="screen-wrap">
+  <div class="screen-label">03 — Gerenciamento de Leads</div>
+  <div class="screen">
+    <div class="sidebar">
+      <div class="sb-logo">
+        <div class="logo-text"><span class="logo-pro">PRO</span><span class="logo-specta">SPECTA</span></div>
+        <div class="sb-tagline">Prospecting Suite</div>
+      </div>
+      <div class="sb-nav">
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Painel</div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>Google Maps</div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>Facebook ADS</div>
+        <div class="nav-item active"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Leads</div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/></svg>Inbox Gmail</div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>Perfil</div>
+        <div class="nav-item"><svg class="ni" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4"/></svg>Configurações</div>
+      </div>
+      <div class="sb-bottom"><button class="btn-novo"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novo Prospecto</button></div>
+    </div>
+    <div class="main">
+      <div class="topbar">
+        <div class="tb-left">
+          <div class="tb-eyebrow">Gerenciamento</div>
+          <div class="tb-title">Leads</div>
+        </div>
+        <div class="tb-right">
+          <button class="export-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar CSV
+          </button>
+          <div class="status-pill"><div class="status-dot"></div>Desconectado</div>
+          <div class="avatar-btn">DA</div>
+        </div>
+      </div>
+      <div class="content">
+        <div class="tabs">
+          <div class="tab active">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            Leads
+          </div>
+          <div class="tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Google Sheets
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px">
+          <div class="stat-card" style="padding:12px"><div class="sc-label" style="font-size:10px">Total</div><div class="sc-val" style="font-size:20px">1.247</div></div>
+          <div class="stat-card" style="padding:12px"><div class="sc-label" style="font-size:10px">Com Tel.</div><div class="sc-val" style="font-size:20px;color:#4ade80">1.034</div></div>
+          <div class="stat-card" style="padding:12px"><div class="sc-label" style="font-size:10px">Com Email</div><div class="sc-val" style="font-size:20px;color:#60a5fa">892</div></div>
+          <div class="stat-card" style="padding:12px"><div class="sc-label" style="font-size:10px">Com Site</div><div class="sc-val" style="font-size:20px;color:#a78bfa">673</div></div>
+          <div class="stat-card" style="padding:12px"><div class="sc-label" style="font-size:10px">Sem Tel.</div><div class="sc-val" style="font-size:20px;color:#f87171">213</div></div>
+          <div class="stat-card" style="padding:12px"><div class="sc-label" style="font-size:10px">Sem Site</div><div class="sc-val" style="font-size:20px;color:#f87171">574</div></div>
+        </div>
+        <div class="filter-bar">
+          <input class="filter-input" type="text" placeholder="Buscar por nome, telefone, email ou website...">
+          <select class="filter-select"><option>Todos os conjuntos</option></select>
+          <select class="filter-select"><option>Todas as cidades</option></select>
+        </div>
+        <div style="background:var(--p-surface2);border:0.5px solid var(--p-border);border-radius:12px;overflow:hidden">
+          <table class="leads-table">
+            <thead><tr><th style="width:30px"><input type="checkbox" style="accent-color:var(--p-orange)"></th><th>Empresa</th><th>Telefone</th><th>Email</th><th>Cidade</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox" style="accent-color:var(--p-orange)"></td>
+                <td style="font-weight:600">Clínica Sorriso Real</td>
+                <td style="color:var(--p-muted)">+55 11 9982-4532</td>
+                <td style="color:#60a5fa">contato@sorrisoreal.com.br</td>
+                <td><span class="badge badge-brand">São Paulo</span></td>
+                <td><span class="badge badge-ok">Com Email</span></td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" style="accent-color:var(--p-orange)"></td>
+                <td style="font-weight:600">Odonto Master</td>
+                <td style="color:var(--p-muted)">+55 11 0772-9988</td>
+                <td style="color:var(--p-muted2)">—</td>
+                <td><span class="badge badge-brand">São Paulo</span></td>
+                <td><span class="badge badge-warn">Sem Email</span></td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" style="accent-color:var(--p-orange)"></td>
+                <td style="font-weight:600">Dental Care Sul</td>
+                <td style="color:var(--p-muted)">+55 11 9662-1100</td>
+                <td style="color:#60a5fa">dental@caresul.com</td>
+                <td><span class="badge" style="background:rgba(96,165,250,0.12);color:#60a5fa">Curitiba</span></td>
+                <td><span class="badge badge-ok">Com Email</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>

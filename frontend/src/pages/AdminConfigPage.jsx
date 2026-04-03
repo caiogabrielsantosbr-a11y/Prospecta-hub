@@ -1,138 +1,130 @@
-import { useState } from 'react'
+/**
+ * AdminConfigPage — Backend configuration page.
+ */
+import { useState, useEffect } from 'react'
+import { Link2, Save, Trash2, AlertCircle } from 'lucide-react'
 import useConfigStore from '../store/useConfigStore'
+import { api } from '../services/api'
 import toast from 'react-hot-toast'
 
 export default function AdminConfigPage() {
-  const { apiUrl, connectionStatus, isLoading, setApiUrl, clearApiUrl } = useConfigStore()
-  const [inputUrl, setInputUrl] = useState(apiUrl || '')
-  const [error, setError] = useState(null)
+  const { backendUrl, setBackendUrl, testConnection, wsConnected } = useConfigStore()
+  const [url, setUrl] = useState(backendUrl)
+  const [testing, setTesting] = useState(false)
+
+  useEffect(() => { setUrl(backendUrl) }, [backendUrl])
 
   const handleSave = async () => {
-    setError(null)
-    
+    setTesting(true)
     try {
-      await setApiUrl(inputUrl)
-      toast.success('Configuração salva e conexão testada com sucesso!')
+      setBackendUrl(url)
+      await testConnection()
+      toast.success('Conexão estabelecida com sucesso!')
     } catch (e) {
-      setError(e.message)
-      toast.error('Falha ao salvar configuração')
+      toast.error('Falha na conexão: ' + (e.message || 'Timeout'))
     }
+    setTesting(false)
   }
 
-  const handleClear = async () => {
-    try {
-      await clearApiUrl()
-      setInputUrl('')
-      setError(null)
-      toast.success('Configuração limpa')
-    } catch (e) {
-      toast.error('Falha ao limpar configuração')
-    }
-  }
-
-  const statusColors = {
-    connected: 'text-primary',
-    disconnected: 'text-error',
-    testing: 'text-secondary',
-    unconfigured: 'text-on-surface-variant',
-  }
-
-  const statusLabels = {
-    connected: 'Conectado',
-    disconnected: 'Desconectado',
-    testing: 'Testando...',
-    unconfigured: 'Não configurado',
+  const handleClear = () => {
+    setUrl('')
+    setBackendUrl('')
+    toast('URL limpa', { icon: '🗑️' })
   }
 
   return (
-    <div className="p-8 flex items-center justify-center min-h-[calc(100vh-80px)]">
-      <div className="w-full max-w-[600px] space-y-8">
-        {/* Header */}
-        <div className="flex flex-col gap-1 text-center">
-          <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">SISTEMA</span>
-          <h2 className="font-condensed text-4xl font-bold">Configuração do Backend</h2>
-          <p className="text-on-surface-variant text-sm mt-2">
-            Configure a URL do backend para conectar o frontend aos serviços de extração.
-          </p>
+    <div style={{
+      flex: 1, display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', padding: 40,
+    }}>
+      {/* Eyebrow */}
+      <div style={{
+        fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase',
+        color: 'var(--pro-orange)', fontWeight: 700, marginBottom: 8, textAlign: 'center',
+      }}>
+        Sistema
+      </div>
+
+      {/* Title */}
+      <div style={{
+        fontSize: 32, fontWeight: 800, color: 'var(--pro-text)',
+        marginBottom: 6, textAlign: 'center',
+      }}>
+        Configuração do Backend
+      </div>
+
+      {/* Subtitle */}
+      <div style={{
+        fontSize: 13, color: 'var(--pro-muted)', marginBottom: 32, textAlign: 'center',
+      }}>
+        Configure a URL do backend para conectar o frontend aos serviços de extração.
+      </div>
+
+      {/* Config Card */}
+      <div style={{
+        width: '100%', maxWidth: 480,
+        background: 'var(--pro-surface2)', border: '0.5px solid var(--pro-border)',
+        borderRadius: 14, padding: 24,
+      }}>
+        {/* Connection Status Row */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          paddingBottom: 16, marginBottom: 16, borderBottom: '0.5px solid var(--pro-border)',
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--pro-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Link2 size={14} strokeWidth={2} />
+            Status da Conexão
+          </div>
+          <div style={{
+            fontSize: 12, fontWeight: 600,
+            color: wsConnected ? 'var(--pro-success)' : '#f87171',
+            display: 'flex', alignItems: 'center', gap: 5,
+          }}>
+            <span style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: wsConnected ? 'var(--pro-success)' : '#f87171',
+            }} />
+            {wsConnected ? 'Conectado' : 'Desconectado'}
+          </div>
         </div>
-        
-        <div className="glass-card rounded-lg p-8 space-y-6">
-          {/* Connection Status */}
-          <div className="flex items-center justify-between p-4 rounded-lg bg-surface-container-high border border-outline-variant/20">
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-on-surface-variant">cable</span>
-              <span className="text-sm font-semibold">Status da Conexão</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-primary animate-pulse' : connectionStatus === 'disconnected' ? 'bg-error' : 'bg-on-surface-variant'}`} />
-              <span className={`text-sm font-bold ${statusColors[connectionStatus]}`}>
-                {statusLabels[connectionStatus]}
-              </span>
-            </div>
-          </div>
 
-          {/* URL Input */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-              URL do Backend
-            </label>
-            <input
-              type="text"
-              value={inputUrl}
-              onChange={(e) => setInputUrl(e.target.value)}
-              placeholder="https://abc123.ngrok.io"
-              className="w-full !bg-surface-container-high !border-outline-variant/30 text-sm"
-              disabled={isLoading}
-            />
-            {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-error/10 border border-error/30">
-                <span className="material-symbols-outlined text-error text-sm">error</span>
-                <p className="text-sm text-error">{error}</p>
-              </div>
-            )}
-          </div>
+        {/* URL Field */}
+        <div className="field-label">URL do Backend</div>
+        <input
+          type="text"
+          value={url}
+          onChange={e => setUrl(e.target.value)}
+          placeholder="https://seu-backend.ngrok-free.dev"
+          style={{
+            width: '100%', fontFamily: 'monospace', fontSize: 12, marginBottom: 14,
+          }}
+        />
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-outline-variant/10">
-            <button
-              onClick={handleSave}
-              disabled={isLoading || !inputUrl}
-              className="btn-primary flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-lg">save</span>
-                  Salvar e Testar
-                </>
-              )}
-            </button>
-            <button
-              onClick={handleClear}
-              disabled={isLoading}
-              className="btn-ghost border-error/30 text-error hover:bg-error/10 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="material-symbols-outlined text-lg">delete</span>
-              Limpar Configuração
-            </button>
-          </div>
+        {/* Buttons */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10 }}>
+          <button
+            className="btn-primary"
+            onClick={handleSave}
+            disabled={testing}
+            style={{ width: '100%', justifyContent: 'center' }}
+          >
+            <Save size={13} strokeWidth={2} />
+            {testing ? 'Testando...' : 'Salvar e Testar'}
+          </button>
+          <button className="btn-danger" onClick={handleClear}>
+            <Trash2 size={13} strokeWidth={2} />
+            Limpar
+          </button>
+        </div>
 
-          {/* Help Text */}
-          <div className="bg-primary/10 p-4 rounded-lg border border-primary/20">
-            <div className="flex gap-3">
-              <span className="material-symbols-outlined text-primary text-xl">info</span>
-              <div className="flex-1 space-y-2">
-                <p className="text-sm font-semibold text-on-surface">Como usar:</p>
-                <p className="text-sm text-on-surface-variant leading-relaxed">
-                  Execute seu backend local e exponha-o usando um serviço de túnel 
-                  (ngrok, localtunnel, Cloudflare Tunnel). Cole a URL pública aqui e clique em "Salvar e Testar".
-                </p>
-              </div>
-            </div>
+        {/* Help Box */}
+        <div className="help-box">
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--pro-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <AlertCircle size={13} strokeWidth={2} />
+            Como usar
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--pro-muted2)', lineHeight: 1.6 }}>
+            Execute seu backend local e exponha-o usando um serviço de túnel (ngrok, localtunnel, Cloudflare Tunnel). Cole a URL pública aqui e clique em "Salvar e Testar".
           </div>
         </div>
       </div>

@@ -301,15 +301,12 @@ export default function InboxPage() {
   // ─────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 64px)' }}
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}
       onClick={() => showSettings && setShowSettings(false)}>
       {/* Header */}
-      <div className="px-8 py-4 border-b border-outline-variant/10 shrink-0">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">COMUNICAÇÃO</span>
-            <h2 className="font-condensed text-3xl font-bold">Inbox Gmail</h2>
-          </div>
+      <div style={{ padding: '12px 24px', borderBottom: '0.5px solid var(--pro-border)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--pro-text)' }}>Inbox Gmail</div>
 
           <div className="flex items-center gap-2 flex-wrap">
             {loadingAccounts ? (
@@ -643,8 +640,8 @@ function TemplatesModal({ templates, onSelect, onClose, onRefresh }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-surface-container rounded-2xl shadow-xl border border-outline-variant/20 w-full max-w-lg max-h-[80vh] flex flex-col"
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-container" style={{ maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/10">
           <h3 className="font-bold text-lg">Templates de Resposta</h3>

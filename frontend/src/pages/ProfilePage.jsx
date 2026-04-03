@@ -1,7 +1,8 @@
 /**
- * ProfilePage - User profile management
+ * ProfilePage — User profile management (Screen 06)
  */
 import { useState } from 'react'
+import { Upload, LogOut, Edit3, Save, AlertCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -16,10 +17,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
 
   const handleChange = (e) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }))
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
   const handleSave = async () => {
@@ -35,210 +33,163 @@ export default function ProfilePage() {
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Por favor, selecione uma imagem')
-      return
-    }
-
-    // Validate file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Imagem muito grande. Máximo 2MB')
-      return
-    }
-
+    if (!file.type.startsWith('image/')) { toast.error('Por favor, selecione uma imagem'); return }
+    if (file.size > 2 * 1024 * 1024) { toast.error('Imagem muito grande. Máximo 2MB'); return }
     setUploading(true)
-    try {
-      await uploadAvatar(file)
-    } finally {
-      setUploading(false)
-    }
+    try { await uploadAvatar(file) } finally { setUploading(false) }
   }
 
+  const initials = (profile?.full_name || user?.email || 'U')
+    .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+
   return (
-    <div className="p-8 space-y-8 max-w-[1200px]">
-      {/* Header */}
-      <div className="flex flex-col gap-1">
-        <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">CONTA</span>
-        <h2 className="font-condensed text-4xl font-bold">Meu Perfil</h2>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile Card */}
-        <div className="glass-card rounded-lg p-6 space-y-6">
+    <div style={{ padding: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 20 }}>
+        {/* Left: Profile Card */}
+        <div className="profile-card">
           {/* Avatar */}
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt="Avatar"
-                  className="w-32 h-32 rounded-full object-cover border-4 border-primary/20"
-                />
-              ) : (
-                <div className="w-32 h-32 rounded-full bg-primary/20 flex items-center justify-center border-4 border-primary/20">
-                  <span className="material-symbols-outlined text-6xl text-primary">
-                    person
-                  </span>
-                </div>
-              )}
-              
-              {uploading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
-                  <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
-                </div>
-              )}
-            </div>
-
-            <label className="btn-ghost cursor-pointer">
-              <span className="material-symbols-outlined text-lg">upload</span>
-              Alterar Foto
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="hidden"
-                disabled={uploading}
+          <div style={{ position: 'relative' }}>
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt="Avatar"
+                style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover' }}
               />
-            </label>
+            ) : (
+              <div className="prof-avatar">{initials}</div>
+            )}
+            {uploading && (
+              <div style={{
+                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+                justifyContent: 'center', background: 'rgba(0,0,0,0.5)', borderRadius: '50%',
+              }}>
+                <div style={{ width: 24, height: 24, border: '3px solid #fff', borderTopColor: 'transparent', borderRadius: '50%' }} className="animate-spin" />
+              </div>
+            )}
           </div>
 
-          {/* User Info */}
-          <div className="pt-6 border-t border-outline-variant/10 space-y-3">
-            <div>
-              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">
-                Email
-              </label>
-              <p className="text-sm">{user?.email}</p>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">
-                Membro desde
-              </label>
-              <p className="text-sm">
-                {new Date(profile?.created_at).toLocaleDateString('pt-BR')}
-              </p>
-            </div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--pro-text)', marginTop: 12, marginBottom: 4 }}>
+            {profile?.full_name || 'Usuário'}
           </div>
+          <div style={{ fontSize: 12, color: 'var(--pro-muted)', marginBottom: 4 }}>
+            {user?.email}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--pro-muted2)', marginBottom: 16 }}>
+            Membro desde {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('pt-BR') : '—'}
+          </div>
+
+          {/* Upload Button */}
+          <label className="btn-outline" style={{ cursor: 'pointer', marginBottom: 8 }}>
+            <Upload size={13} strokeWidth={2} />
+            Alterar Foto
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              style={{ display: 'none' }}
+              disabled={uploading}
+            />
+          </label>
 
           {/* Sign Out */}
           <button
+            className="btn-outline"
             onClick={signOut}
-            className="btn-ghost w-full justify-center border-error/30 text-error hover:bg-error/10"
+            style={{ color: '#f87171', borderColor: 'rgba(248,113,113,0.2)' }}
           >
-            <span className="material-symbols-outlined text-lg">logout</span>
+            <LogOut size={13} strokeWidth={2} />
             Sair da Conta
           </button>
         </div>
 
-        {/* Settings Card */}
-        <div className="lg:col-span-2 glass-card rounded-lg p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold">Configurações</h3>
+        {/* Right: Account Settings */}
+        <div style={{
+          background: 'var(--pro-surface2)', border: '0.5px solid var(--pro-border)',
+          borderRadius: 12, padding: 24,
+        }}>
+          {/* Header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: 20, paddingBottom: 16, borderBottom: '0.5px solid var(--pro-border)',
+          }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--pro-text)' }}>
+              Configurações da Conta
+            </div>
             {!editing ? (
               <button
-                onClick={() => {
-                  setFormData({
-                    full_name: profile?.full_name || '',
-                    backend_url: profile?.backend_url || ''
-                  })
-                  setEditing(true)
-                }}
                 className="btn-ghost"
+                onClick={() => { setFormData({ full_name: profile?.full_name || '', backend_url: profile?.backend_url || '' }); setEditing(true) }}
+                style={{ padding: '7px 14px', fontSize: 12 }}
               >
-                <span className="material-symbols-outlined text-lg">edit</span>
+                <Edit3 size={12} strokeWidth={2} />
                 Editar
               </button>
             ) : (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setEditing(false)}
-                  className="btn-ghost"
-                  disabled={saving}
-                >
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn-ghost" onClick={() => setEditing(false)} disabled={saving} style={{ padding: '7px 14px', fontSize: 12 }}>
                   Cancelar
                 </button>
-                <button
-                  onClick={handleSave}
-                  className="btn-primary"
-                  disabled={saving}
-                >
+                <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ padding: '7px 14px', fontSize: 12 }}>
                   {saving ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      Salvando...
-                    </>
+                    <><div style={{ width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%' }} className="animate-spin" /> Salvando...</>
                   ) : (
-                    <>
-                      <span className="material-symbols-outlined text-lg">save</span>
-                      Salvar
-                    </>
+                    <><Save size={12} strokeWidth={2} /> Salvar</>
                   )}
                 </button>
               </div>
             )}
           </div>
 
-          <div className="space-y-4">
-            {/* Full Name */}
-            <div>
-              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">
-                Nome Completo
-              </label>
-              {editing ? (
-                <input
-                  type="text"
-                  name="full_name"
-                  value={formData.full_name}
-                  onChange={handleChange}
-                  className="w-full"
-                  placeholder="Seu nome"
-                />
-              ) : (
-                <p className="text-sm p-3 rounded-lg bg-surface-container-high">
-                  {profile?.full_name || 'Não informado'}
-                </p>
-              )}
+          {/* Fields */}
+          <div className="field-label">Nome Completo</div>
+          {editing ? (
+            <input
+              type="text"
+              name="full_name"
+              value={formData.full_name}
+              onChange={handleChange}
+              placeholder="Seu nome"
+              style={{ width: '100%', marginBottom: 16 }}
+            />
+          ) : (
+            <div style={{
+              width: '100%', padding: '9px 12px', background: 'var(--pro-surface3)',
+              border: '0.5px solid var(--pro-border)', borderRadius: 8,
+              color: 'var(--pro-text)', fontSize: 13, marginBottom: 16,
+            }}>
+              {profile?.full_name || 'Não informado'}
             </div>
+          )}
 
-            {/* Backend URL */}
-            <div>
-              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">
-                URL do Backend
-              </label>
-              {editing ? (
-                <input
-                  type="text"
-                  name="backend_url"
-                  value={formData.backend_url}
-                  onChange={handleChange}
-                  className="w-full"
-                  placeholder="https://seu-backend.ngrok.io"
-                />
-              ) : (
-                <p className="text-sm p-3 rounded-lg bg-surface-container-high font-mono">
-                  {profile?.backend_url || 'Não configurado'}
-                </p>
-              )}
-              <p className="text-xs text-on-surface-variant mt-2">
-                Configure a URL do seu backend pessoal para extração de leads
-              </p>
+          <div className="field-label">URL do Backend</div>
+          {editing ? (
+            <input
+              type="text"
+              name="backend_url"
+              value={formData.backend_url}
+              onChange={handleChange}
+              placeholder="https://seu-backend.ngrok.io"
+              style={{ width: '100%', fontFamily: 'monospace', fontSize: 12, marginBottom: 16 }}
+            />
+          ) : (
+            <div style={{
+              width: '100%', padding: '9px 12px', background: 'var(--pro-surface3)',
+              border: '0.5px solid var(--pro-border)', borderRadius: 8,
+              color: 'var(--pro-muted)', fontSize: 12, fontFamily: 'monospace', marginBottom: 16,
+            }}>
+              {profile?.backend_url || 'Não configurado'}
             </div>
-          </div>
+          )}
 
           {/* Info Box */}
-          <div className="bg-primary/10 p-4 rounded-lg border border-primary/20">
-            <div className="flex gap-3">
-              <span className="material-symbols-outlined text-primary text-xl">info</span>
-              <div className="flex-1 space-y-2">
-                <p className="text-sm font-semibold text-on-surface">Dados Privados</p>
-                <p className="text-sm text-on-surface-variant leading-relaxed">
-                  Seus leads, tarefas e configurações são privados e visíveis apenas para você.
-                  Apenas os conjuntos de locais são compartilhados entre todos os usuários.
-                </p>
-              </div>
+          <div className="info-box">
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#F07A5F', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertCircle size={13} strokeWidth={2} />
+              Dados Privados
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--pro-muted)', lineHeight: 1.5 }}>
+              Seus leads, tarefas e configurações são privados e visíveis apenas para você.
+              Apenas os conjuntos de locais são compartilhados entre todos os usuários.
             </div>
           </div>
         </div>

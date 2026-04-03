@@ -1,5 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { Bell, LogOut, User, Settings } from 'lucide-react'
 import useTaskStore from '../../store/useTaskStore'
 import { useAuth } from '../../contexts/AuthContext'
 import ConnectionStatus from '../ConnectionStatus'
@@ -40,8 +41,8 @@ export default function TopBar() {
     <header style={{
       height: 52,
       flexShrink: 0,
-      borderBottom: '0.5px solid rgba(255,255,255,0.08)',
-      background: '#161616',
+      borderBottom: '0.5px solid var(--pro-border)',
+      background: 'var(--pro-surface)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -52,10 +53,10 @@ export default function TopBar() {
     }}>
       {/* Left: eyebrow + title */}
       <div>
-        <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(240,238,233,0.50)', fontWeight: 600 }}>
+        <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--pro-muted)', fontWeight: 600 }}>
           {meta.eyebrow}
         </div>
-        <div style={{ fontFamily: '"Barlow Condensed", sans-serif', fontSize: 20, fontWeight: 700, color: '#F0EEE9', lineHeight: 1.1 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--pro-text)', lineHeight: 1.1 }}>
           {meta.title}
         </div>
       </div>
@@ -64,36 +65,37 @@ export default function TopBar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         {/* Active tasks badge */}
         {activeTasks.length > 0 && (
-          <div style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:100, background:'rgba(251,191,36,0.12)', fontSize:11, fontWeight:600, color:'#fbbf24' }}>
-            <span style={{ width:6, height:6, borderRadius:'50%', background:'#fbbf24' }} className="animate-pulse" />
+          <div className="status-pill" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}>
+            <span className="status-dot animate-pulse" style={{ background: '#fbbf24' }} />
             {activeTasks.length} processo{activeTasks.length > 1 ? 's' : ''}
           </div>
         )}
 
         <ConnectionStatus />
 
+        {/* Notification icon */}
+        <button className="btn-icon" style={{ background: 'transparent', border: 'none' }}>
+          <Bell size={16} strokeWidth={1.75} style={{ color: 'var(--pro-muted)' }} />
+        </button>
+
         {/* Profile menu */}
-        <div className="relative" ref={menuRef}>
+        <div style={{ position: 'relative' }} ref={menuRef}>
           <button
             onClick={() => setShowMenu(!showMenu)}
-            style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', padding:0 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
             {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="Avatar" style={{ width:30, height:30, borderRadius:'50%', objectFit:'cover' }} />
+              <img src={profile.avatar_url} alt="Avatar" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover' }} />
             ) : (
               <div style={{
                 width: 30, height: 30, borderRadius: '50%',
-                background: 'linear-gradient(135deg,#E8593C,#C4185A)',
+                background: 'var(--pro-grad)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 11, fontWeight: 700, color: '#fff',
-                fontFamily: '"Barlow", sans-serif',
               }}>
                 {initials}
               </div>
             )}
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#F0EEE9', fontFamily: '"Barlow", sans-serif' }} className="hidden md:block">
-              {profile?.full_name || user?.email?.split('@')[0]}
-            </span>
           </button>
 
           {showMenu && (
@@ -101,40 +103,48 @@ export default function TopBar() {
               className="animate-scale-in"
               style={{
                 position: 'absolute', right: 0, top: '100%', marginTop: 8,
-                width: 220, background: '#1F1F1F', border: '0.5px solid rgba(255,255,255,0.14)',
+                width: 220, background: 'var(--pro-surface2)', border: '0.5px solid var(--pro-border2)',
                 borderRadius: 12, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
                 zIndex: 50,
               }}
             >
-              <div style={{ padding: '14px 16px', borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#F0EEE9' }}>{profile?.full_name || 'Usuário'}</div>
-                <div style={{ fontSize: 11, color: 'rgba(240,238,233,0.50)', marginTop: 2 }}>{user?.email}</div>
+              <div style={{ padding: '14px 16px', borderBottom: '0.5px solid var(--pro-border)' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--pro-text)' }}>{profile?.full_name || 'Usuário'}</div>
+                <div style={{ fontSize: 11, color: 'var(--pro-muted)', marginTop: 2 }}>{user?.email}</div>
               </div>
               <div style={{ padding: '6px' }}>
                 {[
-                  { label: 'Meu Perfil', path: '/profile', icon: 'person' },
-                  { label: 'Configurações', path: '/admin/config', icon: 'settings' },
+                  { label: 'Meu Perfil', path: '/profile', Icon: User },
+                  { label: 'Configurações', path: '/admin/config', Icon: Settings },
                 ].map(item => (
                   <button
                     key={item.path}
                     onClick={() => { navigate(item.path); setShowMenu(false) }}
-                    style={{ width:'100%', padding:'8px 10px', display:'flex', alignItems:'center', gap:8, background:'none', border:'none', cursor:'pointer', borderRadius:8, fontSize:13, color:'rgba(240,238,233,0.50)', fontFamily:'"Barlow",sans-serif', textAlign:'left' }}
-                    onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.05)'; e.currentTarget.style.color='#F0EEE9' }}
-                    onMouseLeave={e => { e.currentTarget.style.background=''; e.currentTarget.style.color='rgba(240,238,233,0.50)' }}
+                    style={{
+                      width: '100%', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8,
+                      background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8,
+                      fontSize: 13, color: 'var(--pro-muted)', textAlign: 'left',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'var(--pro-text)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--pro-muted)' }}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize:16 }}>{item.icon}</span>
+                    <item.Icon size={16} strokeWidth={1.75} />
                     {item.label}
                   </button>
                 ))}
               </div>
-              <div style={{ borderTop: '0.5px solid rgba(255,255,255,0.08)', padding: '6px' }}>
+              <div style={{ borderTop: '0.5px solid var(--pro-border)', padding: '6px' }}>
                 <button
                   onClick={handleSignOut}
-                  style={{ width:'100%', padding:'8px 10px', display:'flex', alignItems:'center', gap:8, background:'none', border:'none', cursor:'pointer', borderRadius:8, fontSize:13, color:'#f87171', fontFamily:'"Barlow",sans-serif', textAlign:'left' }}
-                  onMouseEnter={e => e.currentTarget.style.background='rgba(248,113,113,0.08)'}
-                  onMouseLeave={e => e.currentTarget.style.background=''}
+                  style={{
+                    width: '100%', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8,
+                    background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8,
+                    fontSize: 13, color: '#f87171', textAlign: 'left',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.08)'}
+                  onMouseLeave={e => e.currentTarget.style.background = ''}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize:16 }}>logout</span>
+                  <LogOut size={16} strokeWidth={1.75} />
                   Sair
                 </button>
               </div>

@@ -3,10 +3,9 @@
  */
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import useConfigStore from '../store/useConfigStore'
+import { locationSetsService } from '../services/supabase'
 
 export default function LocationSetsPage() {
-  const { apiUrl } = useConfigStore()
   const [locationSets, setLocationSets] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -35,28 +34,13 @@ export default function LocationSetsPage() {
   }, [])
 
   const fetchLocationSets = async () => {
-    if (!apiUrl) {
-      toast.error('URL do backend não configurada')
-      setIsLoading(false)
-      return
-    }
-    
     setIsLoading(true)
     try {
-      const response = await fetch(`${apiUrl}/api/locations`, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true' // Skip ngrok warning page
-        }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setLocationSets(data)
-      } else {
-        toast.error('Falha ao carregar conjuntos de locais')
-      }
+      const data = await locationSetsService.getAll()
+      setLocationSets(data)
     } catch (error) {
       console.error('Failed to fetch location sets:', error)
-      toast.error('Erro de conexão ao carregar conjuntos')
+      toast.error('Erro ao carregar conjuntos de locais')
     } finally {
       setIsLoading(false)
     }
@@ -108,13 +92,6 @@ export default function LocationSetsPage() {
   const handleCreateSubmit = async (e) => {
     e.preventDefault()
 
-    // Check if API is configured
-    if (!apiUrl) {
-      toast.error('URL do backend não configurada. Configure em Configurações.')
-      return
-    }
-
-    // Validate form fields
     if (!formData.name.trim()) {
       toast.error('Nome é obrigatório')
       return
@@ -130,7 +107,6 @@ export default function LocationSetsPage() {
       return
     }
 
-    // Validate JSON
     const validation = validateJson(formData.jsonInput)
     if (!validation.valid) {
       setJsonError(validation.error)
@@ -138,57 +114,22 @@ export default function LocationSetsPage() {
       return
     }
 
-    // Submit to API
     setIsCreating(true)
     try {
-      const response = await fetch(`${apiUrl}/api/locations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true' // Skip ngrok warning page
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          description: formData.description.trim(),
-          locations: validation.locations
-        })
+      await locationSetsService.create({
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        locations: validation.locations
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        toast.success(`Conjunto criado com sucesso! ${data.location_count} locais adicionados.`)
-        
-        // Reset form and close
-        setFormData({ name: '', description: '', jsonInput: '' })
-        setJsonError('')
-        setShowCreateForm(false)
-        
-        // Refresh list
-        fetchLocationSets()
-      } else {
-        // Handle error responses
-        const errorMessage = data.detail?.message || data.message || 'Erro ao criar conjunto'
-        
-        if (data.detail?.error === 'duplicate_name') {
-          toast.error(`Já existe um conjunto com o nome "${formData.name}"`)
-        } else if (data.detail?.error === 'file_too_large') {
-          toast.error('Arquivo JSON excede o limite de 10MB')
-        } else if (data.detail?.error === 'invalid_name_length') {
-          toast.error('Nome deve ter entre 3 e 100 caracteres')
-        } else if (data.detail?.error === 'invalid_description_length') {
-          toast.error('Descrição não pode exceder 500 caracteres')
-        } else if (data.detail?.error === 'empty_locations') {
-          toast.error('Conjunto deve conter pelo menos um local')
-        } else if (data.detail?.error === 'invalid_location_format') {
-          toast.error('Todos os locais devem ser strings')
-        } else {
-          toast.error(errorMessage)
-        }
-      }
+      toast.success(`Conjunto criado com sucesso! ${validation.locations.length} locais adicionados.`)
+      setFormData({ name: '', description: '', jsonInput: '' })
+      setJsonError('')
+      setShowCreateForm(false)
+      fetchLocationSets()
     } catch (error) {
       console.error('Failed to create location set:', error)
-      toast.error('Erro de conexão ao criar conjunto')
+      toast.error(error.message || 'Erro ao criar conjunto')
     } finally {
       setIsCreating(false)
     }

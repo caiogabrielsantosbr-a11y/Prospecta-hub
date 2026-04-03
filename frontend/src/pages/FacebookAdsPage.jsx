@@ -2,6 +2,7 @@
  * Facebook ADS Extractor Page
  */
 import { useState } from 'react'
+import { Search, UserCheck } from 'lucide-react'
 import { api } from '../services/api'
 import useTaskStore from '../store/useTaskStore'
 
@@ -24,44 +25,64 @@ export default function FacebookAdsPage() {
   }
 
   return (
-    <div className="p-8 space-y-8 max-w-[1600px]">
-      <div className="flex flex-col gap-1">
-        <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">MÓDULO</span>
-        <h2 className="font-condensed text-4xl font-bold">Facebook ADS</h2>
-        <p className="text-on-surface-variant text-sm">Extraia leads da Biblioteca de Anúncios do Facebook em 2 etapas.</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div style={{ padding: 24 }}>
+      {/* Two-Column Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
         {/* Step 1: Feed */}
-        <div className="glass-card p-8 rounded-lg space-y-6">
-          <div className="flex items-center gap-3">
-            <span className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">1</span>
-            <h4 className="text-lg font-bold">Buscar Feed</h4>
+        <div className="form-section" style={{ margin: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: 'rgba(232,89,60,0.12)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--pro-orange)', fontWeight: 700, fontSize: 13,
+            }}>1</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--pro-text)' }}>Buscar Feed</div>
           </div>
-          <p className="text-sm text-on-surface-variant">Busque anúncios por palavra-chave na Ads Library.</p>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Palavra-chave</label>
-            <input type="text" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="ex: e-commerce fashion" className="w-full" />
+          <div style={{ fontSize: 12, color: 'var(--pro-muted)', marginBottom: 14 }}>
+            Busque anúncios por palavra-chave na Ads Library.
           </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Delay (ms)</label>
-            <input type="number" value={delay} onChange={(e) => setDelay(parseInt(e.target.value))} className="w-32" />
-          </div>
-          <button onClick={handleStartFeed} className="btn-primary">
-            <span className="material-symbols-outlined text-lg">search</span>
+
+          <div className="field-label">Palavra-chave</div>
+          <input
+            type="text"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="ex: e-commerce fashion"
+            style={{ width: '100%', marginBottom: 12 }}
+          />
+
+          <div className="field-label">Delay (ms)</div>
+          <input
+            type="number"
+            value={delay}
+            onChange={(e) => setDelay(parseInt(e.target.value))}
+            style={{ width: 120, marginBottom: 14 }}
+          />
+
+          <button onClick={handleStartFeed} className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+            <Search size={13} strokeWidth={2} />
             Buscar Feed
           </button>
         </div>
 
         {/* Step 2: Contacts */}
-        <div className="glass-card p-8 rounded-lg space-y-6">
-          <div className="flex items-center gap-3">
-            <span className="w-8 h-8 rounded-lg bg-secondary/20 flex items-center justify-center text-secondary font-bold text-sm">2</span>
-            <h4 className="text-lg font-bold">Extrair Contatos</h4>
+        <div className="form-section" style={{ margin: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: 'rgba(196,24,90,0.12)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--pro-pink)', fontWeight: 700, fontSize: 13,
+            }}>2</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--pro-text)' }}>Extrair Contatos</div>
           </div>
-          <p className="text-sm text-on-surface-variant">Com o feed coletado, extraia emails, telefones e Instagram de cada página.</p>
-          <button onClick={handleStartContacts} className="btn-primary">
-            <span className="material-symbols-outlined text-lg">contact_page</span>
+          <div style={{ fontSize: 12, color: 'var(--pro-muted)', marginBottom: 14, lineHeight: 1.5 }}>
+            Com o feed coletado, extraia emails, telefones e Instagram de cada página.
+          </div>
+
+          <button onClick={handleStartContacts} className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+            <UserCheck size={13} strokeWidth={2} />
             Extrair Contatos
           </button>
         </div>
@@ -69,20 +90,24 @@ export default function FacebookAdsPage() {
 
       {/* Task Status */}
       {currentTask && (
-        <div className="glass-card p-6 rounded-lg">
-          <div className="flex items-center gap-4 mb-4">
-            <span className={`w-2 h-2 rounded-full ${currentTask.status === 'running' ? 'bg-primary animate-pulse' : 'bg-green-500'}`} />
-            <span className="text-sm font-bold">{currentTask.module} — {currentTask.status}</span>
-            <span className="text-xs text-on-surface-variant">#{currentTask.id}</span>
+        <div className="pro-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span className={`status-dot ${currentTask.status === 'running' ? 'animate-pulse' : ''}`}
+              style={{ background: currentTask.status === 'running' ? 'var(--pro-orange)' : 'var(--pro-success)' }} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--pro-text)' }}>
+              {currentTask.module} — {currentTask.status}
+            </span>
+            <span className="pro-badge badge-neutral">#{currentTask.id}</span>
           </div>
-          <div className="w-full h-2 bg-surface-container rounded-full overflow-hidden">
-            <div className="h-full bg-primary transition-all duration-500" style={{ width: `${currentTask.progress}%` }} />
+
+          <div className="prog-bar" style={{ marginBottom: 10 }}>
+            <div className="prog-fill" style={{ width: `${currentTask.progress}%` }} />
           </div>
-          <div className="mt-4 font-mono text-[10px] space-y-1 max-h-20 overflow-y-auto custom-scrollbar">
+
+          <div className="pro-terminal" style={{ padding: 10, maxHeight: 80, overflow: 'auto' }}>
             {(currentTask.logs || []).slice(-5).map((log, i) => (
-              <div key={i} className="flex gap-2">
-                <span className="text-on-surface-variant">{log.time}</span>
-                <span className={`${log.level === 'error' ? 'text-error' : 'text-primary'}`}>{log.message}</span>
+              <div key={i} className="term-line" style={{ fontSize: 10 }}>
+                [{log.time}] <span className="hl">{log.message}</span>
               </div>
             ))}
           </div>
