@@ -4,7 +4,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 
-import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import useWebSocket from './hooks/useWebSocket'
 import useConfigStore from './store/useConfigStore'
@@ -29,8 +28,8 @@ function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0D0D0D' }}>
+        <div style={{ width:32, height:32, border:'3px solid rgba(232,89,60,0.2)', borderTopColor:'#E8593C', borderRadius:'50%' }} className="animate-spin" />
       </div>
     )
   }
@@ -52,47 +51,43 @@ function AppLayout() {
   }, [loadFromSupabase])
 
   return (
-    <>
+    <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'#0D0D0D' }}>
       <Sidebar />
-      <main className="ml-64 min-h-screen flex flex-col">
+      <main style={{ marginLeft: 200, flex: 1, display:'flex', flexDirection:'column', overflow:'hidden', background:'#0D0D0D' }}>
         <TopBar />
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/gmap" element={<GMapPage />} />
-          <Route path="/facebook" element={<FacebookAdsPage />} />
-          <Route path="/leads" element={<LeadsPage />} />
-          <Route path="/inbox" element={<InboxPage />} />
-          <Route path="/admin/config" element={<AdminConfigPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-        </Routes>
+        <div style={{ flex: 1, overflowY: 'auto' }} className="custom-scrollbar">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/gmap" element={<GMapPage />} />
+            <Route path="/facebook" element={<FacebookAdsPage />} />
+            <Route path="/leads" element={<LeadsPage />} />
+            <Route path="/inbox" element={<InboxPage />} />
+            <Route path="/admin/config" element={<AdminConfigPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Routes>
+        </div>
       </main>
       <TaskManagerBar />
-
-      {/* Background Glow */}
-      <div className="bg-glow-primary" />
-      <div className="bg-glow-secondary" />
-
       <Toaster
         position="bottom-right"
         toastOptions={{
           style: {
-            background: 'var(--color-surface-container)',
-            color: 'var(--color-on-surface)',
-            border: '1px solid var(--color-outline-variant)',
-            fontFamily: 'Manrope, sans-serif',
+            background: '#1F1F1F',
+            color: '#F0EEE9',
+            border: '0.5px solid rgba(255,255,255,0.14)',
+            fontFamily: 'Barlow, sans-serif',
             fontSize: '0.875rem',
           },
         }}
       />
-    </>
+    </div>
   )
 }
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
@@ -105,8 +100,7 @@ export default function App() {
               }
             />
           </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </ThemeProvider>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }

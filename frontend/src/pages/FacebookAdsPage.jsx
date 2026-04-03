@@ -27,7 +27,7 @@ export default function FacebookAdsPage() {
     <div className="p-8 space-y-8 max-w-[1600px]">
       <div className="flex flex-col gap-1">
         <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">MÓDULO</span>
-        <h2 className="text-3xl font-bold tracking-tight">Facebook ADS</h2>
+        <h2 className="font-condensed text-4xl font-bold">Facebook ADS</h2>
         <p className="text-on-surface-variant text-sm">Extraia leads da Biblioteca de Anúncios do Facebook em 2 etapas.</p>
       </div>
 

@@ -1,124 +1,140 @@
-/**
- * TopBar — sticky header with search and notifications.
- */
 import { useMemo, useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import useTaskStore from '../../store/useTaskStore'
 import { useAuth } from '../../contexts/AuthContext'
-import ThemeToggle from '../ThemeToggle'
 import ConnectionStatus from '../ConnectionStatus'
+
+const ROUTE_META = {
+  '/':             { eyebrow: 'Sistema Operacional', title: 'Painel de Controle' },
+  '/gmap':         { eyebrow: 'Extração Automática',  title: 'Google Maps Extractor' },
+  '/facebook':     { eyebrow: 'Extração Automática',  title: 'Facebook ADS' },
+  '/leads':        { eyebrow: 'Gerenciamento',         title: 'Leads' },
+  '/inbox':        { eyebrow: 'Comunicação',           title: 'Inbox Gmail' },
+  '/profile':      { eyebrow: 'Conta',                 title: 'Meu Perfil' },
+  '/admin/config': { eyebrow: 'Sistema',               title: 'Configurações' },
+}
 
 export default function TopBar() {
   const tasks = useTaskStore((s) => s.tasks)
   const activeTasks = useMemo(() => tasks.filter(t => t.status === 'running' || t.status === 'paused'), [tasks])
   const { user, profile, signOut } = useAuth()
-  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
   const menuRef = useRef(null)
   const navigate = useNavigate()
+  const location = useLocation()
 
-  // Close menu when clicking outside
+  const meta = ROUTE_META[location.pathname] || { eyebrow: 'Prospecta', title: 'Dashboard' }
+
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowProfileMenu(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
-  }
+  const handleSignOut = async () => { await signOut(); navigate('/login') }
+
+  const initials = (profile?.full_name || user?.email || 'U')
+    .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 
   return (
-    <header className="w-full h-16 border-b border-outline-variant/15 sticky top-0 z-40 bg-surface/60 backdrop-blur-2xl flex items-center justify-between px-8">
-      <div className="flex items-center gap-6">
-        {/* Active Tasks Badge */}
-        {activeTasks.length > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 cursor-pointer hover:bg-primary/15 transition-colors">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            <span className="text-primary text-xs font-bold">
-              {activeTasks.length} {activeTasks.length === 1 ? 'processo' : 'processos'} ativo{activeTasks.length > 1 ? 's' : ''}
-            </span>
-          </div>
-        )}
+    <header style={{
+      height: 52,
+      flexShrink: 0,
+      borderBottom: '0.5px solid rgba(255,255,255,0.08)',
+      background: '#161616',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '0 24px',
+      position: 'sticky',
+      top: 0,
+      zIndex: 40,
+    }}>
+      {/* Left: eyebrow + title */}
+      <div>
+        <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(240,238,233,0.50)', fontWeight: 600 }}>
+          {meta.eyebrow}
+        </div>
+        <div style={{ fontFamily: '"Barlow Condensed", sans-serif', fontSize: 20, fontWeight: 700, color: '#F0EEE9', lineHeight: 1.1 }}>
+          {meta.title}
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      {/* Right */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* Active tasks badge */}
+        {activeTasks.length > 0 && (
+          <div style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:100, background:'rgba(251,191,36,0.12)', fontSize:11, fontWeight:600, color:'#fbbf24' }}>
+            <span style={{ width:6, height:6, borderRadius:'50%', background:'#fbbf24' }} className="animate-pulse" />
+            {activeTasks.length} processo{activeTasks.length > 1 ? 's' : ''}
+          </div>
+        )}
+
         <ConnectionStatus />
-        <button className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
-          <span className="material-symbols-outlined">notifications</span>
-        </button>
-        <ThemeToggle />
-        
-        {/* Profile Menu */}
+
+        {/* Profile menu */}
         <div className="relative" ref={menuRef}>
           <button
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            onClick={() => setShowMenu(!showMenu)}
+            style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', padding:0 }}
           >
             {profile?.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt="Avatar"
-                className="w-8 h-8 rounded-full object-cover border border-outline-variant"
-              />
+              <img src={profile.avatar_url} alt="Avatar" style={{ width:30, height:30, borderRadius:'50%', objectFit:'cover' }} />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center">
-                <span className="material-symbols-outlined text-sm text-on-surface-variant">person</span>
+              <div style={{
+                width: 30, height: 30, borderRadius: '50%',
+                background: 'linear-gradient(135deg,#E8593C,#C4185A)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 700, color: '#fff',
+                fontFamily: '"Barlow", sans-serif',
+              }}>
+                {initials}
               </div>
             )}
-            <span className="text-sm font-semibold hidden md:block">
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#F0EEE9', fontFamily: '"Barlow", sans-serif' }} className="hidden md:block">
               {profile?.full_name || user?.email?.split('@')[0]}
-            </span>
-            <span className="material-symbols-outlined text-sm text-on-surface-variant">
-              {showProfileMenu ? 'expand_less' : 'expand_more'}
             </span>
           </button>
 
-          {/* Dropdown Menu */}
-          {showProfileMenu && (
-            <div className="absolute right-0 mt-2 w-64 glass-card rounded-lg shadow-xl border border-outline-variant/20 overflow-hidden animate-scale-in">
-              {/* User Info */}
-              <div className="p-4 border-b border-outline-variant/10">
-                <p className="font-semibold">{profile?.full_name || 'Usuário'}</p>
-                <p className="text-xs text-on-surface-variant truncate">{user?.email}</p>
+          {showMenu && (
+            <div
+              className="animate-scale-in"
+              style={{
+                position: 'absolute', right: 0, top: '100%', marginTop: 8,
+                width: 220, background: '#1F1F1F', border: '0.5px solid rgba(255,255,255,0.14)',
+                borderRadius: 12, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+                zIndex: 50,
+              }}
+            >
+              <div style={{ padding: '14px 16px', borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#F0EEE9' }}>{profile?.full_name || 'Usuário'}</div>
+                <div style={{ fontSize: 11, color: 'rgba(240,238,233,0.50)', marginTop: 2 }}>{user?.email}</div>
               </div>
-
-              {/* Menu Items */}
-              <div className="py-2">
-                <button
-                  onClick={() => {
-                    navigate('/profile')
-                    setShowProfileMenu(false)
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-surface-container-high transition-colors flex items-center gap-3"
-                >
-                  <span className="material-symbols-outlined text-lg">person</span>
-                  Meu Perfil
-                </button>
-                <button
-                  onClick={() => {
-                    navigate('/admin/config')
-                    setShowProfileMenu(false)
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-surface-container-high transition-colors flex items-center gap-3"
-                >
-                  <span className="material-symbols-outlined text-lg">settings</span>
-                  Configurações
-                </button>
+              <div style={{ padding: '6px' }}>
+                {[
+                  { label: 'Meu Perfil', path: '/profile', icon: 'person' },
+                  { label: 'Configurações', path: '/admin/config', icon: 'settings' },
+                ].map(item => (
+                  <button
+                    key={item.path}
+                    onClick={() => { navigate(item.path); setShowMenu(false) }}
+                    style={{ width:'100%', padding:'8px 10px', display:'flex', alignItems:'center', gap:8, background:'none', border:'none', cursor:'pointer', borderRadius:8, fontSize:13, color:'rgba(240,238,233,0.50)', fontFamily:'"Barlow",sans-serif', textAlign:'left' }}
+                    onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.05)'; e.currentTarget.style.color='#F0EEE9' }}
+                    onMouseLeave={e => { e.currentTarget.style.background=''; e.currentTarget.style.color='rgba(240,238,233,0.50)' }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize:16 }}>{item.icon}</span>
+                    {item.label}
+                  </button>
+                ))}
               </div>
-
-              {/* Sign Out */}
-              <div className="border-t border-outline-variant/10 p-2">
+              <div style={{ borderTop: '0.5px solid rgba(255,255,255,0.08)', padding: '6px' }}>
                 <button
                   onClick={handleSignOut}
-                  className="w-full px-4 py-2 text-left text-sm text-error hover:bg-error/10 transition-colors flex items-center gap-3 rounded-lg"
+                  style={{ width:'100%', padding:'8px 10px', display:'flex', alignItems:'center', gap:8, background:'none', border:'none', cursor:'pointer', borderRadius:8, fontSize:13, color:'#f87171', fontFamily:'"Barlow",sans-serif', textAlign:'left' }}
+                  onMouseEnter={e => e.currentTarget.style.background='rgba(248,113,113,0.08)'}
+                  onMouseLeave={e => e.currentTarget.style.background=''}
                 >
-                  <span className="material-symbols-outlined text-lg">logout</span>
+                  <span className="material-symbols-outlined" style={{ fontSize:16 }}>logout</span>
                   Sair
                 </button>
               </div>

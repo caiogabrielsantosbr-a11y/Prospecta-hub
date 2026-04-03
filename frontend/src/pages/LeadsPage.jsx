@@ -810,7 +810,7 @@ function Modal({ title, onClose, children }) {
       <div className="bg-surface-container rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.8)] border border-outline-variant/20 w-full max-w-2xl max-h-[85vh] overflow-hidden animate-scale-in"
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-8 py-6 border-b border-outline-variant/10">
-          <h3 className="text-2xl font-bold tracking-tight">{title}</h3>
+          <h3 className="font-condensed text-3xl font-bold">{title}</h3>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface-container-highest transition-all">
             <span className="material-symbols-outlined text-on-surface-variant">close</span>
           </button>

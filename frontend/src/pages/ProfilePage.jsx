@@ -61,7 +61,7 @@ export default function ProfilePage() {
       {/* Header */}
       <div className="flex flex-col gap-1">
         <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">CONTA</span>
-        <h2 className="text-3xl font-bold tracking-tight">Meu Perfil</h2>
+        <h2 className="font-condensed text-4xl font-bold">Meu Perfil</h2>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

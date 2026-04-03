@@ -50,7 +50,7 @@ export default function AdminConfigPage() {
         {/* Header */}
         <div className="flex flex-col gap-1 text-center">
           <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">SISTEMA</span>
-          <h2 className="text-3xl font-bold tracking-tight">Configuração do Backend</h2>
+          <h2 className="font-condensed text-4xl font-bold">Configuração do Backend</h2>
           <p className="text-on-surface-variant text-sm mt-2">
             Configure a URL do backend para conectar o frontend aos serviços de extração.
           </p>

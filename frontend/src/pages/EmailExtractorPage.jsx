@@ -42,7 +42,7 @@ export default function EmailExtractorPage() {
       {/* Header */}
       <div className="flex flex-col gap-1">
         <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">MÓDULO</span>
-        <h2 className="text-3xl font-bold tracking-tight">Extrator de Email</h2>
+        <h2 className="font-condensed text-4xl font-bold">Extrator de Email</h2>
         <p className="text-on-surface-variant text-sm">Extraia emails de domínios via RDAP + scraping de páginas de contato.</p>
       </div>
 

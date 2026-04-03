@@ -59,9 +59,10 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold tracking-tight mb-2">
-            Lead Prospecting
-          </h1>
+          <div style={{ fontFamily:'"Barlow Condensed",sans-serif', fontWeight:800, fontSize:42, letterSpacing:'-0.01em', lineHeight:1, marginBottom:8 }}>
+            <span style={{ background:'linear-gradient(135deg,#E8593C,#C4185A)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>PRO</span>
+            <span style={{ color:'#F0EEE9' }}>SPECTA</span>
+          </div>
           <p className="text-on-surface-variant">
             {isSignUp ? 'Crie sua conta para começar' : 'Entre na sua conta'}
           </p>

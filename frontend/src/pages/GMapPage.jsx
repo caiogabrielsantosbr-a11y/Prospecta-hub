@@ -421,7 +421,7 @@ export default function GMapPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-1">
-          <h2 className="text-3xl font-bold tracking-tight">
+          <h2 className="font-condensed text-4xl font-bold">
             Extrator Google Maps
           </h2>
           <p className="text-on-surface-variant text-sm">
@@ -837,7 +837,7 @@ function StatCard({ icon, label, value, iconColor }) {
       </div>
       <div className="flex-1">
         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{label}</p>
-        <p className="text-3xl font-bold tracking-tight text-white">{value}</p>
+        <p className="font-condensed text-4xl font-bold text-white">{value}</p>
       </div>
     </div>
   )

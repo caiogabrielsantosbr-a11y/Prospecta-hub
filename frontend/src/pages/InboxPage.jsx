@@ -308,7 +308,7 @@ export default function InboxPage() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">COMUNICAÇÃO</span>
-            <h2 className="text-2xl font-bold tracking-tight">Inbox Gmail</h2>
+            <h2 className="font-condensed text-3xl font-bold">Inbox Gmail</h2>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">

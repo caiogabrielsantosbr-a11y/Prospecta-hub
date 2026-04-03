@@ -48,7 +48,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col gap-1">
         <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">SISTEMA OPERACIONAL</span>
-        <h2 className="text-3xl font-bold tracking-tight">Painel de Controle</h2>
+        <h2 className="font-condensed text-4xl font-bold">Painel de Controle</h2>
       </div>
 
       {/* Stat Cards — row 1 */}

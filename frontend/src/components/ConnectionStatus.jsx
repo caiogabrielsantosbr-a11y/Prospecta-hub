@@ -5,37 +5,23 @@ export default function ConnectionStatus() {
 
   if (!isConfigured()) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
-        <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-        <span>Backend não configurado</span>
+      <div style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:100, background:'rgba(251,191,36,0.12)', fontSize:11, fontWeight:600, color:'#fbbf24' }}>
+        <span style={{ width:6, height:6, borderRadius:'50%', background:'#fbbf24', flexShrink:0 }} />
+        Não configurado
       </div>
     )
   }
 
-  const statusConfig = {
-    connected: {
-      color: 'bg-green-100 text-green-800',
-      dot: 'bg-green-500',
-      label: 'Conectado'
-    },
-    disconnected: {
-      color: 'bg-red-100 text-red-800',
-      dot: 'bg-red-500',
-      label: 'Desconectado'
-    },
-    testing: {
-      color: 'bg-blue-100 text-blue-800',
-      dot: 'bg-blue-500 animate-pulse',
-      label: 'Testando...'
-    },
-  }
-
-  const config = statusConfig[connectionStatus] || statusConfig.disconnected
+  const cfg = {
+    connected:    { bg:'rgba(74,222,128,0.12)', dot:'#4ade80', label:'Conectado' },
+    disconnected: { bg:'rgba(248,113,113,0.12)', dot:'#f87171', label:'Desconectado' },
+    testing:      { bg:'rgba(96,165,250,0.12)',  dot:'#60a5fa', label:'Testando...' },
+  }[connectionStatus] || { bg:'rgba(248,113,113,0.12)', dot:'#f87171', label:'Desconectado' }
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${config.color}`}>
-      <span className={`w-2 h-2 rounded-full ${config.dot}`}></span>
-      <span>{config.label}</span>
+    <div style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:100, background:cfg.bg, fontSize:11, fontWeight:600, color:cfg.dot }}>
+      <span style={{ width:6, height:6, borderRadius:'50%', background:cfg.dot, flexShrink:0 }} />
+      {cfg.label}
     </div>
   )
 }

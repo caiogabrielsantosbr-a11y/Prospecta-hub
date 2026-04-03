@@ -57,7 +57,7 @@ export default function EmailDispatchPage() {
     <div className="p-8 space-y-8 max-w-[1600px]">
       <div className="flex flex-col gap-1">
         <span className="text-primary font-bold text-[10px] tracking-[0.15em] uppercase">MÓDULO</span>
-        <h2 className="text-3xl font-bold tracking-tight">Disparo de Email</h2>
+        <h2 className="font-condensed text-4xl font-bold">Disparo de Email</h2>
         <p className="text-on-surface-variant text-sm">Envie emails personalizados em massa via SMTP.</p>
       </div>
 
