@@ -417,7 +417,7 @@ export default function GMapPage() {
 
   return (
     <>
-      <div style={{ padding: 24 }}>
+      <div className="content-wrapper">
       {/* Stats Dark Grid — 4 cols */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
         <div className="stat-card-dark">

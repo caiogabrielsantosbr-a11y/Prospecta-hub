@@ -41,85 +41,93 @@ export default function Dashboard() {
   }, [])
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="content-wrapper">
       {/* Stat Grid Row 1 — 4 cols */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
         <div className="stat-card">
           <div className="sc-label">
             Total de Leads
-            <Users size={18} strokeWidth={1.5} style={{ opacity: 0.6 }} />
+            <Users size={18} strokeWidth={1.5} style={{ opacity: 0.5 }} />
           </div>
-          <div className="sc-val brand">{leadStats?.total?.toLocaleString() ?? '—'}</div>
+          <div className="sc-val brand">{leadStats?.total?.toLocaleString() ?? '0'}</div>
           <div className="sc-delta" style={{ color: 'var(--pro-success)' }}>↑ 12% este mês</div>
         </div>
         <div className="stat-card">
           <div className="sc-label">
             Com Email
-            <Mail size={18} strokeWidth={1.5} style={{ opacity: 0.6 }} />
+            <Mail size={18} strokeWidth={1.5} style={{ opacity: 0.5 }} />
           </div>
-          <div className="sc-val">{leadStats?.with_email?.toLocaleString() ?? '—'}</div>
+          <div className="sc-val">{leadStats?.with_email?.toLocaleString() ?? '0'}</div>
         </div>
         <div className="stat-card">
           <div className="sc-label">
             Com Telefone
-            <Phone size={18} strokeWidth={1.5} style={{ opacity: 0.6 }} />
+            <Phone size={18} strokeWidth={1.5} style={{ opacity: 0.5 }} />
           </div>
-          <div className="sc-val">{leadStats?.with_phone?.toLocaleString() ?? '—'}</div>
+          <div className="sc-val">{leadStats?.with_phone?.toLocaleString() ?? '0'}</div>
         </div>
         <div className="stat-card">
           <div className="sc-label">
             Processos Ativos
-            <Zap size={18} strokeWidth={1.5} style={{ opacity: 0.6 }} />
+            <Zap size={18} strokeWidth={1.5} style={{ opacity: 0.5 }} />
           </div>
           <div className="sc-val" style={{ color: 'var(--pro-warning)' }}>{activeTasks.length}</div>
         </div>
       </div>
 
       {/* Stat Grid Row 2 — 3 cols (GSheets) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 22 }}>
         <div className="stat-card">
           <div className="sc-label">
             Enviados Hoje
-            <Calendar size={18} strokeWidth={1.5} style={{ opacity: 0.6 }} />
+            <Calendar size={18} strokeWidth={1.5} style={{ opacity: 0.5 }} />
           </div>
           <div className="sc-val">{sendStats?.today ?? 0}</div>
         </div>
         <div className="stat-card">
-          <div className="sc-label">Enviados Esta Semana</div>
+          <div className="sc-label">
+            Enviados Esta Semana
+            <CalendarDays size={18} strokeWidth={1.5} style={{ opacity: 0.5 }} />
+          </div>
           <div className="sc-val">{sendStats?.week ?? 0}</div>
         </div>
         <div className="stat-card">
-          <div className="sc-label">Enviados Este Mês</div>
+          <div className="sc-label">
+            Enviados Este Mês
+            <CalendarRange size={18} strokeWidth={1.5} style={{ opacity: 0.5 }} />
+          </div>
           <div className="sc-val">{sendStats?.month ?? 0}</div>
         </div>
       </div>
 
-      {/* Bottom Grid — 2 cols */}
+      {/* Bottom Grid — 2 cols with better fill */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Left: Visão de Leads */}
-        <div className="pro-card pro-card-accent">
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--pro-text)', marginBottom: 4 }}>Visão de Leads</div>
-          <div style={{ fontSize: 11, color: 'var(--pro-muted)', marginBottom: 16 }}>Qualidade do banco de dados</div>
+        <div className="pro-card pro-card-accent" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--pro-text)', marginBottom: 4 }}>Visão de Leads</div>
+          <div style={{ fontSize: 13, color: 'var(--pro-muted)', marginBottom: 20 }}>Qualidade do banco de dados</div>
 
-          <ProgressRow label="Com Telefone" dotColor="#4ade80" pct={leadStats ? Math.round((leadStats.with_phone / (leadStats.total || 1)) * 100) : 0} />
-          <ProgressRow label="Com Email" dotColor="#60a5fa" pct={leadStats ? Math.round((leadStats.with_email / (leadStats.total || 1)) * 100) : 0} gradientColors="linear-gradient(90deg,#3b82f6,#60a5fa)" />
-          <ProgressRow label="Com Website" dotColor="#a78bfa" pct={leadStats ? Math.round((leadStats.with_website / (leadStats.total || 1)) * 100) : 0} gradientColors="linear-gradient(90deg,#7c3aed,#a78bfa)" />
-          <ProgressRow label="Sem Telefone" dotColor="#f87171" pct={leadStats ? Math.round((leadStats.without_phone / (leadStats.total || 1)) * 100) : 0} gradientColors="linear-gradient(90deg,#ef4444,#f87171)" last />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <ProgressRow label="Com Telefone" dotColor="#16a34a" pct={leadStats ? Math.round((leadStats.with_phone / (leadStats.total || 1)) * 100) : 0} />
+            <ProgressRow label="Com Email" dotColor="#2563eb" pct={leadStats ? Math.round((leadStats.with_email / (leadStats.total || 1)) * 100) : 0} gradientColors="linear-gradient(90deg,#2563eb,#60a5fa)" />
+            <ProgressRow label="Com Website" dotColor="#7c3aed" pct={leadStats ? Math.round((leadStats.with_website / (leadStats.total || 1)) * 100) : 0} gradientColors="linear-gradient(90deg,#7c3aed,#a78bfa)" />
+            <ProgressRow label="Sem Telefone" dotColor="#dc2626" pct={leadStats ? Math.round((leadStats.without_phone / (leadStats.total || 1)) * 100) : 0} gradientColors="linear-gradient(90deg,#dc2626,#f87171)" last />
+          </div>
         </div>
 
         {/* Right: Terminal Logs */}
-        <div className="pro-terminal" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="pro-terminal" style={{ display: 'flex', flexDirection: 'column', minHeight: 260 }}>
           <div className="term-head">
             <div className="term-dots">
-              <div className="term-dot" style={{ background: '#f87171' }} />
-              <div className="term-dot" style={{ background: '#fbbf24' }} />
-              <div className="term-dot" style={{ background: '#4ade80' }} />
+              <div className="term-dot" style={{ background: '#dc2626' }} />
+              <div className="term-dot" style={{ background: '#d97706' }} />
+              <div className="term-dot" style={{ background: '#16a34a' }} />
             </div>
-            <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.5)', letterSpacing: '0.1em' }}>LOGS DE INTELIGÊNCIA</span>
+            <span style={{ fontSize: 11, color: 'var(--pro-muted)', letterSpacing: '0.1em' }}>LOGS DE INTELIGÊNCIA</span>
             <div className="live-dot" style={{ marginLeft: 'auto' }} />
           </div>
 
-          <div style={{ flex: 1, overflow: 'auto', maxHeight: 200 }} className="custom-scrollbar">
+          <div style={{ flex: 1, overflow: 'auto', minHeight: 140 }} className="custom-scrollbar">
             {tasks.length > 0 ? (
               tasks.flatMap(t => t.logs || []).reverse().slice(0, 20).map((log, i) => (
                 <div key={i} className="term-line">
@@ -141,7 +149,7 @@ export default function Dashboard() {
               type="text"
               style={{
                 flex: 1, background: 'transparent', border: 'none', padding: 0,
-                fontSize: 11, color: 'var(--pro-muted)', fontFamily: 'monospace',
+                fontSize: 12, color: 'var(--pro-muted)', fontFamily: 'monospace',
                 outline: 'none',
               }}
               placeholder="Executar comando..."
@@ -158,15 +166,15 @@ export default function Dashboard() {
 
 function ProgressRow({ label, dotColor, pct, gradientColors, last }) {
   return (
-    <div style={{ marginBottom: last ? 0 : 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-        <div style={{ fontSize: 12, color: 'var(--pro-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+    <div style={{ marginBottom: last ? 0 : 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <div style={{ fontSize: 13, color: 'var(--pro-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
           {label}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--pro-muted)', fontWeight: 600 }}>{pct}%</div>
+        <div style={{ fontSize: 12, color: 'var(--pro-muted)', fontWeight: 600 }}>{pct}%</div>
       </div>
-      <div className="prog-bar">
+      <div className="prog-bar" style={{ height: 4 }}>
         <div className="prog-fill" style={{ width: `${pct}%`, ...(gradientColors ? { background: gradientColors } : {}) }} />
       </div>
     </div>

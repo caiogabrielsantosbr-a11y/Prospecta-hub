@@ -9,7 +9,7 @@ export default function LeadsPage() {
   const [activeTab, setActiveTab] = useState('leads')
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="content-wrapper">
       {/* Tabs */}
       <div className="pro-tabs">
         {[

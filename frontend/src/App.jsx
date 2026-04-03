@@ -22,13 +22,19 @@ import ProfilePage from './pages/ProfilePage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import { useEffect } from 'react'
 
+// Apply saved theme immediately on load (before React hydration)
+;(function() {
+  const t = localStorage.getItem('prospecta-theme') || 'light'
+  document.documentElement.setAttribute('data-theme', t)
+})()
+
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
 
   if (loading) {
     return (
-      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0D0D0D' }}>
+      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--pro-black)' }}>
         <div style={{ width:32, height:32, border:'3px solid rgba(232,89,60,0.2)', borderTopColor:'#E8593C', borderRadius:'50%' }} className="animate-spin" />
       </div>
     )
@@ -51,9 +57,9 @@ function AppLayout() {
   }, [loadFromSupabase])
 
   return (
-    <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'#0D0D0D' }}>
+    <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'var(--pro-black)', transition:'background 0.25s ease' }}>
       <Sidebar />
-      <main style={{ marginLeft: 200, flex: 1, display:'flex', flexDirection:'column', overflow:'hidden', background:'#0D0D0D' }}>
+      <main style={{ marginLeft: 'var(--sidebar-width)', flex: 1, display:'flex', flexDirection:'column', overflow:'hidden', background:'var(--pro-black)', transition:'background 0.25s ease' }}>
         <TopBar />
         <div style={{ flex: 1, overflowY: 'auto' }} className="custom-scrollbar">
           <Routes>

@@ -63,6 +63,9 @@
 
 /* ── CSS Custom Properties — NOVO-DESIGN Tokens ────────────── */
 :root {
+  /* Layout */
+  --sidebar-width: 240px;
+
   /* Brand */
   --pro-orange:       #E8593C;
   --pro-pink:         #C4185A;
@@ -75,7 +78,7 @@
   --pro-grad: linear-gradient(135deg, #E8593C 0%, #C4185A 100%);
   --pro-grad-soft: linear-gradient(135deg, rgba(232,89,60,0.12) 0%, rgba(196,24,90,0.12) 100%);
 
-  /* Surfaces */
+  /* Surfaces — Dark (default) */
   --pro-black:    #0D0D0D;
   --pro-surface:  #161616;
   --pro-surface2: #1F1F1F;
@@ -91,25 +94,93 @@
   --pro-muted2:     rgba(240, 238, 233, 0.28);
 
   /* Semantic */
-  --pro-success: #4ade80;
-  --pro-warning: #fbbf24;
-  --pro-danger:  #f87171;
-  --pro-info:    #60a5fa;
+  --pro-success: #16a34a;
+  --pro-warning: #d97706;
+  --pro-danger:  #dc2626;
+  --pro-info:    #2563eb;
+}
+
+/* ── Light Mode ────────────────────────────────────── */
+:root[data-theme="light"] {
+  --pro-black:    #F5F5F7;
+  --pro-surface:  #FFFFFF;
+  --pro-surface2: #F8F8FA;
+  --pro-surface3: #EFEFEF;
+
+  --pro-border:  rgba(0, 0, 0, 0.08);
+  --pro-border2: rgba(0, 0, 0, 0.13);
+
+  --pro-text:       #1A1A1A;
+  --pro-muted:      rgba(26, 26, 26, 0.55);
+  --pro-muted2:     rgba(26, 26, 26, 0.30);
+
+  --pro-success: #16a34a;
+  --pro-warning: #d97706;
+  --pro-danger:  #dc2626;
+  --pro-info:    #2563eb;
+}
+
+:root[data-theme="light"] .pro-terminal {
+  background: #F0F0F2;
+  color: #1A1A1A;
+}
+:root[data-theme="light"] .term-line { color: #334155; }
+:root[data-theme="light"] .term-line .hl { color: var(--pro-orange); }
+:root[data-theme="light"] .term-cursor { background: var(--pro-orange); }
+:root[data-theme="light"] .sc-val.brand {
+  background: var(--pro-grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+:root[data-theme="light"] .stat-card-dark {
+  background: #F0F0F2;
+}
+:root[data-theme="light"] ::selection {
+  background: rgba(232,89,60,0.2);
+  color: #1A1A1A;
+}
+:root[data-theme="light"] .sidebar-nav-item:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+  color: #1A1A1A !important;
+}
+:root[data-theme="light"] .modal-overlay {
+  background: rgba(0, 0, 0, 0.35);
+}
+:root[data-theme="light"] .btn-ghost:hover {
+  background: rgba(232,89,60,0.06);
+}
+:root[data-theme="light"] input,
+:root[data-theme="light"] textarea,
+:root[data-theme="light"] select {
+  background: #fff;
+  border-color: rgba(0,0,0,0.12);
+}
+:root[data-theme="light"] select option {
+  background: #fff;
+  color: #1A1A1A;
 }
 
 /* ── Base ───────────────────────────────────────── */
 body {
   font-family: "Inter", sans-serif;
+  font-size: 14px;
   background-color: var(--pro-black);
   color: var(--pro-text);
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 ::selection {
   background: rgba(232,89,60,0.3);
-  color: #F0EEE9;
+}
+
+/* ── Content Wrapper ───────────────────────────── */
+.content-wrapper {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 28px;
 }
 
 /* ── Scrollbar ──────────────────────────────────── */
@@ -177,20 +248,22 @@ body {
   background: var(--pro-surface2);
   border: 0.5px solid var(--pro-border);
   border-radius: 12px;
-  padding: 16px 18px;
+  padding: 18px 20px;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .stat-card-dark {
   background: #0a0a0a;
   border: 0.5px solid var(--pro-border);
   border-radius: 10px;
-  padding: 14px 16px;
+  padding: 16px 18px;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .sc-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--pro-muted);
   margin-bottom: 8px;
@@ -253,8 +326,9 @@ body {
   border-radius: 12px;
   padding: 16px;
   font-family: 'Courier New', monospace;
-  font-size: 11px;
+  font-size: 12px;
   color: rgba(74, 222, 128, 0.7);
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .term-head {
@@ -384,7 +458,7 @@ body {
 .task-bar {
   position: fixed;
   bottom: 0;
-  left: 200px;
+  left: var(--sidebar-width);
   right: 0;
   z-index: 40;
   background: rgba(13, 13, 13, 0.9);
@@ -398,11 +472,11 @@ input, textarea, select {
   border: 0.5px solid var(--pro-border2);
   border-radius: 8px;
   color: var(--pro-text);
-  padding: 9px 12px;
+  padding: 10px 14px;
   font-family: "Inter", sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
 
 input:focus, textarea:focus, select:focus {
@@ -425,7 +499,7 @@ select option {
   background: var(--pro-grad);
   color: #ffffff;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   padding: 10px 20px;
   border-radius: 8px;
   border: none;
@@ -444,7 +518,7 @@ select option {
   background: transparent;
   color: var(--pro-muted);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   padding: 9px 16px;
   border-radius: 8px;
   border: 0.5px solid var(--pro-border2);
@@ -835,7 +909,7 @@ select option {
 
 .bg-glow-secondary {
   position: fixed;
-  bottom: 0; left: 200px;
+  bottom: 0; left: var(--sidebar-width);
   width: 300px; height: 300px;
   background: rgba(196, 24, 90, 0.03);
   border-radius: 50%;

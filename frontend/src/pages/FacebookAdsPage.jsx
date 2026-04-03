@@ -25,7 +25,7 @@ export default function FacebookAdsPage() {
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="content-wrapper">
       {/* Two-Column Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
         {/* Step 1: Feed */}

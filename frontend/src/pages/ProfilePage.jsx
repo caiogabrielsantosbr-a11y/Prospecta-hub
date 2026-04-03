@@ -43,7 +43,7 @@ export default function ProfilePage() {
     .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="content-wrapper">
       <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 20 }}>
         {/* Left: Profile Card */}
         <div className="profile-card">

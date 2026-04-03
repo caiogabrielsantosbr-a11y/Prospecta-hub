@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Bell, LogOut, User, Settings } from 'lucide-react'
+import { Bell, LogOut, User, Settings, Sun, Moon } from 'lucide-react'
 import useTaskStore from '../../store/useTaskStore'
 import { useAuth } from '../../contexts/AuthContext'
 import ConnectionStatus from '../ConnectionStatus'
@@ -24,6 +24,21 @@ export default function TopBar() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // Theme state
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('prospecta-theme') || 'light'
+    }
+    return 'light'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('prospecta-theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
+
   const meta = ROUTE_META[location.pathname] || { eyebrow: 'Prospecta', title: 'Dashboard' }
 
   useEffect(() => {
@@ -39,19 +54,20 @@ export default function TopBar() {
 
   return (
     <header style={{
-      height: 52,
+      height: 56,
       flexShrink: 0,
       borderBottom: '0.5px solid var(--pro-border)',
       background: 'var(--pro-surface)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 24px',
+      padding: '0 28px',
       position: 'sticky',
       top: 0,
       zIndex: 40,
+      transition: 'background 0.25s ease, border-color 0.25s ease',
     }}>
-      {/* Left: eyebrow + title */}
+      {/* Left: title */}
       <div>
         <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--pro-muted)', fontWeight: 600 }}>
           {meta.eyebrow}
@@ -62,20 +78,34 @@ export default function TopBar() {
       </div>
 
       {/* Right */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {/* Active tasks badge */}
         {activeTasks.length > 0 && (
-          <div className="status-pill" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}>
-            <span className="status-dot animate-pulse" style={{ background: '#fbbf24' }} />
+          <div className="status-pill" style={{ background: 'rgba(251,191,36,0.12)', color: '#d97706' }}>
+            <span className="status-dot animate-pulse" style={{ background: '#d97706' }} />
             {activeTasks.length} processo{activeTasks.length > 1 ? 's' : ''}
           </div>
         )}
 
         <ConnectionStatus />
 
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          className="btn-icon"
+          title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+          style={{ background: 'transparent', border: 'none' }}
+        >
+          {theme === 'dark' ? (
+            <Sun size={17} strokeWidth={1.75} style={{ color: 'var(--pro-muted)' }} />
+          ) : (
+            <Moon size={17} strokeWidth={1.75} style={{ color: 'var(--pro-muted)' }} />
+          )}
+        </button>
+
         {/* Notification icon */}
         <button className="btn-icon" style={{ background: 'transparent', border: 'none' }}>
-          <Bell size={16} strokeWidth={1.75} style={{ color: 'var(--pro-muted)' }} />
+          <Bell size={17} strokeWidth={1.75} style={{ color: 'var(--pro-muted)' }} />
         </button>
 
         {/* Profile menu */}
@@ -85,13 +115,13 @@ export default function TopBar() {
             style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
             {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="Avatar" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover' }} />
+              <img src={profile.avatar_url} alt="Avatar" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
             ) : (
               <div style={{
-                width: 30, height: 30, borderRadius: '50%',
+                width: 32, height: 32, borderRadius: '50%',
                 background: 'var(--pro-grad)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 11, fontWeight: 700, color: '#fff',
+                fontSize: 12, fontWeight: 700, color: '#fff',
               }}>
                 {initials}
               </div>
@@ -103,14 +133,14 @@ export default function TopBar() {
               className="animate-scale-in"
               style={{
                 position: 'absolute', right: 0, top: '100%', marginTop: 8,
-                width: 220, background: 'var(--pro-surface2)', border: '0.5px solid var(--pro-border2)',
-                borderRadius: 12, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+                width: 230, background: 'var(--pro-surface2)', border: '0.5px solid var(--pro-border2)',
+                borderRadius: 12, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
                 zIndex: 50,
               }}
             >
               <div style={{ padding: '14px 16px', borderBottom: '0.5px solid var(--pro-border)' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--pro-text)' }}>{profile?.full_name || 'Usuário'}</div>
-                <div style={{ fontSize: 11, color: 'var(--pro-muted)', marginTop: 2 }}>{user?.email}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--pro-text)' }}>{profile?.full_name || 'Usuário'}</div>
+                <div style={{ fontSize: 12, color: 'var(--pro-muted)', marginTop: 2 }}>{user?.email}</div>
               </div>
               <div style={{ padding: '6px' }}>
                 {[
@@ -121,14 +151,14 @@ export default function TopBar() {
                     key={item.path}
                     onClick={() => { navigate(item.path); setShowMenu(false) }}
                     style={{
-                      width: '100%', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8,
+                      width: '100%', padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 8,
                       background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8,
-                      fontSize: 13, color: 'var(--pro-muted)', textAlign: 'left',
+                      fontSize: 14, color: 'var(--pro-muted)', textAlign: 'left',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'var(--pro-text)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; e.currentTarget.style.color = 'var(--pro-text)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--pro-muted)' }}
                   >
-                    <item.Icon size={16} strokeWidth={1.75} />
+                    <item.Icon size={17} strokeWidth={1.75} />
                     {item.label}
                   </button>
                 ))}
@@ -137,14 +167,14 @@ export default function TopBar() {
                 <button
                   onClick={handleSignOut}
                   style={{
-                    width: '100%', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8,
+                    width: '100%', padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 8,
                     background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8,
-                    fontSize: 13, color: '#f87171', textAlign: 'left',
+                    fontSize: 14, color: '#dc2626', textAlign: 'left',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.08)'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(220,38,38,0.06)'}
                   onMouseLeave={e => e.currentTarget.style.background = ''}
                 >
-                  <LogOut size={16} strokeWidth={1.75} />
+                  <LogOut size={17} strokeWidth={1.75} />
                   Sair
                 </button>
               </div>

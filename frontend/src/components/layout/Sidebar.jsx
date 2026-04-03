@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, MapPin, Target, Users, Inbox,
-  User, Settings, Plus
+  User, Settings
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -21,11 +21,11 @@ export default function Sidebar() {
   const navItemStyle = (isActive) => ({
     display: 'flex',
     alignItems: 'center',
-    gap: 10,
-    padding: '9px 10px',
-    borderRadius: 8,
-    fontSize: 13,
-    fontWeight: 500,
+    gap: 12,
+    padding: '11px 14px',
+    borderRadius: 10,
+    fontSize: 14,
+    fontWeight: isActive ? 600 : 500,
     textDecoration: 'none',
     transition: 'all 0.15s',
     background: isActive ? 'rgba(232,89,60,0.12)' : 'transparent',
@@ -36,26 +36,27 @@ export default function Sidebar() {
     <aside
       className="fixed left-0 top-0 h-full flex flex-col z-50"
       style={{
-        width: 200,
+        width: 'var(--sidebar-width)',
         background: 'var(--pro-surface)',
         borderRight: '0.5px solid var(--pro-border)',
+        transition: 'background 0.25s ease, border-color 0.25s ease',
       }}
     >
       {/* Logo */}
-      <div style={{ padding: '20px 18px 16px', borderBottom: '0.5px solid var(--pro-border)' }}>
-        <div style={{ fontWeight: 800, fontSize: 22, letterSpacing: '-0.01em' }}>
+      <div style={{ padding: '22px 20px 18px', borderBottom: '0.5px solid var(--pro-border)' }}>
+        <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: '-0.01em' }}>
           <span style={{ background: 'var(--pro-grad)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             PRO
           </span>
           <span style={{ color: 'var(--pro-text)' }}>SPECTA</span>
         </div>
-        <div style={{ fontSize: 10, color: 'var(--pro-muted2)', marginTop: 2, letterSpacing: '0.06em' }}>
+        <div style={{ fontSize: 11, color: 'var(--pro-muted2)', marginTop: 2, letterSpacing: '0.06em' }}>
           Prospecting Suite
         </div>
       </div>
 
       {/* Navigation */}
-      <nav style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <nav style={{ flex: 1, padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 3 }}>
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon
           return (
@@ -66,7 +67,7 @@ export default function Sidebar() {
               style={({ isActive }) => navItemStyle(isActive)}
               className="sidebar-nav-item"
             >
-              <Icon size={16} strokeWidth={1.75} style={{ flexShrink: 0, opacity: 0.7 }} />
+              <Icon size={18} strokeWidth={1.75} style={{ flexShrink: 0, opacity: 0.7 }} />
               <span>{item.label}</span>
             </NavLink>
           )
@@ -82,21 +83,13 @@ export default function Sidebar() {
                 style={({ isActive }) => navItemStyle(isActive)}
                 className="sidebar-nav-item"
               >
-                <Icon size={16} strokeWidth={1.75} style={{ flexShrink: 0, opacity: 0.7 }} />
+                <Icon size={18} strokeWidth={1.75} style={{ flexShrink: 0, opacity: 0.7 }} />
                 <span>{item.label}</span>
               </NavLink>
             )
           })}
         </div>
       </nav>
-
-      {/* CTA Button */}
-      <div style={{ padding: '12px 10px' }}>
-        <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-          <Plus size={12} strokeWidth={2.5} />
-          Novo Prospecto
-        </button>
-      </div>
     </aside>
   )
 }
