@@ -107,7 +107,13 @@ export default function LocationSetsPage() {
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault()
-    
+
+    // Check if API is configured
+    if (!apiUrl) {
+      toast.error('URL do backend não configurada. Configure em Configurações.')
+      return
+    }
+
     // Validate form fields
     if (!formData.name.trim()) {
       toast.error('Nome é obrigatório')
