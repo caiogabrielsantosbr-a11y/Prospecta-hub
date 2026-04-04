@@ -3,19 +3,18 @@
  */
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import { locationSetsService } from '../services/supabase'
 
-export default function LocationSetsModal({ 
-  isOpen, 
-  onClose, 
-  apiUrl, 
-  locationSets, 
-  onRefresh 
+export default function LocationSetsModal({
+  isOpen,
+  onClose,
+  locationSets,
+  onRefresh
 }) {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [previewData, setPreviewData] = useState(null)
   const [locationSetToDelete, setLocationSetToDelete] = useState(null)
@@ -37,7 +36,7 @@ export default function LocationSetsModal({
       // Remove trailing commas before parsing (common mistake)
       const cleanedJson = jsonString.replace(/,(\s*[}\]])/g, '$1')
       const parsed = JSON.parse(cleanedJson)
-      
+
       if (!Array.isArray(parsed)) {
         return { valid: false, error: 'JSON deve ser um array de strings' }
       }
@@ -69,7 +68,7 @@ export default function LocationSetsModal({
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (!formData.name.trim()) {
       toast.error('Nome é obrigatório')
       return
@@ -94,72 +93,46 @@ export default function LocationSetsModal({
 
     setIsCreating(true)
     try {
-      const response = await fetch(`${apiUrl}/api/locations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          description: formData.description.trim(),
-          locations: validation.locations
-        })
+      await locationSetsService.create({
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        locations: validation.locations
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        toast.success(`Conjunto criado! ${data.location_count} locais adicionados.`)
-        setFormData({ name: '', description: '', jsonInput: '' })
-        setJsonError('')
-        setShowCreateForm(false)
-        onRefresh()
-      } else {
-        const errorMessage = data.detail?.message || data.message || 'Erro ao criar conjunto'
-        
-        if (data.detail?.error === 'duplicate_name') {
-          toast.error(`Já existe um conjunto com o nome "${formData.name}"`)
-        } else {
-          toast.error(errorMessage)
-        }
-      }
+      toast.success(`Conjunto criado! ${validation.locations.length} locais adicionados.`)
+      setFormData({ name: '', description: '', jsonInput: '' })
+      setJsonError('')
+      setShowCreateForm(false)
+      onRefresh()
     } catch (error) {
       console.error('Failed to create location set:', error)
-      toast.error('Erro de conexão ao criar conjunto')
+      if (error.message && error.message.includes('duplicate')) {
+        toast.error(`Já existe um conjunto com o nome "${formData.name}"`)
+      } else {
+        toast.error('Erro ao criar conjunto')
+      }
     } finally {
       setIsCreating(false)
     }
   }
 
-  const handlePreview = async (locationSetId) => {
-    setIsLoadingPreview(true)
-    setShowPreviewModal(true)
-    setPreviewData(null)
-    
-    try {
-      const response = await fetch(`${apiUrl}/api/locations/${locationSetId}/preview`, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true'
-        }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setPreviewData(data)
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        const errorMessage = errorData.detail?.message || errorData.message || 'Erro ao carregar preview'
-        toast.error(errorMessage)
-        setShowPreviewModal(false)
-      }
-    } catch (error) {
-      console.error('Failed to fetch preview:', error)
-      toast.error('Erro de conexão ao carregar preview')
-      setShowPreviewModal(false)
-    } finally {
-      setIsLoadingPreview(false)
+  const handlePreview = (locationSetId) => {
+    const locationSet = locationSets.find(set => set.id === locationSetId)
+
+    if (!locationSet) {
+      toast.error('Conjunto não encontrado')
+      return
     }
+
+    // Show preview from the locations array already in Supabase response
+    const preview = locationSet.locations.slice(0, 10)
+    setPreviewData({
+      name: locationSet.name,
+      preview: preview,
+      showing: Math.min(10, locationSet.locations.length),
+      total_count: locationSet.locations.length
+    })
+    setShowPreviewModal(true)
   }
 
   const handleDeleteClick = (locationSet) => {
@@ -169,29 +142,18 @@ export default function LocationSetsModal({
 
   const handleConfirmDelete = async () => {
     if (!locationSetToDelete) return
-    
+
     setIsDeleting(true)
     try {
-      const response = await fetch(`${apiUrl}/api/locations/${locationSetToDelete.id}`, {
-        method: 'DELETE',
-        headers: {
-          'ngrok-skip-browser-warning': 'true'
-        }
-      })
-      
-      if (response.ok) {
-        toast.success(`Conjunto "${locationSetToDelete.name}" excluído`)
-        setShowDeleteConfirm(false)
-        setLocationSetToDelete(null)
-        onRefresh()
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        const errorMessage = errorData.detail?.message || errorData.message || 'Erro ao excluir conjunto'
-        toast.error(errorMessage)
-      }
+      await locationSetsService.delete(locationSetToDelete.id)
+
+      toast.success(`Conjunto "${locationSetToDelete.name}" excluído`)
+      setShowDeleteConfirm(false)
+      setLocationSetToDelete(null)
+      onRefresh()
     } catch (error) {
       console.error('Failed to delete location set:', error)
-      toast.error('Erro de conexão ao excluir conjunto')
+      toast.error('Erro ao excluir conjunto')
     } finally {
       setIsDeleting(false)
     }
@@ -305,7 +267,7 @@ export default function LocationSetsModal({
                       </>
                     )}
                   </button>
-                  
+
                   <button
                     type="button"
                     onClick={() => {
@@ -360,7 +322,7 @@ export default function LocationSetsModal({
                             </span>
                           </div>
                         </div>
-                        
+
                         <div className="ml-4 flex items-center gap-2">
                           <button
                             onClick={() => handlePreview(set.id)}
@@ -369,7 +331,7 @@ export default function LocationSetsModal({
                             <span className="material-symbols-outlined text-base">visibility</span>
                             Preview
                           </button>
-                          
+
                           <button
                             onClick={() => handleDeleteClick(set)}
                             className="btn-danger" style={{ fontSize: 12 }}
@@ -394,21 +356,15 @@ export default function LocationSetsModal({
           <div className="modal-container" style={{ maxWidth: 640, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div className="modal-header">
               <div className="modal-title" style={{ fontSize: 18 }}>
-                {isLoadingPreview ? 'Carregando...' : previewData?.name || 'Preview'}
+                {previewData?.name || 'Preview'}
               </div>
               <button onClick={() => setShowPreviewModal(false)} className="btn-icon">
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
               </button>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-6">
-              {isLoadingPreview ? (
-                <div className="flex items-center justify-center py-12">
-                  <span className="material-symbols-outlined text-4xl text-primary animate-spin">
-                    progress_activity
-                  </span>
-                </div>
-              ) : previewData ? (
+              {previewData ? (
                 <div className="space-y-4">
                   <div className="bg-surface-container-low rounded-lg p-4 border border-outline-variant/15">
                     <p className="text-sm text-on-surface-variant">
@@ -423,7 +379,7 @@ export default function LocationSetsModal({
                       )}
                     </p>
                   </div>
-                  
+
                   <div className="space-y-2">
                     {previewData.preview.map((location, index) => (
                       <div
@@ -460,7 +416,7 @@ export default function LocationSetsModal({
                 <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
               </button>
             </div>
-            
+
             <div className="p-6">
               <div className="flex items-start gap-4 mb-4">
                 <span className="material-symbols-outlined text-4xl text-error">
@@ -476,7 +432,7 @@ export default function LocationSetsModal({
                 </div>
               </div>
             </div>
-            
+
             <div className="p-6 border-t border-outline-variant/15 flex items-center gap-3">
               <button
                 onClick={handleConfirmDelete}
@@ -495,7 +451,7 @@ export default function LocationSetsModal({
                   </>
                 )}
               </button>
-              
+
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={isDeleting}

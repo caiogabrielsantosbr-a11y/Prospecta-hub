@@ -8,6 +8,7 @@ import { sessionCache } from '../utils/sessionCache'
 import useConfigStore from '../store/useConfigStore'
 import toast from 'react-hot-toast'
 import LocationSetsModal from '../components/LocationSetsModal'
+import { locationSetsService } from '../services/supabase'
 
 export default function GMapPage() {
   const { apiUrl } = useConfigStore()
@@ -21,9 +22,7 @@ export default function GMapPage() {
   const [isPaused, setIsPaused] = useState(false)
   const [headless, setHeadless] = useState(true) // Navegador oculto por padrão
   const [extractEmails, setExtractEmails] = useState(true) // Extração de email ativada por padrão
-  const [isLoadingLocations, setIsLoadingLocations] = useState(false) // Track location loading state
   const [isStarting, setIsStarting] = useState(false) // Prevent double-click
-  const [downloadProgress, setDownloadProgress] = useState({ show: false, estimatedSize: null, startTime: null }) // Track download progress
   const [liveStats, setLiveStats] = useState({
     queue: 0,
     done: 0,
@@ -32,10 +31,10 @@ export default function GMapPage() {
   })
   const [currentLocation, setCurrentLocation] = useState('São Paulo, BR')
   const [mapMarkers, setMapMarkers] = useState([])
-  
+
   // Location Sets Management Modal State
   const [showManageModal, setShowManageModal] = useState(false)
-  
+
   const tasks = useTaskStore((s) => s.tasks)
   const currentTask = tasks.find(t => t.id === taskId)
 
@@ -53,61 +52,25 @@ export default function GMapPage() {
     loadProgress()
   }, [])
 
-  // Load available location sets from backend
+  // Load available location sets from Supabase
   useEffect(() => {
     const loadLocations = async () => {
-      if (!apiUrl) {
-        console.warn('Backend URL not configured, using fallback cities')
-        setSelectedCities({
-          'São Paulo, SP': false,
-          'Rio de Janeiro, RJ': false,
-          'Curitiba, PR': false,
-          'Belo Horizonte, MG': false,
-          'Porto Alegre, RS': false,
-          'Salvador, BA': false,
-          'Recife, PE': false,
-          'Goiânia, GO': false,
-        })
-        return
-      }
-      
       try {
-        const response = await fetch(`${apiUrl}/api/locations`, {
-          headers: {
-            'ngrok-skip-browser-warning': 'true' // Skip ngrok warning page
-          }
-        })
-        const data = await response.json()
-        
-        // Check if we got the new format (metadata) or old format (direct JSON)
-        const isNewFormat = data.length > 0 && data[0].id && data[0].storage_url
-        
-        if (isNewFormat) {
-          // New format: metadata with id, name, description, location_count, storage_url
-          setAvailableLocations(data)
-          
-          // Set first location set as selected, but don't load locations yet (lazy loading)
-          if (data.length > 0) {
-            setSelectedLocationSet(data[0].id)
-            // Load the first location set's data
-            await loadLocationSetData(data[0].id, data)
-          }
-        } else {
-          // Old format: direct JSON with nome and locais
-          setAvailableLocations(data)
-          
-          // Set first location set as default
-          if (data.length > 0) {
-            setSelectedLocationSet(data[0].nome)
-            const cities = {}
-            data[0].locais.forEach(city => {
-              cities[city] = false
-            })
-            setSelectedCities(cities)
-          }
+        const locations = await locationSetsService.getAll()
+        setAvailableLocations(locations)
+
+        // Set first location set as selected
+        if (locations.length > 0) {
+          setSelectedLocationSet(locations[0].id)
+          // Load the locations array directly from Supabase (already in the object)
+          const cities = {}
+          locations[0].locations.forEach(city => {
+            cities[city] = false
+          })
+          setSelectedCities(cities)
         }
       } catch (err) {
-        console.error('Failed to load locations:', err)
+        console.error('Failed to load locations from Supabase:', err)
         // Fallback to default cities
         setSelectedCities({
           'São Paulo, SP': false,
@@ -122,178 +85,22 @@ export default function GMapPage() {
       }
     }
     loadLocations()
-  }, [apiUrl])
-
-  // Helper function to load location set data with session cache
-  const loadLocationSetData = async (setId, locationsList = availableLocations) => {
-    const locationSet = locationsList.find(loc => loc.id === setId)
-    
-    if (!locationSet) return
-    
-    try {
-      // Check session cache first
-      const cacheKey = setId
-      const cachedData = sessionCache.get(cacheKey)
-      
-      if (cachedData) {
-        console.log('Loading location set from cache:', locationSet.name)
-        // Use cached data
-        const cities = {}
-        cachedData.forEach(city => {
-          cities[city] = false
-        })
-        setSelectedCities(cities)
-        return
-      }
-      
-      // Cache miss or expired - download from API
-      console.log('Downloading location set:', locationSet.name)
-      setIsLoadingLocations(true) // Show loading indicator
-      
-      // Track download start time
-      const startTime = Date.now()
-      setDownloadProgress({ show: true, estimatedSize: null, startTime })
-      
-      // Set up a timer to show estimated file size after 2 seconds
-      const sizeEstimateTimer = setTimeout(() => {
-        const elapsed = Date.now() - startTime
-        if (elapsed >= 2000) {
-          // Estimate file size based on location count (rough estimate: ~50 bytes per location + overhead)
-          const estimatedBytes = locationSet.location_count * 50 + 1000
-          const estimatedMB = (estimatedBytes / (1024 * 1024)).toFixed(2)
-          setDownloadProgress(prev => ({ ...prev, estimatedSize: estimatedMB }))
-        }
-      }, 2000)
-      
-      const response = await fetch(`${apiUrl}/api/locations/${locationSet.id}/full`, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true' // Skip ngrok warning page
-        }
-      })
-      const data = await response.json()
-      
-      // Clear the timer
-      clearTimeout(sizeEstimateTimer)
-      
-      // Calculate actual download time
-      const downloadTime = Date.now() - startTime
-      console.log(`Downloaded location set in ${downloadTime}ms`)
-      
-      // Store in session cache
-      sessionCache.set(cacheKey, data.locations)
-      
-      // data.locations contains the array of location strings
-      const cities = {}
-      data.locations.forEach(city => {
-        cities[city] = false
-      })
-      setSelectedCities(cities)
-    } catch (err) {
-      console.error('Failed to load location set:', err)
-    } finally {
-      setIsLoadingLocations(false) // Hide loading indicator
-      setDownloadProgress({ show: false, estimatedSize: null, startTime: null })
-    }
-  }
-
-  // Update live stats in real-time from task or backend
-  useEffect(() => {
-    // If we have a current task, use its real stats
-    if (currentTask) {
-      setLiveStats({
-        queue: currentTask.stats?.queue ?? 0,
-        done: currentTask.stats?.done ?? 0,
-        leads: currentTask.stats?.leads ?? 0,
-        errors: currentTask.stats?.errors ?? 0,
-      })
-    }
-  }, [currentTask])
-
-  // Fetch real stats from backend periodically
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch('/api/dashboard/stats')
-        const data = await response.json()
-        
-        // Only update leads count from backend if we don't have an active task
-        // This prevents showing old lead counts when starting a new extraction
-        if (!currentTask && !taskId) {
-          setLiveStats({
-            queue: 0,
-            done: 0,
-            leads: data.gmap_leads ?? 0,
-            errors: 0,
-          })
-        }
-      } catch (err) {
-        console.error('Failed to fetch stats:', err)
-      }
-    }
-
-    // Fetch immediately only if no task is active
-    if (!currentTask && !taskId) {
-      fetchStats()
-    }
-
-    // Then fetch every 5 seconds
-    const interval = setInterval(fetchStats, 5000)
-
-    return () => clearInterval(interval)
-  }, [currentTask, taskId])
-
-  // Animate map markers
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const newMarkers = Array.from({ length: 5 }, () => ({
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        id: Math.random(),
-      }))
-      setMapMarkers(newMarkers)
-    }, 3000)
-
-    return () => clearInterval(interval)
   }, [])
-
-  // Rotate current location
-  useEffect(() => {
-    if (!currentTask || currentTask.status !== 'running') return
-
-    const cities = Object.keys(selectedCities).filter(city => selectedCities[city])
-    if (cities.length === 0) return
-
-    let index = 0
-    const interval = setInterval(() => {
-      setCurrentLocation(cities[index])
-      index = (index + 1) % cities.length
-    }, 5000)
-
-    return () => clearInterval(interval)
-  }, [currentTask, selectedCities])
 
   const handleLocationSetChange = async (setId) => {
     setSelectedLocationSet(setId)
-    
-    // Find the location set metadata
-    const locationSet = availableLocations.find(loc => loc.id === setId || loc.nome === setId)
-    
+
+    // Find the location set from available locations
+    const locationSet = availableLocations.find(loc => loc.id === setId)
+
     if (!locationSet) return
-    
-    // Check if this is the new format (has id and storage_url)
-    const isNewFormat = locationSet.id && locationSet.storage_url
-    
-    if (isNewFormat) {
-      // New format: fetch locations from API
-      await loadLocationSetData(setId)
-    } else {
-      // Old format: locations are already in the response
-      const cities = {}
-      locationSet.locais.forEach(city => {
-        cities[city] = false
-      })
-      setSelectedCities(cities)
-    }
+
+    // Load locations directly from the object (already in Supabase response)
+    const cities = {}
+    locationSet.locations.forEach(city => {
+      cities[city] = false
+    })
+    setSelectedCities(cities)
   }
 
   const toggleCity = (city) => {
@@ -407,6 +214,82 @@ export default function GMapPage() {
     // TODO: Implement stop API call
   }
 
+  // Update live stats in real-time from task or backend
+  useEffect(() => {
+    // If we have a current task, use its real stats
+    if (currentTask) {
+      setLiveStats({
+        queue: currentTask.stats?.queue ?? 0,
+        done: currentTask.stats?.done ?? 0,
+        leads: currentTask.stats?.leads ?? 0,
+        errors: currentTask.stats?.errors ?? 0,
+      })
+    }
+  }, [currentTask])
+
+  // Fetch real stats from backend periodically
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/dashboard/stats')
+        const data = await response.json()
+
+        // Only update leads count from backend if we don't have an active task
+        // This prevents showing old lead counts when starting a new extraction
+        if (!currentTask && !taskId) {
+          setLiveStats({
+            queue: 0,
+            done: 0,
+            leads: data.gmap_leads ?? 0,
+            errors: 0,
+          })
+        }
+      } catch (err) {
+        console.error('Failed to fetch stats:', err)
+      }
+    }
+
+    // Fetch immediately only if no task is active
+    if (!currentTask && !taskId) {
+      fetchStats()
+    }
+
+    // Then fetch every 5 seconds
+    const interval = setInterval(fetchStats, 5000)
+
+    return () => clearInterval(interval)
+  }, [currentTask, taskId])
+
+  // Animate map markers
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newMarkers = Array.from({ length: 5 }, () => ({
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        id: Math.random(),
+      }))
+      setMapMarkers(newMarkers)
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Rotate current location
+  useEffect(() => {
+    if (!currentTask || currentTask.status !== 'running') return
+
+    const cities = Object.keys(selectedCities).filter(city => selectedCities[city])
+    if (cities.length === 0) return
+
+    let index = 0
+    const interval = setInterval(() => {
+      setCurrentLocation(cities[index])
+      index = (index + 1) % cities.length
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [currentTask, selectedCities])
+
   // Use live stats or fallback to current task stats
   const stats = {
     queue: currentTask?.stats?.queue ?? liveStats.queue,
@@ -490,43 +373,39 @@ export default function GMapPage() {
               </div>
             </div>
 
-            {/* Location Set Selector */}
-            {availableLocations.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                    CONJUNTO DE LOCAIS
-                  </label>
-                  <button
-                    onClick={() => setShowManageModal(true)}
-                    className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
-                    title="Gerenciar conjuntos"
-                  >
-                    <span className="material-symbols-outlined text-xs">settings</span>
-                    GERENCIAR
-                  </button>
-                </div>
+            {/* Location Set Selector - Always visible */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                  CONJUNTO DE LOCAIS
+                </label>
+                <button
+                  onClick={() => setShowManageModal(true)}
+                  className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+                  title="Gerenciar conjuntos"
+                >
+                  <span className="material-symbols-outlined text-xs">settings</span>
+                  GERENCIAR
+                </button>
+              </div>
+              {availableLocations.length > 0 ? (
                 <select
                   value={selectedLocationSet}
                   onChange={(e) => handleLocationSetChange(e.target.value)}
                   className="w-full !bg-surface-container-high !border-outline-variant/30 text-sm"
                 >
-                  {availableLocations.map(loc => {
-                    // Support both new format (id, name, location_count) and old format (nome, locais)
-                    const isNewFormat = loc.id && loc.storage_url
-                    const key = isNewFormat ? loc.id : loc.nome
-                    const displayName = isNewFormat ? loc.name : loc.nome
-                    const count = isNewFormat ? loc.location_count : loc.locais.length
-                    
-                    return (
-                      <option key={key} value={key}>
-                        {displayName} ({count} locais)
-                      </option>
-                    )
-                  })}
+                  {availableLocations.map(loc => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.name} ({loc.location_count} locais)
+                    </option>
+                  ))}
                 </select>
-              </div>
-            )}
+              ) : (
+                <div className="w-full p-3 rounded bg-surface-container-high border border-outline-variant/15 text-center text-sm text-on-surface-variant">
+                  Nenhum conjunto cadastrado
+                </div>
+              )}
+            </div>
 
             {/* Target Geographies */}
             <div className="space-y-3">
@@ -535,25 +414,25 @@ export default function GMapPage() {
                   GEOGRAFIAS ALVO
                 </label>
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={selectAll}
                     className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors"
                   >
                     TODOS
                   </button>
-                  <button 
+                  <button
                     onClick={selectNone}
                     className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors"
                   >
                     NENHUM
                   </button>
-                  <button 
+                  <button
                     onClick={selectPending}
                     className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors"
                   >
                     PENDENTES
                   </button>
-                  <button 
+                  <button
                     onClick={resetProgress}
                     className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-error/20 text-on-surface-variant hover:text-error transition-colors"
                     title="Resetar progresso"
@@ -565,54 +444,35 @@ export default function GMapPage() {
               <div className="text-[9px] text-on-surface-variant/60 italic">
                 * Nenhuma seleção = todos na ordem
               </div>
-              {/* Loading Indicator */}
-              {isLoadingLocations ? (
-                <div className="flex flex-col items-center justify-center py-8 space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm text-on-surface-variant">Loading locations...</span>
-                  </div>
-                  {downloadProgress.show && downloadProgress.estimatedSize && (
-                    <div className="text-xs text-on-surface-variant/70 italic">
-                      Estimated file size: ~{downloadProgress.estimatedSize} MB
-                    </div>
-                  )}
-                  {downloadProgress.show && !downloadProgress.estimatedSize && (
-                    <div className="text-xs text-on-surface-variant/70 italic">
-                      Downloading...
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                  {Object.entries(selectedCities).map(([city, selected]) => {
-                    const cityKey = `${selectedLocationSet}:${city}`
-                    const isCompleted = completedCities[cityKey]
-                    
-                    return (
-                      <label 
-                        key={city} 
-                        className={`flex items-center gap-2 cursor-pointer group relative ${isCompleted ? 'opacity-50' : ''}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          onChange={() => toggleCity(city)}
-                          className="w-4 h-4 rounded border-outline-variant bg-surface-container-high checked:bg-primary checked:border-primary cursor-pointer"
-                        />
-                        <span className={`text-sm ${isCompleted ? 'line-through text-on-surface-variant/50' : 'text-on-surface-variant group-hover:text-primary'} transition-colors`}>
-                          {city}
+              {/* Location Checkboxes Grid */}
+              <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                {Object.entries(selectedCities).map(([city, selected]) => {
+                  const cityKey = `${selectedLocationSet}:${city}`
+                  const isCompleted = completedCities[cityKey]
+
+                  return (
+                    <label
+                      key={city}
+                      className={`flex items-center gap-2 cursor-pointer group relative ${isCompleted ? 'opacity-50' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => toggleCity(city)}
+                        className="w-4 h-4 rounded border-outline-variant bg-surface-container-high checked:bg-primary checked:border-primary cursor-pointer"
+                      />
+                      <span className={`text-sm ${isCompleted ? 'line-through text-on-surface-variant/50' : 'text-on-surface-variant group-hover:text-primary'} transition-colors`}>
+                        {city}
+                      </span>
+                      {isCompleted && (
+                        <span className="material-symbols-outlined text-primary text-xs ml-auto" title="Concluído">
+                          check_circle
                         </span>
-                        {isCompleted && (
-                          <span className="material-symbols-outlined text-primary text-xs ml-auto" title="Concluído">
-                            check_circle
-                          </span>
-                        )}
-                      </label>
-                    )
-                  })}
-                </div>
-              )}
+                      )}
+                    </label>
+                  )
+                })}
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -627,7 +487,7 @@ export default function GMapPage() {
             </button>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <button 
+              <button
                 onClick={handlePause}
                 disabled={!currentTask || currentTask.status !== 'running'}
                 className="btn-ghost"
@@ -635,7 +495,7 @@ export default function GMapPage() {
               >
                 Pausar
               </button>
-              <button 
+              <button
                 onClick={handleStop}
                 disabled={!currentTask}
                 className="btn-ghost"
@@ -655,7 +515,7 @@ export default function GMapPage() {
             <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.15 }} viewBox="0 0 400 200" preserveAspectRatio="none">
               <path d="M0 50 L400 50 M0 100 L400 100 M0 150 L400 150 M100 0 L100 200 M200 0 L200 200 M300 0 L300 200" stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" fill="none"/>
             </svg>
-            
+
             {/* Map Pins */}
             {mapMarkers.map((marker) => (
               <div key={marker.id} className="map-pin" style={{ top: `${marker.y}%`, left: `${marker.x}%` }} />
@@ -678,7 +538,7 @@ export default function GMapPage() {
               </div>
               <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.5)', letterSpacing: '0.1em' }}>LOG DO TERMINAL</span>
             </div>
-            
+
             <div style={{ flex: 1, overflow: 'auto' }} className="custom-scrollbar">
               {currentTask?.logs?.length > 0 ? (
                 currentTask.logs.slice(-15).map((log, i) => (
@@ -709,26 +569,22 @@ export default function GMapPage() {
     <LocationSetsModal
       isOpen={showManageModal}
       onClose={() => setShowManageModal(false)}
-      apiUrl={apiUrl}
       locationSets={availableLocations}
       onRefresh={async () => {
-        // Reload location sets after create/delete
+        // Reload location sets from Supabase after create/delete
         try {
-          const response = await fetch(`${apiUrl}/api/locations`, {
-            headers: {
-              'ngrok-skip-browser-warning': 'true'
-            }
-          })
-          const data = await response.json()
-          setAvailableLocations(data)
-          
+          const locations = await locationSetsService.getAll()
+          setAvailableLocations(locations)
+
           // If current selection was deleted, select first available
-          const currentExists = data.find(loc => loc.id === selectedLocationSet || loc.nome === selectedLocationSet)
-          if (!currentExists && data.length > 0) {
-            const isNewFormat = data[0].id && data[0].storage_url
-            const newSelection = isNewFormat ? data[0].id : data[0].nome
-            setSelectedLocationSet(newSelection)
-            await loadLocationSetData(newSelection, data)
+          const currentExists = locations.find(loc => loc.id === selectedLocationSet)
+          if (!currentExists && locations.length > 0) {
+            setSelectedLocationSet(locations[0].id)
+            const cities = {}
+            locations[0].locations.forEach(city => {
+              cities[city] = false
+            })
+            setSelectedCities(cities)
           }
         } catch (err) {
           console.error('Failed to reload location sets:', err)

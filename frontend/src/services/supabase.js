@@ -178,7 +178,13 @@ export const locationSetsService = {
     const userId = await getCurrentUserId()
     const { data, error } = await supabase
       .from('location_sets')
-      .insert({ ...locationSet, user_id: userId })
+      .insert({
+        name: locationSet.name,
+        description: locationSet.description,
+        locations: locationSet.locations,
+        location_count: locationSet.locations?.length ?? 0,
+        user_id: userId
+      })
       .select()
       .single()
     if (error) throw error

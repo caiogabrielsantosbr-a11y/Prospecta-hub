@@ -256,9 +256,14 @@ Para expor o backend via ngrok:
 - Routers do backend comentados em `main.py` (debug temporário)
 - Socket.IO temporariamente desabilitado
 - Dashboard stats ainda mockado
+- Location sets migrados para Supabase direto (sem depender do backend)
 
 **Próximos passos:**
 1. Reabilitar routers backend um a um
 2. Reabilitar Socket.IO
 3. Conectar dashboard stats ao Supabase real
 4. Deploy do backend (Railway, Fly.io ou similar)
+
+---
+
+## LOG DE OTIMIZAÇÕES
