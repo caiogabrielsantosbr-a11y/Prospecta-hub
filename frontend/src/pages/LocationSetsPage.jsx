@@ -188,38 +188,17 @@ export default function LocationSetsPage() {
 
   const handleConfirmDelete = async () => {
     if (!locationSetToDelete) return
-    
+
     setIsDeleting(true)
     try {
-      const response = await fetch(`${apiUrl}/api/locations/${locationSetToDelete.id}`, {
-        method: 'DELETE',
-        headers: {
-          'ngrok-skip-browser-warning': 'true' // Skip ngrok warning page
-        }
-      })
-      
-      if (response.ok) {
-        toast.success(`Conjunto "${locationSetToDelete.name}" excluído com sucesso`)
-        
-        // Close dialog
-        setShowDeleteConfirm(false)
-        setLocationSetToDelete(null)
-        
-        // Refresh list
-        fetchLocationSets()
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        const errorMessage = errorData.detail?.message || errorData.message || 'Erro ao excluir conjunto'
-        
-        if (response.status === 404) {
-          toast.error('Conjunto não encontrado')
-        } else {
-          toast.error(errorMessage)
-        }
-      }
+      await locationSetsService.delete(locationSetToDelete.id)
+      toast.success(`Conjunto "${locationSetToDelete.name}" excluído com sucesso`)
+      setShowDeleteConfirm(false)
+      setLocationSetToDelete(null)
+      fetchLocationSets()
     } catch (error) {
       console.error('Failed to delete location set:', error)
-      toast.error('Erro de conexão ao excluir conjunto')
+      toast.error('Erro ao excluir conjunto')
     } finally {
       setIsDeleting(false)
     }
