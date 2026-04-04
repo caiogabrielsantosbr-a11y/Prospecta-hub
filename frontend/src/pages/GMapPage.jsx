@@ -227,38 +227,6 @@ export default function GMapPage() {
     }
   }, [currentTask])
 
-  // Fetch real stats from backend periodically
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch('/api/dashboard/stats')
-        const data = await response.json()
-
-        // Only update leads count from backend if we don't have an active task
-        // This prevents showing old lead counts when starting a new extraction
-        if (!currentTask && !taskId) {
-          setLiveStats({
-            queue: 0,
-            done: 0,
-            leads: data.gmap_leads ?? 0,
-            errors: 0,
-          })
-        }
-      } catch (err) {
-        console.error('Failed to fetch stats:', err)
-      }
-    }
-
-    // Fetch immediately only if no task is active
-    if (!currentTask && !taskId) {
-      fetchStats()
-    }
-
-    // Then fetch every 5 seconds
-    const interval = setInterval(fetchStats, 5000)
-
-    return () => clearInterval(interval)
-  }, [currentTask, taskId])
 
   // Animate map markers
   useEffect(() => {
