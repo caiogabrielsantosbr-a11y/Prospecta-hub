@@ -56,7 +56,7 @@ const LABEL_STYLES = {
 
 const FILTER_TABS = [
   { id: 'sent',   label: 'Enviados',  icon: 'send',              query: 'in:sent' },
-  { id: 'unread', label: 'Não lidos', icon: 'mark_email_unread', query: 'is:unread' },
+  { id: 'unread', label: 'Não lidos', icon: 'mark_email_unread', query: 'is:unread -from:me' },
 ]
 
 // ─────────────────────────────────────────────────────────────
