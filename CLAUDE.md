@@ -57,6 +57,23 @@ A URL do ngrok é configurada dinamicamente no frontend via painel admin (tabela
 4. **Edições sempre cirúrgicas** — use Edit (str_replace) ou edição de bloco específico
 5. **Se a tarefa não estiver clara, pergunte:** "Qual arquivo e qual comportamento exato?" antes de agir
 6. Use `/clear` entre tarefas não relacionadas
+7. **NUNCA decidir sozinho qual modelo usar** — seguir obrigatoriamente a tabela de modelos abaixo
+
+---
+
+## Tabela de Modelos — seguir sem exceção
+
+| Tipo de tarefa | Modelo | Justificativa |
+|---|---|---|
+| Leitura de arquivos, edições simples, testes, operações Git, typos, formatação, ajustes de estilo | haiku | Custa 1/20 do Opus. Executa 90% das tarefas |
+| Refatoração de múltiplos arquivos, nova feature, integração entre módulos, raciocínio sobre arquitetura | sonnet | Capacidade intermediária, custo moderado |
+| Auditoria de segurança, depuração complexa, decisão arquitetural de alto impacto onde errar custa mais que os tokens | opus | Reservar apenas quando o custo de errar supera o custo do modelo |
+
+### Regra de ouro dos modelos
+- Padrão SEMPRE: **haiku**
+- O modelo NUNCA é escolhido automaticamente — é definido pela tabela acima
+- Só sobe para sonnet quando haiku claramente não resolve
+- Opus é exceção rara — apenas quando errar custaria mais do que os tokens gastos
 
 ---
 
