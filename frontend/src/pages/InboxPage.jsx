@@ -55,11 +55,8 @@ const LABEL_STYLES = {
 }
 
 const FILTER_TABS = [
-  { id: 'all',        label: 'Todos',         icon: 'all_inbox' },
-  { id: 'unread',     label: 'Não lidos',     icon: 'mark_email_unread' },
-  { id: 'replied',    label: 'Respondidos',   icon: 'reply' },
-  { id: 'week',       label: 'Última semana', icon: 'date_range' },
-  { id: 'attachment', label: 'Com anexo',     icon: 'attach_file' },
+  { id: 'sent',   label: 'Enviados',  icon: 'send',              query: 'in:sent' },
+  { id: 'unread', label: 'Não lidos', icon: 'mark_email_unread', query: 'is:unread' },
 ]
 
 // ─────────────────────────────────────────────────────────────
@@ -77,9 +74,7 @@ export default function InboxPage() {
   const [emailContent, setEmailContent]   = useState(null)
   const [loadingEmail, setLoadingEmail]   = useState(false)
 
-  const [filter, setFilter] = useState('all')
-  const [search, setSearch] = useState('')
-  const searchTimeout       = useRef(null)
+  const [filter, setFilter] = useState('sent')
 
   const [labels, setLabels] = useState({})   // { message_id: { label, confidence, reason } }
 
@@ -101,13 +96,6 @@ export default function InboxPage() {
   useEffect(() => {
     if (selectedAccount) { setEmails([]); setNextPageToken(''); fetchEmails('') }
   }, [selectedAccount, filter])
-
-  useEffect(() => {
-    if (!selectedAccount) return
-    clearTimeout(searchTimeout.current)
-    searchTimeout.current = setTimeout(() => { setEmails([]); setNextPageToken(''); fetchEmails('') }, 400)
-    return () => clearTimeout(searchTimeout.current)
-  }, [search])
 
   useEffect(() => {
     if (selectedAccount) loadTemplates()
@@ -132,12 +120,23 @@ export default function InboxPage() {
     if (!selectedAccount) return
     setLoadingEmails(true)
     try {
+      const activeTab = FILTER_TABS.find(t => t.id === filter)
+      const cacheKey = `inbox_${selectedAccount.id}_${filter}`
+      const cached = localStorage.getItem(cacheKey)
+
+      if (!pageToken && cached) {
+        const parsedCache = JSON.parse(cached)
+        if (Date.now() - parsedCache.ts < 5 * 60 * 1000) {
+          setEmails(parsedCache.data)
+        }
+      }
+
       const data = await edgeFn('gmail-messages', {
         params: {
           account_id: selectedAccount.id,
           filter,
-          search,
           page_token: pageToken,
+          q: activeTab?.query || 'in:sent',
         },
       })
       const msgs = data.messages || []
@@ -147,7 +146,11 @@ export default function InboxPage() {
       msgs.forEach(m => { if (m.label) incoming[m.id] = { label: m.label, confidence: m.label_confidence } })
       setLabels(prev => ({ ...prev, ...incoming }))
 
-      setEmails(prev => pageToken ? [...prev, ...msgs] : msgs)
+      const newEmails = pageToken ? [...emails, ...msgs] : msgs
+      setEmails(newEmails)
+      if (!pageToken) {
+        localStorage.setItem(cacheKey, JSON.stringify({ data: newEmails, ts: Date.now() }))
+      }
       setNextPageToken(data.next_page_token || '')
     } catch (e) {
       toast.error('Erro ao carregar emails: ' + e.message)
@@ -398,11 +401,6 @@ export default function InboxPage() {
                 </button>
               ))}
             </div>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar emails..." className="pl-9 py-1.5 text-sm w-52" />
-            </div>
           </div>
         )}
       </div>
@@ -442,9 +440,9 @@ export default function InboxPage() {
               <>
                 {emails.map(email => (
                   <button key={email.id} onClick={() => loadEmail(email)}
-                    className={`w-full text-left px-4 py-3 border-b border-outline-variant/5 hover:bg-surface-container-low transition-colors cursor-pointer ${
-                      selectedEmail?.id === email.id ? 'bg-surface-container-low border-l-2 border-l-primary pl-3.5' : ''
-                    }`}
+                    className={`w-full text-left px-4 py-3 border-b border-outline-variant/5 transition-colors cursor-pointer ${
+                      email.unread ? 'bg-surface-container-high border-l-2 border-l-primary' : 'hover:bg-surface-container-low bg-surface-container-low'
+                    } ${selectedEmail?.id === email.id ? 'bg-surface-container-low border-l-2 border-l-primary pl-3.5' : ''}`}
                   >
                     <div className="flex items-center justify-between gap-1 mb-0.5">
                       <span className={`text-sm truncate flex-1 ${email.unread ? 'font-bold' : 'font-medium'}`}>

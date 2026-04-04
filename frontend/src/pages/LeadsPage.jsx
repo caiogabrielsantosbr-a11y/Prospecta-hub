@@ -818,7 +818,6 @@ function WebhookControlModal({ webhook, onClose }) {
   const [triggering, setTriggering] = useState(false)
 
   const [subject, setSubject] = useState('')
-  const [senderName, setSenderName] = useState('')
   const [dailyLimit, setDailyLimit] = useState(80)
   const [batchSize, setBatchSize] = useState(20)
   const [minHour, setMinHour] = useState(8)
@@ -826,7 +825,6 @@ function WebhookControlModal({ webhook, onClose }) {
   const [selectedDays, setSelectedDays] = useState([])
 
   const [reportEmail, setReportEmail] = useState('')
-  const [reportHour, setReportHour] = useState(17)
   const [savingReport, setSavingReport] = useState(false)
 
   const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -853,7 +851,6 @@ function WebhookControlModal({ webhook, onClose }) {
       setStats(statsRes)
       if (settingsRes.success !== false) {
         setSubject(settingsRes.subject || '')
-        setSenderName(settingsRes.sender_name || '')
         setDailyLimit(settingsRes.daily_limit || 80)
         setBatchSize(settingsRes.hourly_batch_size || 20)
         setMinHour(settingsRes.min_hour || 8)
@@ -862,7 +859,6 @@ function WebhookControlModal({ webhook, onClose }) {
       }
       if (reportRes.success !== false) {
         setReportEmail(reportRes.report_email || '')
-        setReportHour(reportRes.report_hour || 17)
       }
     } catch {
       toast.error('Erro ao conectar com a planilha. Verifique a URL do webhook.')
@@ -876,7 +872,7 @@ function WebhookControlModal({ webhook, onClose }) {
     setSaving(true)
     try {
       const res = await apiPost({
-        action: 'configure', subject, sender_name: senderName,
+        action: 'configure', subject,
         daily_limit: dailyLimit, hourly_batch_size: batchSize,
         min_hour: minHour, max_hour: maxHour,
       })
@@ -936,7 +932,6 @@ function WebhookControlModal({ webhook, onClose }) {
         action: 'configure_report',
         recipient_email: reportEmail,
         enabled,
-        hour: reportHour,
       })
       if (res.success) {
         toast.success(enabled ? 'Relatório diário ativado!' : 'Relatório diário desativado')
@@ -1019,13 +1014,6 @@ function WebhookControlModal({ webhook, onClose }) {
                 <p className="text-xs text-on-surface-variant mt-1">
                   Crie um rascunho no Gmail com esse assunto. Use {`{{EMPRESA}}`}, {`{{EMAIL}}`}, {`{{CIDADE}}`} no corpo.
                 </p>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">
-                  Nome do Remetente
-                </label>
-                <input type="text" value={senderName} onChange={e => setSenderName(e.target.value)}
-                  placeholder="Ex: João Silva" className="w-full" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1141,21 +1129,6 @@ function WebhookControlModal({ webhook, onClose }) {
                   placeholder="relatorio@email.com"
                   className="input-field w-full"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-on-surface-variant mb-1">
-                  Hora de envio ({reportHour}:00)
-                </label>
-                <input
-                  type="range"
-                  min={0} max={23}
-                  value={reportHour}
-                  onChange={e => setReportHour(Number(e.target.value))}
-                  className="w-full accent-primary"
-                />
-                <div className="flex justify-between text-xs text-on-surface-variant mt-1">
-                  <span>0h</span><span>12h</span><span>23h</span>
-                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <button

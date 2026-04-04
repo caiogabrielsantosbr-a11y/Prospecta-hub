@@ -171,6 +171,7 @@ function handleConfigure(payload) {
     props.setProperty('AUTO_SUBJECT', payload.subject);
     updates.subject = payload.subject;
   }
+  // SENDER_NAME removido — usa nome padrão da conta Gmail
 
   return jsonResponse({ success: true, updated: updates });
 }
@@ -389,7 +390,7 @@ function processBatchServerSide_(subjectLine, maxEmails) {
           msgObj.text,
           {
             htmlBody:     msgObj.html,
-            name:         props.getProperty('SENDER_NAME') || 'Prospecta HUB',
+            name:         'Prospecta HUB',
             attachments:  template.attachments,
             inlineImages: template.inlineImages,
           }
@@ -415,6 +416,11 @@ function processBatchServerSide_(subjectLine, maxEmails) {
         }
       }
     }
+  }
+
+  // Relatório de conclusão: disparar quando não houver mais pendentes
+  if (countRows_().pending === 0) {
+    sendCompletionReport_();
   }
 }
 
@@ -490,7 +496,6 @@ function getStoredSettings() {
     daily_limit:       props.getProperty('DAILY_LIMIT')         || '80',
     hourly_batch_size: props.getProperty('HOURLY_BATCH_SIZE')   || '20',
     max_hour:          props.getProperty('MAX_HOUR')            || '16',
-    sender_name:       props.getProperty('SENDER_NAME')         || '',
   };
 }
 
@@ -503,7 +508,6 @@ function saveSchedule(config) {
   if (config.hourly_batch_size) props.setProperty('HOURLY_BATCH_SIZE',    String(config.hourly_batch_size));
   if (config.min_hour)          props.setProperty('MIN_HOUR',             String(config.min_hour));
   if (config.max_hour)          props.setProperty('MAX_HOUR',             String(config.max_hour));
-  if (config.sender_name)       props.setProperty('SENDER_NAME',          config.sender_name);
 
   const active = config.active === true || config.active === 'true';
   props.setProperty('AUTO_ACTIVE', String(active));
@@ -531,7 +535,7 @@ function sendTest(config) {
     const template = getGmailTemplateFromDrafts_(config.subjectLine);
     GmailApp.sendEmail(config.to, template.message.subject, template.message.text, {
       htmlBody: template.message.html,
-      name:     getProps().getProperty('SENDER_NAME') || 'Prospecta HUB',
+      name:     'Prospecta HUB',
       attachments:  template.attachments,
       inlineImages: template.inlineImages,
     });
@@ -544,8 +548,8 @@ function sendTest(config) {
  *******************************************************/
 
 /**
- * configure_report — configura relatório diário por email
- * Payload: { recipient_email?, enabled?, hour? }
+ * configure_report — configura relatório de conclusão por email
+ * Payload: { recipient_email?, enabled? }
  */
 function handleConfigureReport(payload) {
   const props = getProps();
@@ -554,22 +558,15 @@ function handleConfigureReport(payload) {
     props.setProperty('REPORT_EMAIL', payload.recipient_email);
   if (payload.enabled !== undefined)
     props.setProperty('REPORT_ENABLED', String(payload.enabled === true || payload.enabled === 'true'));
-  if (payload.hour !== undefined)
-    props.setProperty('REPORT_HOUR', String(payload.hour));
 
-  // Recria trigger do relatório
+  // Remove trigger de hora fixa (legado)
   deleteTriggerByName_('sendDailyReport');
-  const enabled = props.getProperty('REPORT_ENABLED') === 'true';
-  if (enabled) {
-    const hour = Number(props.getProperty('REPORT_HOUR') || 17);
-    ScriptApp.newTrigger('sendDailyReport').timeBased().atHour(hour).everyDays(1).create();
-  }
 
+  const enabled = props.getProperty('REPORT_ENABLED') === 'true';
   return jsonResponse({
-    success: true,
+    success:      true,
     report_enabled: enabled,
-    report_email:   props.getProperty('REPORT_EMAIL') || '',
-    report_hour:    Number(props.getProperty('REPORT_HOUR') || 17),
+    report_email: props.getProperty('REPORT_EMAIL') || '',
   });
 }
 
@@ -582,31 +579,30 @@ function handleGetReportConfig() {
     success:        true,
     report_enabled: props.getProperty('REPORT_ENABLED') === 'true',
     report_email:   props.getProperty('REPORT_EMAIL')   || '',
-    report_hour:    Number(props.getProperty('REPORT_HOUR') || 17),
   });
 }
 
 /**
- * sendDailyReport — enviado via trigger diário
+ * sendCompletionReport_ — disparado internamente ao fim de um lote quando pending === 0
  */
-function sendDailyReport() {
+function sendCompletionReport_() {
   const props = getProps();
   if (props.getProperty('REPORT_ENABLED') !== 'true') return;
 
   const recipient = props.getProperty('REPORT_EMAIL');
   if (!recipient) return;
 
-  const rows       = countRows_();
-  const daily      = Number(props.getProperty('DAILY_SENT_COUNT') || 0);
-  const limit      = Number(props.getProperty('DAILY_LIMIT')      || DEFAULT_DAILY_LIMIT);
-  const quota      = MailApp.getRemainingDailyQuota();
-  const sheetName  = SpreadsheetApp.getActiveSpreadsheet().getName();
-  const date       = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+  const rows      = countRows_();
+  const daily     = Number(props.getProperty('DAILY_SENT_COUNT') || 0);
+  const limit     = Number(props.getProperty('DAILY_LIMIT')      || DEFAULT_DAILY_LIMIT);
+  const quota     = MailApp.getRemainingDailyQuota();
+  const sheetName = SpreadsheetApp.getActiveSpreadsheet().getName();
+  const date      = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm');
 
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:520px">
-      <h2 style="color:#1a73e8">Relatório Diário — ${sheetName}</h2>
-      <p><strong>Data:</strong> ${date}</p>
+      <h2 style="color:#1a73e8">✅ Envios concluídos — ${sheetName}</h2>
+      <p><strong>Data/hora:</strong> ${date}</p>
       <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%">
         <tr style="background:#f1f3f4">
           <td><strong>Emails enviados hoje</strong></td>
@@ -625,8 +621,8 @@ function sendDailyReport() {
 
   GmailApp.sendEmail(
     recipient,
-    `Relatório Diário — ${sheetName} (${date})`,
-    `Relatório do dia ${date}: ${daily}/${limit} enviados, ${rows.pending} pendentes, cota Gmail ${quota}.`,
+    `✅ Envios concluídos — ${sheetName} (${date})`,
+    `Envios concluídos em ${date}: ${daily}/${limit} enviados, ${rows.pending} pendentes, cota Gmail ${quota}.`,
     { htmlBody: html }
   );
 }
