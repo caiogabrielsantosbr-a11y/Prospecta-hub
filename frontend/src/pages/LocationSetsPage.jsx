@@ -59,14 +59,19 @@ export default function LocationSetsPage() {
         const parsed = JSON.parse(cleaned)
         if (!Array.isArray(parsed)) return { valid: false, error: 'JSON deve ser um array de strings' }
         locations = parsed.map(i => String(i).trim()).filter(Boolean)
-      } catch (e) {
-        return { valid: false, error: `JSON inválido: ${e.message}` }
+      } catch {
+        // Fallback: extrai conteúdo dentro dos colchetes e trata como texto
+        const inner = raw.replace(/^\[|\]$/g, '')
+        locations = inner
+          .split(/[\n,;]+/)
+          .map(s => s.replace(/^[\s"'\u201c\u201d\u2018\u2019]+|[\s"'\u201c\u201d\u2018\u2019]+$/g, ''))
+          .filter(Boolean)
       }
     } else {
-      // Tenta uma por linha ou separado por vírgula/ponto-e-vírgula
+      // Uma por linha ou separado por vírgula/ponto-e-vírgula
       locations = raw
         .split(/[\n,;]+/)
-        .map(s => s.replace(/^["'\s]+|["'\s]+$/g, ''))
+        .map(s => s.replace(/^[\s"'\u201c\u201d\u2018\u2019]+|[\s"'\u201c\u201d\u2018\u2019]+$/g, ''))
         .filter(Boolean)
     }
 
