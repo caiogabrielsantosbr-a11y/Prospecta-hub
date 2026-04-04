@@ -46,43 +46,35 @@ export default function LocationSetsPage() {
     }
   }
 
-  const validateJson = (jsonString) => {
-    if (!jsonString.trim()) {
-      return { valid: false, error: 'JSON não pode estar vazio' }
+  const parseLocations = (input) => {
+    const raw = input.trim()
+    if (!raw) return { valid: false, error: 'Lista não pode estar vazia' }
+
+    let locations = []
+
+    // Tenta JSON array (com ou sem trailing comma)
+    if (raw.startsWith('[')) {
+      try {
+        const cleaned = raw.replace(/,(\s*[}\]])/g, '$1')
+        const parsed = JSON.parse(cleaned)
+        if (!Array.isArray(parsed)) return { valid: false, error: 'JSON deve ser um array de strings' }
+        locations = parsed.map(i => String(i).trim()).filter(Boolean)
+      } catch (e) {
+        return { valid: false, error: `JSON inválido: ${e.message}` }
+      }
+    } else {
+      // Tenta uma por linha ou separado por vírgula/ponto-e-vírgula
+      locations = raw
+        .split(/[\n,;]+/)
+        .map(s => s.replace(/^["'\s]+|["'\s]+$/g, ''))
+        .filter(Boolean)
     }
 
-    try {
-      // Remove trailing commas before parsing (common mistake)
-      const cleanedJson = jsonString.replace(/,(\s*[}\]])/g, '$1')
-      const parsed = JSON.parse(cleanedJson)
-      
-      // Check if it's an array
-      if (!Array.isArray(parsed)) {
-        return { valid: false, error: 'JSON deve ser um array de strings' }
-      }
-
-      // Check if array has at least one element
-      if (parsed.length === 0) {
-        return { valid: false, error: 'Array deve conter pelo menos 1 local' }
-      }
-
-      // Check if all elements are strings
-      const nonStrings = parsed.filter(item => typeof item !== 'string')
-      if (nonStrings.length > 0) {
-        return { valid: false, error: 'Todos os elementos devem ser strings' }
-      }
-
-      // Check if all strings are non-empty after trimming
-      const emptyStrings = parsed.filter(item => !item.trim())
-      if (emptyStrings.length > 0) {
-        return { valid: false, error: 'Todos os locais devem ser strings não vazias' }
-      }
-
-      return { valid: true, locations: parsed }
-    } catch (e) {
-      return { valid: false, error: `JSON inválido: ${e.message}` }
-    }
+    if (locations.length === 0) return { valid: false, error: 'Nenhum local encontrado' }
+    return { valid: true, locations }
   }
+
+  const validateJson = parseLocations
 
   const handleJsonChange = (value) => {
     setFormData({ ...formData, jsonInput: value })
@@ -277,12 +269,15 @@ export default function LocationSetsPage() {
               {/* JSON Textarea */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                  Array JSON de Locais *
+                  Locais *
                 </label>
+                <p className="text-[11px] text-on-surface-variant">
+                  Aceita: JSON array, um por linha, ou separado por vírgula/ponto-e-vírgula
+                </p>
                 <textarea
                   value={formData.jsonInput}
                   onChange={(e) => handleJsonChange(e.target.value)}
-                  placeholder='["São Paulo, SP", "Rio de Janeiro, RJ", "Belo Horizonte, MG"]'
+                  placeholder={"[\"São Paulo - SP\", \"Campinas - SP\"]\n\nou uma por linha:\nSão Paulo - SP\nCampinas - SP"}
                   rows={10}
                   className={`w-full resize-none font-mono text-sm ${jsonError ? 'border-error' : ''}`}
                   required
