@@ -46,40 +46,11 @@ export default function LocationSetsPage() {
     }
   }
 
-  const parseLocations = (input) => {
-    const raw = input.trim()
-    if (!raw) return { valid: false, error: 'Lista não pode estar vazia' }
-
-    let locations = []
-
-    // Tenta JSON array (com ou sem trailing comma)
-    if (raw.startsWith('[')) {
-      try {
-        const cleaned = raw.replace(/,(\s*[}\]])/g, '$1')
-        const parsed = JSON.parse(cleaned)
-        if (!Array.isArray(parsed)) return { valid: false, error: 'JSON deve ser um array de strings' }
-        locations = parsed.map(i => String(i).trim()).filter(Boolean)
-      } catch {
-        // Fallback: extrai conteúdo dentro dos colchetes e trata como texto
-        const inner = raw.replace(/^\[|\]$/g, '')
-        locations = inner
-          .split(/[\n,;]+/)
-          .map(s => s.replace(/^[\s"'\u201c\u201d\u2018\u2019]+|[\s"'\u201c\u201d\u2018\u2019]+$/g, ''))
-          .filter(Boolean)
-      }
-    } else {
-      // Uma por linha ou separado por vírgula/ponto-e-vírgula
-      locations = raw
-        .split(/[\n,;]+/)
-        .map(s => s.replace(/^[\s"'\u201c\u201d\u2018\u2019]+|[\s"'\u201c\u201d\u2018\u2019]+$/g, ''))
-        .filter(Boolean)
-    }
-
-    if (locations.length === 0) return { valid: false, error: 'Nenhum local encontrado' }
+  const validateJson = (input) => {
+    const locations = input.split('\n').map(s => s.trim()).filter(Boolean)
+    if (locations.length === 0) return { valid: false, error: 'Lista não pode estar vazia' }
     return { valid: true, locations }
   }
-
-  const validateJson = parseLocations
 
   const handleJsonChange = (value) => {
     setFormData({ ...formData, jsonInput: value })
@@ -271,20 +242,17 @@ export default function LocationSetsPage() {
                 </p>
               </div>
 
-              {/* JSON Textarea */}
+              {/* Locais Textarea */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                  Locais *
+                  Locais * <span className="normal-case font-normal">(um por linha)</span>
                 </label>
-                <p className="text-[11px] text-on-surface-variant">
-                  Aceita: JSON array, um por linha, ou separado por vírgula/ponto-e-vírgula
-                </p>
                 <textarea
                   value={formData.jsonInput}
                   onChange={(e) => handleJsonChange(e.target.value)}
-                  placeholder={"[\"São Paulo - SP\", \"Campinas - SP\"]\n\nou uma por linha:\nSão Paulo - SP\nCampinas - SP"}
+                  placeholder={"São Paulo - SP\nGuarulhos - SP\nCampinas - SP"}
                   rows={10}
-                  className={`w-full resize-none font-mono text-sm ${jsonError ? 'border-error' : ''}`}
+                  className={`w-full resize-none text-sm ${jsonError ? 'border-error' : ''}`}
                   required
                 />
                 {jsonError && (
