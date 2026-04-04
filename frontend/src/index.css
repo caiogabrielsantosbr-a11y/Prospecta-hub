@@ -118,6 +118,27 @@
   --pro-warning: #d97706;
   --pro-danger:  #dc2626;
   --pro-info:    #2563eb;
+
+  /* Overriding Tailwind @theme static colours for light mode */
+  --color-surface: #FFFFFF;
+  --color-surface-dim: #F5F5F7;
+  --color-surface-bright: #FFFFFF;
+  --color-surface-container: #F8F8FA;
+  --color-surface-container-low: #FFFFFF;
+  --color-surface-container-high: #EFEFEF;
+  --color-surface-container-highest: #E5E5E5;
+  --color-surface-container-lowest: #FFFFFF;
+
+  --color-on-surface: #1A1A1A;
+  --color-on-surface-variant: rgba(26, 26, 26, 0.55);
+  --color-on-background: #1A1A1A;
+
+  --color-outline: rgba(0, 0, 0, 0.08);
+  --color-outline-variant: rgba(0, 0, 0, 0.14);
+}
+
+.text-on-surface-variant {
+  color: var(--color-on-surface-variant) !important;
 }
 
 :root[data-theme="light"] .pro-terminal {
@@ -163,7 +184,7 @@
 /* ── Base ───────────────────────────────────────── */
 body {
   font-family: "Inter", sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   background-color: var(--pro-black);
   color: var(--pro-text);
   margin: 0;
@@ -248,7 +269,7 @@ body {
   background: var(--pro-surface2);
   border: 0.5px solid var(--pro-border);
   border-radius: 12px;
-  padding: 18px 20px;
+  padding: 30px 24px;
   transition: background 0.2s, border-color 0.2s;
 }
 
@@ -261,7 +282,7 @@ body {
 }
 
 .sc-label {
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -274,8 +295,8 @@ body {
 
 .sc-val {
   font-family: "Inter", sans-serif;
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 44px;
+  font-weight: 800;
   color: var(--pro-text);
   line-height: 1;
 }
@@ -287,8 +308,8 @@ body {
 }
 
 .sc-delta {
-  font-size: 11px;
-  margin-top: 4px;
+  font-size: 15px;
+  margin-top: 6px;
   color: var(--pro-muted);
 }
 
@@ -326,7 +347,7 @@ body {
   border-radius: 12px;
   padding: 16px;
   font-family: 'Courier New', monospace;
-  font-size: 12px;
+  font-size: 15px;
   color: rgba(74, 222, 128, 0.7);
   transition: background 0.2s, border-color 0.2s;
 }
@@ -372,10 +393,10 @@ body {
 .pro-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 9px;
+  gap: 6px;
+  padding: 4px 12px;
   border-radius: 100px;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -392,9 +413,9 @@ body {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 100px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -434,7 +455,7 @@ body {
 }
 
 .fs-title {
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -446,7 +467,7 @@ body {
 }
 
 .field-label {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--pro-muted);
   margin-bottom: 5px;
@@ -474,7 +495,7 @@ input, textarea, select {
   color: var(--pro-text);
   padding: 10px 14px;
   font-family: "Inter", sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   outline: none;
   transition: border-color 0.2s, background 0.2s;
 }
@@ -499,7 +520,7 @@ select option {
   background: var(--pro-grad);
   color: #ffffff;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 15px;
   padding: 10px 20px;
   border-radius: 8px;
   border: none;
@@ -518,7 +539,7 @@ select option {
   background: transparent;
   color: var(--pro-muted);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
   padding: 9px 16px;
   border-radius: 8px;
   border: 0.5px solid var(--pro-border2);
@@ -538,7 +559,7 @@ select option {
   border: 0.5px solid rgba(248, 113, 113, 0.2);
   border-radius: 8px;
   color: #f87171;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   font-family: "Inter", sans-serif;
@@ -572,7 +593,7 @@ select option {
   border: 0.5px solid var(--pro-border2);
   border-radius: 8px;
   color: var(--pro-muted);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   font-family: "Inter", sans-serif;
@@ -597,7 +618,7 @@ select option {
 
 .pro-tab {
   padding: 9px 16px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--pro-muted);
   cursor: pointer;
@@ -660,14 +681,14 @@ select option {
 .pro-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .pro-table th {
   text-align: left;
   padding: 8px 12px;
   color: var(--pro-muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -714,7 +735,7 @@ select option {
 
 .modal-title {
   font-family: "Inter", sans-serif;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--pro-text);
 }

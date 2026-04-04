@@ -41,7 +41,7 @@ export default function Dashboard() {
   }, [])
 
   return (
-    <div className="content-wrapper">
+    <div className="content-wrapper" style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 60px)' }}>
       {/* Stat Grid Row 1 — 4 cols */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
         <div className="stat-card">
@@ -101,11 +101,11 @@ export default function Dashboard() {
       </div>
 
       {/* Bottom Grid — 2 cols with better fill */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, flex: 1, minHeight: 0 }}>
         {/* Left: Visão de Leads */}
-        <div className="pro-card pro-card-accent" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--pro-text)', marginBottom: 4 }}>Visão de Leads</div>
-          <div style={{ fontSize: 13, color: 'var(--pro-muted)', marginBottom: 20 }}>Qualidade do banco de dados</div>
+        <div className="pro-card pro-card-accent" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--pro-text)', marginBottom: 6 }}>Visão de Leads</div>
+          <div style={{ fontSize: 15, color: 'var(--pro-muted)', marginBottom: 24 }}>Qualidade do banco de dados</div>
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <ProgressRow label="Com Telefone" dotColor="#16a34a" pct={leadStats ? Math.round((leadStats.with_phone / (leadStats.total || 1)) * 100) : 0} />
@@ -116,14 +116,14 @@ export default function Dashboard() {
         </div>
 
         {/* Right: Terminal Logs */}
-        <div className="pro-terminal" style={{ display: 'flex', flexDirection: 'column', minHeight: 260 }}>
+        <div className="pro-terminal" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div className="term-head">
             <div className="term-dots">
               <div className="term-dot" style={{ background: '#dc2626' }} />
               <div className="term-dot" style={{ background: '#d97706' }} />
               <div className="term-dot" style={{ background: '#16a34a' }} />
             </div>
-            <span style={{ fontSize: 11, color: 'var(--pro-muted)', letterSpacing: '0.1em' }}>LOGS DE INTELIGÊNCIA</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--pro-text)', letterSpacing: '0.1em' }}>LOGS DE INTELIGÊNCIA</span>
             <div className="live-dot" style={{ marginLeft: 'auto' }} />
           </div>
 
@@ -149,7 +149,7 @@ export default function Dashboard() {
               type="text"
               style={{
                 flex: 1, background: 'transparent', border: 'none', padding: 0,
-                fontSize: 12, color: 'var(--pro-muted)', fontFamily: 'monospace',
+                fontSize: 15, color: 'var(--pro-muted)', fontFamily: 'monospace',
                 outline: 'none',
               }}
               placeholder="Executar comando..."
@@ -167,14 +167,14 @@ export default function Dashboard() {
 function ProgressRow({ label, dotColor, pct, gradientColors, last }) {
   return (
     <div style={{ marginBottom: last ? 0 : 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <div style={{ fontSize: 13, color: 'var(--pro-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--pro-text)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
           {label}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--pro-muted)', fontWeight: 600 }}>{pct}%</div>
+        <div style={{ fontSize: 16, color: 'var(--pro-muted)', fontWeight: 700 }}>{pct}%</div>
       </div>
-      <div className="prog-bar" style={{ height: 4 }}>
+      <div className="prog-bar" style={{ height: 6 }}>
         <div className="prog-fill" style={{ width: `${pct}%`, ...(gradientColors ? { background: gradientColors } : {}) }} />
       </div>
     </div>
