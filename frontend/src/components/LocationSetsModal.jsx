@@ -27,38 +27,12 @@ export default function LocationSetsModal({
 
   if (!isOpen) return null
 
-  const validateJson = (jsonString) => {
-    if (!jsonString.trim()) {
-      return { valid: false, error: 'JSON não pode estar vazio' }
+  const validateJson = (input) => {
+    const locations = input.split('\n').map(s => s.trim()).filter(Boolean)
+    if (locations.length === 0) {
+      return { valid: false, error: 'Lista não pode estar vazia' }
     }
-
-    try {
-      // Remove trailing commas before parsing (common mistake)
-      const cleanedJson = jsonString.replace(/,(\s*[}\]])/g, '$1')
-      const parsed = JSON.parse(cleanedJson)
-
-      if (!Array.isArray(parsed)) {
-        return { valid: false, error: 'JSON deve ser um array de strings' }
-      }
-
-      if (parsed.length === 0) {
-        return { valid: false, error: 'Array deve conter pelo menos 1 local' }
-      }
-
-      const nonStrings = parsed.filter(item => typeof item !== 'string')
-      if (nonStrings.length > 0) {
-        return { valid: false, error: 'Todos os elementos devem ser strings' }
-      }
-
-      const emptyStrings = parsed.filter(item => !item.trim())
-      if (emptyStrings.length > 0) {
-        return { valid: false, error: 'Todos os locais devem ser strings não vazias' }
-      }
-
-      return { valid: true, locations: parsed }
-    } catch (e) {
-      return { valid: false, error: `JSON inválido: ${e.message}` }
-    }
+    return { valid: true, locations }
   }
 
   const handleJsonChange = (value) => {
@@ -231,14 +205,14 @@ export default function LocationSetsModal({
 
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                    Array JSON de Locais *
+                    Locais * <span className="normal-case font-normal">(um por linha)</span>
                   </label>
                   <textarea
                     value={formData.jsonInput}
                     onChange={(e) => handleJsonChange(e.target.value)}
-                    placeholder='["São Paulo, SP", "Rio de Janeiro, RJ"]'
+                    placeholder={"São Paulo - SP\nRio de Janeiro - RJ\nCuritiba - PR"}
                     rows={10}
-                    className={`w-full resize-none font-mono text-sm ${jsonError ? 'border-error' : ''}`}
+                    className={`w-full resize-none text-sm ${jsonError ? 'border-error' : ''}`}
                     required
                   />
                   {jsonError && (

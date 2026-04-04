@@ -262,7 +262,7 @@ export default function LocationSetsPage() {
                   </p>
                 )}
                 <p className="text-[10px] text-on-surface-variant">
-                  Cole um array JSON com strings de locais. Cada local deve ser uma string não vazia.
+                  Insira uma lista de locais. Cada linha será considerada um local diferente.
                 </p>
               </div>
 
