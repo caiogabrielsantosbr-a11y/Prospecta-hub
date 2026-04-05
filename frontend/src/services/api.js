@@ -41,7 +41,13 @@ async function request(path, options = {}) {
 
   try {
     const res = await fetch(url, {
-      headers: { 'Content-Type': 'application/json', ...authHeader, ...options.headers },
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+        'Bypass-Tunnel-Reminder': 'true',
+        ...authHeader,
+        ...options.headers
+      },
       ...options,
     })
     
