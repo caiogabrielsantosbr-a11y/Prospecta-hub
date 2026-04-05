@@ -533,14 +533,27 @@ export default function GMapPage() {
       isOpen={showManageModal}
       onClose={() => setShowManageModal(false)}
       locationSets={availableLocations}
-      onRefresh={async () => {
+      onRefresh={async (newSetId) => {
         // Reload location sets from Supabase after create/delete
         try {
           const locations = await api.getLocationSets()
           setAvailableLocations(locations)
 
+          if (newSetId) {
+            const addedSet = locations.find(loc => loc.id.toString() === newSetId.toString())
+            if (addedSet) {
+              setSelectedLocationSet(addedSet.id)
+              const cities = {}
+              addedSet.locations.forEach(city => {
+                cities[city] = false
+              })
+              setSelectedCities(cities)
+              return
+            }
+          }
+
           // If current selection was deleted, select first available
-          const currentExists = locations.find(loc => loc.id === selectedLocationSet)
+          const currentExists = locations.find(loc => loc.id.toString() === selectedLocationSet?.toString())
           if (!currentExists && locations.length > 0) {
             setSelectedLocationSet(locations[0].id)
             const cities = {}

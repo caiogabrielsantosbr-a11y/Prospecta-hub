@@ -5460,6 +5460,95 @@ class SupabaseClient:
             return False
 
 
+    async def get_app_setting(self, user_id: str, key: str) -> Optional[dict]:
+        """Get an application setting for a specific user."""
+        if not self._available or not user_id:
+            return None
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(
+                    f"{self._url}/rest/v1/app_settings",
+                    params={
+                        'user_id': f'eq.{user_id}',
+                        'key': f'eq.{key}',
+                        'select': 'value',
+                        'limit': '1'
+                    },
+                    headers={
+                        'apikey': self._key,
+                        'Authorization': f'Bearer {self._service_key}'
+                    }
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if data and len(data) > 0:
+                        val = data[0].get('value')
+                        # Value might be stringified JSON or plain text
+                        try:
+                            return json.loads(val) if val else None
+                        except:
+                            return val
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error in get_app_setting: {type(e).__name__}")
+            return None
+
+    async def set_app_setting(self, user_id: str, key: str, value: any) -> bool:
+        """Set or update an application setting for a user."""
+        if not self._available or not user_id:
+            return False
+
+        # Convert dict to JSON string if needed, app_settings.value is text
+        value_str = json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else str(value)
+        
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                # Upsert is achieved by checking if exists first, then POST or PATCH
+                # For PostgREST, we can use ON CONFLICT if we had unique constraints,
+                # but let's do a simple GET then POST/PATCH
+                
+                get_resp = await client.get(
+                    f"{self._url}/rest/v1/app_settings",
+                    params={'user_id': f'eq.{user_id}', 'key': f'eq.{key}', 'select': 'id'},
+                    headers={'apikey': self._key, 'Authorization': f'Bearer {self._service_key}'}
+                )
+                
+                existing = get_resp.json() if get_resp.status_code == 200 else []
+                
+                if existing and len(existing) > 0:
+                    # Update
+                    patch_resp = await client.patch(
+                        f"{self._url}/rest/v1/app_settings",
+                        params={'id': f"eq.{existing[0]['id']}"},
+                        json={'value': value_str},
+                        headers={
+                            'apikey': self._key,
+                            'Authorization': f'Bearer {self._service_key}',
+                            'Content-Type': 'application/json'
+                        }
+                    )
+                    return patch_resp.status_code in (200, 204)
+                else:
+                    # Insert
+                    post_resp = await client.post(
+                        f"{self._url}/rest/v1/app_settings",
+                        json={'user_id': user_id, 'key': key, 'value': value_str},
+                        headers={
+                            'apikey': self._key,
+                            'Authorization': f'Bearer {self._service_key}',
+                            'Content-Type': 'application/json'
+                        }
+                    )
+                    return post_resp.status_code in (200, 201)
+                    
+        except Exception as e:
+            logger.error(f"Error in set_app_setting: {type(e).__name__}")
+            return False
+
+
 # Global singleton instance
 _supabase_client: Optional[SupabaseClient] = None
 

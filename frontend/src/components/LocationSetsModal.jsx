@@ -67,7 +67,7 @@ export default function LocationSetsModal({
 
     setIsCreating(true)
     try {
-      await api.createLocationSet({
+      const createdRecord = await api.createLocationSet({
         name: formData.name.trim(),
         description: formData.description.trim(),
         locations: validation.locations
@@ -77,7 +77,7 @@ export default function LocationSetsModal({
       setFormData({ name: '', description: '', jsonInput: '' })
       setJsonError('')
       setShowCreateForm(false)
-      onRefresh()
+      onRefresh(createdRecord.id)
     } catch (error) {
       console.error('Failed to create location set:', error)
       if (error.message && error.message.includes('duplicate')) {

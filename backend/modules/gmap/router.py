@@ -13,40 +13,32 @@ from middleware.auth import get_optional_user
 
 router = APIRouter()
 
-def get_progress_file(user_id: Optional[str]) -> str:
-    uid = user_id if user_id else "anonymous"
-    # Ensure safe filename
-    uid = "".join(c for c in uid if c.isalnum() or c in ('-', '_'))
-    return f"backend/data/gmap_progress_{uid}.json"
-
-
-def load_progress(user_id: Optional[str]):
-    """Load progress from JSON file for specific user"""
-    file_path = get_progress_file(user_id)
-    if os.path.exists(file_path):
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Error loading progress: {e}")
+async def load_progress(user_id: Optional[str]):
+    """Load progress from Supabase app_settings for specific user"""
+    if not user_id:
+        return {"completed_cities": {}}
+        
+    client = get_supabase_client()
+    data = await client.get_app_setting(user_id, 'gmap_progress')
+    if data and isinstance(data, dict):
+        return data
+        
     return {"completed_cities": {}}
 
 
-def save_progress(progress, user_id: Optional[str]):
-    """Save progress to JSON file for specific user"""
-    file_path = get_progress_file(user_id)
-    try:
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(progress, f, indent=2, ensure_ascii=False)
-    except Exception as e:
-        print(f"Error saving progress: {e}")
+async def save_progress(progress, user_id: Optional[str]):
+    """Save progress to Supabase app_settings for specific user"""
+    if not user_id:
+        return
+        
+    client = get_supabase_client()
+    await client.set_app_setting(user_id, 'gmap_progress', progress)
 
 
 @router.get("/progress")
 async def get_progress(user_id: Optional[str] = Depends(get_optional_user)):
     """Get extraction progress for all cities"""
-    return load_progress(user_id)
+    return await load_progress(user_id)
 
 
 @router.post("/progress/mark-completed")
@@ -56,10 +48,14 @@ async def mark_city_completed(
     user_id: Optional[str] = Depends(get_optional_user)
 ):
     """Mark a city as completed"""
-    progress = load_progress(user_id)
+    progress = await load_progress(user_id)
     city_key = f"{location_set}:{city}"
+    
+    if "completed_cities" not in progress:
+        progress["completed_cities"] = {}
+        
     progress["completed_cities"][city_key] = True
-    save_progress(progress, user_id)
+    await save_progress(progress, user_id)
     return {"success": True, "city_key": city_key}
 
 
@@ -67,7 +63,7 @@ async def mark_city_completed(
 async def reset_progress(user_id: Optional[str] = Depends(get_optional_user)):
     """Reset all progress"""
     progress = {"completed_cities": {}}
-    save_progress(progress, user_id)
+    await save_progress(progress, user_id)
     return {"success": True, "message": "Progress reset"}
 
 
