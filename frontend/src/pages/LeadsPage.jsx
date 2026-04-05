@@ -1001,6 +1001,9 @@ function WebhookControlModal({ webhook, onClose }) {
   const [saving, setSaving] = useState(false)
   const [triggering, setTriggering] = useState(false)
 
+  const [webhookUrl, setWebhookUrl] = useState(webhook.webhook_url)
+  const [savingUrl, setSavingUrl] = useState(false)
+
   const [subject, setSubject] = useState('')
   const [dailyLimit, setDailyLimit] = useState(80)
   const [batchSize, setBatchSize] = useState(20)
@@ -1015,8 +1018,22 @@ function WebhookControlModal({ webhook, onClose }) {
 
   useEffect(() => { loadData() }, [])
 
+  const currentUrl = webhookUrl || webhook.webhook_url
+
+  const handleSaveUrl = async () => {
+    if (!webhookUrl.trim()) { toast.error('URL não pode ser vazia'); return }
+    setSavingUrl(true)
+    try {
+      await gsheetsService.updateWebhook(webhook.id, { webhook_url: webhookUrl.trim() })
+      toast.success('URL atualizada! Recarregando stats...')
+      // reload data with new URL
+      loadData()
+    } catch { toast.error('Erro ao salvar URL') }
+    finally { setSavingUrl(false) }
+  }
+
   const apiPost = async (payload) => {
-    const res = await fetch(webhook.webhook_url, {
+    const res = await fetch(currentUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1028,10 +1045,10 @@ function WebhookControlModal({ webhook, onClose }) {
     setLoadingData(true)
     try {
       const [statsRes, settingsRes] = await Promise.all([
-        fetch(webhook.webhook_url + '?action=stats').then(r => r.json()),
-        fetch(webhook.webhook_url + '?action=settings').then(r => r.json()),
+        fetch(currentUrl + '?action=stats').then(r => r.json()),
+        fetch(currentUrl + '?action=settings').then(r => r.json()),
       ])
-      const reportRes = await fetch(webhook.webhook_url + '?action=report_config').then(r => r.json()).catch(() => ({}))
+      const reportRes = await fetch(currentUrl + '?action=report_config').then(r => r.json()).catch(() => ({}))
       setStats(statsRes)
       if (settingsRes.success !== false) {
         setSubject(settingsRes.subject || '')
@@ -1132,6 +1149,36 @@ function WebhookControlModal({ webhook, onClose }) {
 
   return (
     <Modal title={`Gerenciar — ${webhook.name}`} onClose={onClose}>
+      {/* URL do Webhook — editável para quando o AppScript gerar nova URL */}
+      <div className="mb-5 p-4 rounded-lg" style={{ background: 'var(--pro-surface2)', border: '1px solid var(--pro-border)' }}>
+        <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">
+          URL do Webhook (AppScript)
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="url"
+            value={webhookUrl}
+            onChange={e => setWebhookUrl(e.target.value)}
+            placeholder="https://script.google.com/macros/s/.../exec"
+            className="flex-1 text-xs"
+          />
+          <button
+            onClick={handleSaveUrl}
+            disabled={savingUrl || webhookUrl === webhook.webhook_url}
+            className="btn-primary shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ padding: '8px 14px', fontSize: 13 }}
+          >
+            {savingUrl
+              ? <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              : <><span className="material-symbols-outlined text-base">save</span>Salvar</>
+            }
+          </button>
+        </div>
+        <p className="text-xs text-on-surface-variant mt-1.5 opacity-60">
+          Cole aqui a nova URL sempre que reimplantar o AppScript no Google Sheets.
+        </p>
+      </div>
+
       {loadingData ? (
         <div className="p-8 text-center">
           <div className="inline-block w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin" />
