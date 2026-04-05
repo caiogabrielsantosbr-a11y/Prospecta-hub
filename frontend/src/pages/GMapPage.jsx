@@ -8,7 +8,6 @@ import { sessionCache } from '../utils/sessionCache'
 import useConfigStore from '../store/useConfigStore'
 import toast from 'react-hot-toast'
 import LocationSetsModal from '../components/LocationSetsModal'
-import { locationSetsService } from '../services/supabase'
 
 export default function GMapPage() {
   const { apiUrl } = useConfigStore()
@@ -56,7 +55,7 @@ export default function GMapPage() {
   useEffect(() => {
     const loadLocations = async () => {
       try {
-        const locations = await locationSetsService.getAll()
+        const locations = await api.getLocationSets()
         setAvailableLocations(locations)
 
         // Set first location set as selected
@@ -542,7 +541,7 @@ export default function GMapPage() {
       onRefresh={async () => {
         // Reload location sets from Supabase after create/delete
         try {
-          const locations = await locationSetsService.getAll()
+          const locations = await api.getLocationSets()
           setAvailableLocations(locations)
 
           // If current selection was deleted, select first available
