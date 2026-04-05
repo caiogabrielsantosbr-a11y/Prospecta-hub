@@ -3992,7 +3992,8 @@ class SupabaseClient:
             'name': name,
             'description': description,
             'file_path': file_path,
-            'location_count': len(trimmed_locations)
+            'location_count': len(trimmed_locations),
+            'locations': trimmed_locations
         }
         
         logger.info(

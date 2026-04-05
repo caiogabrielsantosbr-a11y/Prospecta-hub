@@ -62,7 +62,8 @@ export default function GMapPage() {
           setSelectedLocationSet(locations[0].id)
           // Load the locations array directly from Supabase (already in the object)
           const cities = {}
-          locations[0].locations.forEach(city => {
+          const firstLocs = locations[0].locations || []
+          firstLocs.forEach(city => {
             cities[city] = false
           })
           setSelectedCities(cities)
@@ -95,7 +96,8 @@ export default function GMapPage() {
 
     // Load locations directly from the object (already in Supabase response)
     const cities = {}
-    locationSet.locations.forEach(city => {
+    const locs = locationSet.locations || []
+    locs.forEach(city => {
       cities[city] = false
     })
     setSelectedCities(cities)
@@ -544,7 +546,8 @@ export default function GMapPage() {
             if (addedSet) {
               setSelectedLocationSet(addedSet.id)
               const cities = {}
-              addedSet.locations.forEach(city => {
+              const locs = addedSet.locations || []
+              locs.forEach(city => {
                 cities[city] = false
               })
               setSelectedCities(cities)
@@ -557,7 +560,8 @@ export default function GMapPage() {
           if (!currentExists && locations.length > 0) {
             setSelectedLocationSet(locations[0].id)
             const cities = {}
-            locations[0].locations.forEach(city => {
+            const firstLocs = locations[0].locations || []
+            firstLocs.forEach(city => {
               cities[city] = false
             })
             setSelectedCities(cities)

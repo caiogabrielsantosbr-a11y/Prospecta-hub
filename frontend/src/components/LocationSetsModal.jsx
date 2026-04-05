@@ -99,12 +99,13 @@ export default function LocationSetsModal({
     }
 
     // Show preview from the locations array already in Supabase response
-    const preview = locationSet.locations.slice(0, 10)
+    const locs = locationSet.locations || []
+    const preview = locs.slice(0, 10)
     setPreviewData({
       name: locationSet.name,
       preview: preview,
-      showing: Math.min(10, locationSet.locations.length),
-      total_count: locationSet.locations.length
+      showing: Math.min(10, locs.length),
+      total_count: locs.length
     })
     setShowPreviewModal(true)
   }
