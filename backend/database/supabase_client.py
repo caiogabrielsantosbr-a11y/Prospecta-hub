@@ -190,12 +190,18 @@ class SupabaseClient:
             'nome': lead_data.get('nome'),
             'telefone': lead_data.get('telefone'),
             'website': lead_data.get('website'),
+            'email': lead_data.get('email') or '',
             'endereco': lead_data.get('endereco'),
             'cidade': lead_data.get('cidade'),
             'url': lead_data.get('url'),
             'conjunto_de_locais': lead_data.get('conjunto_de_locais'),
-            'task_id': lead_data.get('task_id')
+            'task_id': lead_data.get('task_id'),
+            'user_id': lead_data.get('user_id'),
         }
+        # user_id is NOT NULL — skip insert if missing
+        if not payload['user_id']:
+            logger.error("Cannot insert lead: 'user_id' is required (check JWT auth)")
+            return False
         
         # Retry loop with exponential backoff
         for attempt in range(max_retries):

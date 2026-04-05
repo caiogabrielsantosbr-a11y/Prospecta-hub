@@ -6,7 +6,7 @@ import os
 import logging
 from typing import Optional
 from fastapi import HTTPException, Header, status
-import jwt
+from jose import jwt, JWTError, ExpiredSignatureError
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -49,32 +49,30 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> str:
     
     # Validate token
     try:
-        # Decode JWT token
         payload = jwt.decode(
             token,
             SUPABASE_JWT_SECRET,
             algorithms=['HS256'],
-            audience='authenticated'
+            options={"verify_aud": False},
         )
-        
-        # Extract user ID
+
         user_id = payload.get('sub')
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token: missing user ID",
             )
-        
+
         logger.debug(f"Authenticated user: {user_id}")
         return user_id
-        
-    except jwt.ExpiredSignatureError:
+
+    except ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except jwt.InvalidTokenError as e:
+    except JWTError as e:
         logger.error(f"Invalid token: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
