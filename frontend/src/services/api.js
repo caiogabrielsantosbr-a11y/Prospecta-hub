@@ -116,9 +116,32 @@ export const api = {
       body: JSON.stringify({ searchTerm, cities, delay, headless, extractEmails }),
     }),
   getGmapResults: (taskId) => request(`/gmap/results/${taskId}`),
-  getGmapProgress: () => request('/gmap/progress'),
-  markCityCompleted: (data) => request('/gmap/progress/mark-completed', { method: 'POST', body: JSON.stringify(data) }),
-  resetGmapProgress: () => request('/gmap/progress/reset', { method: 'POST' }),
+  getGmapProgress: (locationSetId) => supabase
+    .from('gmap_progress')
+    .select('city')
+    .eq('location_set_id', locationSetId)
+    .then(({ data, error }) => {
+      if (error) throw new Error(error.message)
+      const completed = {}
+      ;(data || []).forEach(row => { completed[`${locationSetId}:${row.city}`] = true })
+      return { completed_cities: completed }
+    }),
+
+  markCityCompleted: async ({ location_set, city }) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const { error } = await supabase.from('gmap_progress').upsert([
+      { user_id: session.user.id, location_set_id: location_set, city }
+    ], { onConflict: 'user_id,location_set_id,city' })
+    if (error) throw new Error(error.message)
+    return { status: 'marked' }
+  },
+
+  resetGmapProgress: async (locationSetId) => {
+    const { error } = await supabase.from('gmap_progress').delete().eq('location_set_id', locationSetId)
+    if (error) throw new Error(error.message)
+    return { status: 'reset' }
+  },
 
   // ── Facebook ADS ──
   startFacebookFeed: (keyword, delay) =>

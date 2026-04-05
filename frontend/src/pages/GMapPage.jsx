@@ -37,18 +37,16 @@ export default function GMapPage() {
   const tasks = useTaskStore((s) => s.tasks)
   const currentTask = tasks.find(t => t.id === taskId)
 
-  // Load completed cities from backend
-  useEffect(() => {
-    const loadProgress = async () => {
-      try {
-        const data = await api.getGmapProgress()
-        setCompletedCities(data.completed_cities || {})
-      } catch (err) {
-        console.error('Failed to load progress:', err)
-      }
+  // Load progress from Supabase for the current location set
+  const loadProgress = async (locationSetId) => {
+    if (!locationSetId) return
+    try {
+      const data = await api.getGmapProgress(locationSetId)
+      setCompletedCities(data.completed_cities || {})
+    } catch (err) {
+      console.error('Failed to load progress:', err)
     }
-    loadProgress()
-  }, [])
+  }
 
   // Helper: resolve city list from JSONB column, or fallback to Storage JSON
   const resolveCities = async (locationSet) => {
@@ -80,9 +78,11 @@ export default function GMapPage() {
         setAvailableLocations(locations)
 
         if (locations.length > 0) {
-          setSelectedLocationSet(locations[0].id)
+          const firstId = locations[0].id
+          setSelectedLocationSet(firstId)
           const cities = await resolveCities(locations[0])
           setSelectedCities(cities)
+          await loadProgress(firstId)
         }
       } catch (err) {
         console.error('Failed to load locations from Supabase:', err)
@@ -107,6 +107,7 @@ export default function GMapPage() {
     if (!locationSet) return
     const cities = await resolveCities(locationSet)
     setSelectedCities(cities)
+    await loadProgress(setId)
   }
 
   const toggleCity = (city) => {
@@ -142,10 +143,7 @@ export default function GMapPage() {
   const markCityCompleted = async (city) => {
     const cityKey = `${selectedLocationSet}:${city}`
     try {
-      await api.markCityCompleted({
-        location_set: selectedLocationSet.toString(),
-        city: city
-      })
+      await api.markCityCompleted({ location_set: selectedLocationSet, city })
       setCompletedCities(prev => ({ ...prev, [cityKey]: true }))
     } catch (err) {
       console.error('Failed to mark city as completed:', err)
@@ -153,9 +151,9 @@ export default function GMapPage() {
   }
 
   const resetProgress = async () => {
-    if (confirm('Deseja resetar o progresso de todas as cidades?')) {
+    if (confirm('Deseja resetar o progresso deste conjunto de locais?')) {
       try {
-        await api.resetGmapProgress()
+        await api.resetGmapProgress(selectedLocationSet)
         setCompletedCities({})
       } catch (err) {
         console.error('Failed to reset progress:', err)
