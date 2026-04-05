@@ -50,6 +50,28 @@ export default function GMapPage() {
     loadProgress()
   }, [])
 
+  // Helper: resolve city list from JSONB column, or fallback to Storage JSON
+  const resolveCities = async (locationSet) => {
+    let locs = locationSet.locations || []
+
+    // Fallback: if JSONB is empty but storage_url exists, fetch from Storage
+    if (locs.length === 0 && locationSet.storage_url) {
+      try {
+        const res = await fetch(locationSet.storage_url)
+        if (res.ok) {
+          const json = await res.json()
+          locs = json.locais || json.locations || []
+        }
+      } catch (e) {
+        console.error('Fallback Storage fetch failed:', e)
+      }
+    }
+
+    const cities = {}
+    locs.forEach(city => { cities[city] = false })
+    return cities
+  }
+
   // Load available location sets from Supabase
   useEffect(() => {
     const loadLocations = async () => {
@@ -57,20 +79,13 @@ export default function GMapPage() {
         const locations = await api.getLocationSets()
         setAvailableLocations(locations)
 
-        // Set first location set as selected
         if (locations.length > 0) {
           setSelectedLocationSet(locations[0].id)
-          // Load the locations array directly from Supabase (already in the object)
-          const cities = {}
-          const firstLocs = locations[0].locations || []
-          firstLocs.forEach(city => {
-            cities[city] = false
-          })
+          const cities = await resolveCities(locations[0])
           setSelectedCities(cities)
         }
       } catch (err) {
         console.error('Failed to load locations from Supabase:', err)
-        // Fallback to default cities
         setSelectedCities({
           'São Paulo, SP': false,
           'Rio de Janeiro, RJ': false,
@@ -88,18 +103,9 @@ export default function GMapPage() {
 
   const handleLocationSetChange = async (setId) => {
     setSelectedLocationSet(setId)
-
-    // Find the location set from available locations
     const locationSet = availableLocations.find(loc => loc.id.toString() === setId.toString())
-
     if (!locationSet) return
-
-    // Load locations directly from the object (already in Supabase response)
-    const cities = {}
-    const locs = locationSet.locations || []
-    locs.forEach(city => {
-      cities[city] = false
-    })
+    const cities = await resolveCities(locationSet)
     setSelectedCities(cities)
   }
 
