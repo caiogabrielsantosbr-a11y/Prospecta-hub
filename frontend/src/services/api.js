@@ -151,4 +151,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(filters),
     }),
+
+  // ── Locations ──
+  getLocationSets: () => request('/locations'),
+  createLocationSet: (data) => request('/locations', { method: 'POST', body: JSON.stringify(data) }),
+  deleteLocationSet: (id) => request(`/locations/${id}`, { method: 'DELETE' }),
+  getLocationSetPreview: (id, limit = 10) => request(`/locations/${id}/preview?limit=${limit}`),
 }

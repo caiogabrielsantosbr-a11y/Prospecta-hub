@@ -3,7 +3,7 @@
  */
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { locationSetsService } from '../services/supabase'
+import { api } from '../services/api'
 
 export default function LocationSetsModal({
   isOpen,
@@ -67,7 +67,7 @@ export default function LocationSetsModal({
 
     setIsCreating(true)
     try {
-      await locationSetsService.create({
+      await api.createLocationSet({
         name: formData.name.trim(),
         description: formData.description.trim(),
         locations: validation.locations
@@ -119,7 +119,7 @@ export default function LocationSetsModal({
 
     setIsDeleting(true)
     try {
-      await locationSetsService.delete(locationSetToDelete.id)
+      await api.deleteLocationSet(locationSetToDelete.id)
 
       toast.success(`Conjunto "${locationSetToDelete.name}" excluído`)
       setShowDeleteConfirm(false)

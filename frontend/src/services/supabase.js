@@ -151,67 +151,6 @@ export const leadsService = {
 }
 
 /**
- * LOCATION SETS OPERATIONS (Shared - todos usuários veem, só criador deleta)
- */
-
-export const locationSetsService = {
-  async getAll() {
-    const { data, error } = await supabase
-      .from('location_sets')
-      .select('*')
-      .order('created_at', { ascending: false })
-    if (error) throw error
-    return data || []
-  },
-
-  async getById(id) {
-    const { data, error } = await supabase
-      .from('location_sets')
-      .select('*')
-      .eq('id', id)
-      .single()
-    if (error) throw error
-    return data
-  },
-
-  async create(locationSet) {
-    const userId = await getCurrentUserId()
-    const { data, error } = await supabase
-      .from('location_sets')
-      .insert({
-        name: locationSet.name,
-        description: locationSet.description,
-        locations: locationSet.locations,
-        location_count: locationSet.locations?.length ?? 0,
-        user_id: userId
-      })
-      .select()
-      .single()
-    if (error) throw error
-    return data
-  },
-
-  async update(id, updates) {
-    const { data, error } = await supabase
-      .from('location_sets')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-    if (error) throw error
-    return data
-  },
-
-  async delete(id) {
-    const { error } = await supabase
-      .from('location_sets')
-      .delete()
-      .eq('id', id)
-    if (error) throw error
-  }
-}
-
-/**
  * TASKS OPERATIONS
  */
 

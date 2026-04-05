@@ -8,28 +8,36 @@ import { api } from '../services/api'
 import toast from 'react-hot-toast'
 
 export default function AdminConfigPage() {
-  const { backendUrl, setBackendUrl, testConnection, wsConnected } = useConfigStore()
-  const [url, setUrl] = useState(backendUrl)
+  const { apiUrl, setApiUrl, clearApiUrl, testConnection, connectionStatus } = useConfigStore()
+  const [url, setUrl] = useState(apiUrl || '')
   const [testing, setTesting] = useState(false)
 
-  useEffect(() => { setUrl(backendUrl) }, [backendUrl])
+  useEffect(() => { if (apiUrl !== undefined) setUrl(apiUrl || '') }, [apiUrl])
 
   const handleSave = async () => {
     setTesting(true)
     try {
-      setBackendUrl(url)
-      await testConnection()
-      toast.success('Conexão estabelecida com sucesso!')
+      await setApiUrl(url)
+      const isOk = await testConnection()
+      if (isOk) {
+        toast.success('Conexão estabelecida com sucesso!')
+      } else {
+        toast.error('URL salva, mas conexão com backend falhou.')
+      }
     } catch (e) {
-      toast.error('Falha na conexão: ' + (e.message || 'Timeout'))
+      toast.error('Falha ao salvar: ' + (e.message || 'Timeout'))
     }
     setTesting(false)
   }
 
-  const handleClear = () => {
-    setUrl('')
-    setBackendUrl('')
-    toast('URL limpa', { icon: '🗑️' })
+  const handleClear = async () => {
+    try {
+      await clearApiUrl()
+      setUrl('')
+      toast('URL limpa', { icon: '🗑️' })
+    } catch (e) {
+      toast.error('Falha ao limpar URL')
+    }
   }
 
   return (
@@ -77,14 +85,14 @@ export default function AdminConfigPage() {
           </div>
           <div style={{
             fontSize: 12, fontWeight: 600,
-            color: wsConnected ? 'var(--pro-success)' : '#f87171',
+            color: connectionStatus === 'connected' ? 'var(--pro-success)' : '#f87171',
             display: 'flex', alignItems: 'center', gap: 5,
           }}>
             <span style={{
               width: 6, height: 6, borderRadius: '50%',
-              background: wsConnected ? 'var(--pro-success)' : '#f87171',
+              background: connectionStatus === 'connected' ? 'var(--pro-success)' : '#f87171',
             }} />
-            {wsConnected ? 'Conectado' : 'Desconectado'}
+            {connectionStatus === 'connected' ? 'Conectado' : 'Desconectado'}
           </div>
         </div>
 

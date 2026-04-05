@@ -3,7 +3,7 @@
  */
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import { locationSetsService } from '../services/supabase'
+import { api } from '../services/api'
 
 export default function LocationSetsPage() {
   const [locationSets, setLocationSets] = useState([])
@@ -36,7 +36,7 @@ export default function LocationSetsPage() {
   const fetchLocationSets = async () => {
     setIsLoading(true)
     try {
-      const data = await locationSetsService.getAll()
+      const data = await api.getLocationSets()
       setLocationSets(data)
     } catch (error) {
       console.error('Failed to fetch location sets:', error)
@@ -84,7 +84,7 @@ export default function LocationSetsPage() {
 
     setIsCreating(true)
     try {
-      await locationSetsService.create({
+      await api.createLocationSet({
         name: formData.name.trim(),
         description: formData.description.trim(),
         locations: validation.locations
@@ -115,24 +115,11 @@ export default function LocationSetsPage() {
     setPreviewData(null)
     
     try {
-      const response = await fetch(`${apiUrl}/api/locations/${locationSetId}/preview`, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true' // Skip ngrok warning page
-        }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setPreviewData(data)
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        const errorMessage = errorData.detail?.message || errorData.message || 'Erro ao carregar preview'
-        toast.error(errorMessage)
-        setShowPreview(false)
-      }
+      const data = await api.getLocationSetPreview(locationSetId)
+      setPreviewData(data)
     } catch (error) {
       console.error('Failed to fetch preview:', error)
-      toast.error('Erro de conexão ao carregar preview')
+      toast.error(error.message || 'Erro de conexão ao carregar preview')
       setShowPreview(false)
     } finally {
       setIsLoadingPreview(false)
@@ -159,7 +146,7 @@ export default function LocationSetsPage() {
 
     setIsDeleting(true)
     try {
-      await locationSetsService.delete(locationSetToDelete.id)
+      await api.deleteLocationSet(locationSetToDelete.id)
       toast.success(`Conjunto "${locationSetToDelete.name}" excluído com sucesso`)
       setShowDeleteConfirm(false)
       setLocationSetToDelete(null)

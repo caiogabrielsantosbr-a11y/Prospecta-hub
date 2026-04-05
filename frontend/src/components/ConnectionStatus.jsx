@@ -1,12 +1,13 @@
 import useConfigStore from '../store/useConfigStore'
 
 export default function ConnectionStatus() {
-  const wsConnected = useConfigStore((s) => s.wsConnected)
+  const connectionStatus = useConfigStore((s) => s.connectionStatus)
+  const isConnected = connectionStatus === 'connected'
 
   return (
-    <div className={`status-pill ${wsConnected ? 'connected' : 'disconnected'}`}>
+    <div className={`status-pill ${isConnected ? 'connected' : 'disconnected'}`}>
       <span className="status-dot" />
-      {wsConnected ? 'Conectado' : 'Desconectado'}
+      {isConnected ? 'Conectado' : 'Desconectado'}
     </div>
   )
 }
