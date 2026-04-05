@@ -88,10 +88,23 @@ function doPost(e) {
 }
 
 /**
- * GET /exec — retorna stats ou settings
- * Params: ?action=stats|settings
+ * GET /exec — retorna stats/settings OU executa ação via ?payload=
+ * Usado pelo frontend para contornar CORS (POST aciona preflight, GET não).
+ * Params:
+ *   ?action=stats|settings|report_config  — leitura (padrão: stats)
+ *   ?payload={"action":"configure",...}   — qualquer ação de escrita
  */
 function doGet(e) {
+  // Ação de escrita enviada como GET para evitar CORS preflight
+  if (e.parameter && e.parameter.payload) {
+    try {
+      const fakeEvent = { postData: { contents: e.parameter.payload } };
+      return doPost(fakeEvent);
+    } catch (err) {
+      return jsonResponse({ success: false, error: 'payload inválido: ' + err.message });
+    }
+  }
+
   const action = (e.parameter && e.parameter.action) || 'stats';
   switch (action) {
     case 'settings':      return handleGetSettings();

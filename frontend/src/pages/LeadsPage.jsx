@@ -527,12 +527,10 @@ function WebhookCard({ webhook, onManage, onDelete }) {
 
   useEffect(() => { fetchStats() }, [webhook.webhook_url])
 
+  // Usa GET com ?payload= para evitar CORS preflight (Apps Script não suporta OPTIONS)
   const apiPost = async (payload) => {
-    const res = await fetch(webhook.webhook_url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+    const url = webhook.webhook_url + '?payload=' + encodeURIComponent(JSON.stringify(payload))
+    const res = await fetch(url)
     return res.json()
   }
 
@@ -1032,12 +1030,10 @@ function WebhookControlModal({ webhook, onClose }) {
     finally { setSavingUrl(false) }
   }
 
+  // Usa GET com ?payload= para evitar CORS preflight (Apps Script não suporta OPTIONS)
   const apiPost = async (payload) => {
-    const res = await fetch(currentUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+    const url = currentUrl + '?payload=' + encodeURIComponent(JSON.stringify(payload))
+    const res = await fetch(url)
     return res.json()
   }
 
