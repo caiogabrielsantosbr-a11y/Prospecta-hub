@@ -1298,13 +1298,19 @@ function WebhookControlModal({ webhook, onClose }) {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => handleSchedule(true)} disabled={saving}
-                  className="btn-primary justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+                <button onClick={() => handleSchedule(true)} disabled={saving || stats?.schedule_active}
+                  className={`justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
+                    stats?.schedule_active ? 'btn-ghost' : 'btn-primary'
+                  }`}>
                   <span className="material-symbols-outlined text-lg">play_arrow</span>
-                  Ativar
+                  {stats?.schedule_active ? 'Já ativo' : 'Ativar'}
                 </button>
-                <button onClick={() => handleSchedule(false)} disabled={saving}
-                  className="btn-ghost justify-center text-error border-error hover:bg-error/10 disabled:opacity-50">
+                <button onClick={() => handleSchedule(false)} disabled={saving || !stats?.schedule_active}
+                  className={`justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
+                    stats?.schedule_active
+                      ? 'btn-ghost text-error border-error hover:bg-error/10'
+                      : 'btn-ghost opacity-40'
+                  }`}>
                   <span className="material-symbols-outlined text-lg">stop</span>
                   Parar
                 </button>
