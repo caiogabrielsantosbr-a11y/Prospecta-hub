@@ -20,8 +20,9 @@ Supabase (PostgreSQL + Auth + Storage + Edge Functions)   → cloud
 ```
 
 O backend FastAPI **não está hospedado em produção** — roda localmente e é exposto via **ngrok** para que o frontend em produção (Vercel) consiga acessá-lo.
-
 A URL do ngrok é configurada dinamicamente no frontend via painel admin (tabela `app_settings` no Supabase), sem necessidade de rebuild.
+
+**Diretriz de Arquitetura Crítica:** O Ngrok/Backend cuida *exclusivamente* de hospedar e processar os extratores pesados (Playwright/Chromium) em 2º plano. É isso que o backend local faz, nada mais. Tudo que for manipulação de dados CRUD (como criar conjuntos de locais, ver leads, atualizar status e configurações) DEVE ser feito acessando o Supabase diretamente do Frontend. O backend não deve atuar como proxy (intermediário) para o banco de dados.
 
 ---
 
