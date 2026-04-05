@@ -11,4 +11,3 @@ aiofiles>=24.1
 playwright>=1.49
 beautifulsoup4>=4.12
 supabase>=2.0
-python-jose[cryptography]>=3.3
