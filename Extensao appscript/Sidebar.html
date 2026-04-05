@@ -4,405 +4,297 @@
   <meta charset="UTF-8">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; }
-    body { background: #0d0d0d; color: #e0e0e0; font-family: "Inter", sans-serif; padding: 16px; margin: 0; font-size: 13px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    h3 { font-size: 13px; color: #fff; margin: 0 0 10px 0; }
-    label { display: block; margin-bottom: 4px; font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-
-    .card { background: #1c1c1c; padding: 14px; border-radius: 10px; border: 1px solid #2a2a2a; margin-bottom: 12px; }
-    .card-green  { border-left: 3px solid #00d26a; }
-    .card-blue   { border-left: 3px solid #0055ff; }
-    .card-orange { border-left: 3px solid #ff8c00; }
-
-    input[type="text"], input[type="number"], input[type="email"], select {
-      width: 100%; padding: 9px 10px; border-radius: 6px; border: 1px solid #333;
-      background: #111; color: #fff; margin-bottom: 10px; font-size: 13px; font-family: Inter, sans-serif;
+    body {
+      background: #0d0d0d;
+      color: #e0e0e0;
+      font-family: "Inter", sans-serif;
+      padding: 20px 16px;
+      font-size: 13px;
+      min-height: 100vh;
     }
-    input:focus, select:focus { outline: none; border-color: #0055ff; }
 
-    .row2 { display: flex; gap: 8px; }
-    .row2 > div { flex: 1; }
+    .logo {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      margin-bottom: 4px;
+    }
+    .logo .pro { color: #0055ff; }
+    .logo .specta { color: #fff; }
+    .logo-sub {
+      font-size: 10px;
+      color: #555;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
 
-    button.btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
-      cursor: pointer; margin-bottom: 8px; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 6px; }
-    .btn-primary  { background: #0055ff; color: #fff; }
-    .btn-primary:hover  { background: #0044cc; }
-    .btn-success  { background: #00d26a; color: #fff; }
-    .btn-success:hover  { background: #00b058; }
-    .btn-danger   { background: transparent; color: #ff4444; border: 1px solid #333; }
-    .btn-danger:hover   { background: #1a0000; }
-    .btn-stop     { background: #ff4444; color: #fff; display: none; }
-    .btn-secondary { background: #222; color: #ccc; border: 1px solid #333; }
-    .btn-secondary:hover { background: #333; }
+    .card {
+      background: #1c1c1c;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
 
-    .week-selector { display: flex; justify-content: space-between; gap: 4px; margin-bottom: 10px; }
-    .day-check { display: none; }
-    .day-label { flex: 1; text-align: center; padding: 7px 0; background: #222; border: 1px solid #333;
-      border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: bold; color: #666; transition: 0.15s; }
-    .day-check:checked + .day-label { background: #0055ff; color: #fff; border-color: #0055ff; }
+    .section-label {
+      font-size: 10px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
 
-    .stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12px; }
-    .stat-label { color: #777; }
-    .stat-val   { color: #fff; font-weight: 600; }
-    .stat-val.green { color: #00d26a; }
-    .stat-val.red   { color: #ff4444; }
-    .stat-val.blue  { color: #6699ff; }
+    .quota-number {
+      font-size: 42px;
+      font-weight: 700;
+      line-height: 1;
+      color: #00d26a;
+    }
+    .quota-number.low { color: #E8593C; }
+    .quota-sub {
+      font-size: 11px;
+      color: #555;
+      margin-top: 4px;
+    }
 
-    .quota-big { font-size: 28px; font-weight: 700; color: #fff; line-height: 1; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-on  { background: #003d1f; color: #00d26a; border: 1px solid #00d26a33; }
+    .badge-off { background: #1a1a1a; color: #555;    border: 1px solid #2a2a2a; }
 
-    .progress-area { display: none; margin-top: 8px; }
-    .progress-track { width: 100%; height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #0055ff, #00aaff); transition: width 0.3s; }
-    .progress-labels { display: flex; justify-content: space-between; font-size: 11px; color: #888; margin-bottom: 4px; }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .badge-on .dot  { animation: pulse 1.5s infinite; }
 
-    .log-wrap { display: none; margin-top: 8px; }
-    .terminal { background: #000; border: 1px solid #222; border-radius: 6px; height: 110px; overflow-y: auto;
-      padding: 8px; font-family: monospace; font-size: 11px; color: #0f0; }
-    .log-entry { margin-bottom: 3px; }
-    .log-error { color: #ff4444; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
 
-    .badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-    .badge-on  { background: #003d1f; color: #00d26a; }
-    .badge-off { background: #222; color: #777; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
 
-    .help-btn { background: #1a1a1a; color: #777; border: 1px solid #333; width: 100%; height: 28px; border-radius: 8px;
-      cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; margin-top: 6px; }
-    .help-btn:hover { background: #0055ff; color: #fff; border-color: #0055ff; }
+    .stat-item {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 10px;
+    }
 
-    .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.85); backdrop-filter: blur(2px); }
-    .modal-content { background: #1e1e1e; margin: 10% auto; padding: 20px; border: 1px solid #444; width: 80%;
-      border-radius: 12px; color: #eee; }
-    .close-modal { color: #aaa; float: right; font-size: 24px; cursor: pointer; }
-    .help-list { list-style: none; padding: 0; margin-top: 12px; }
-    .help-list li { margin-bottom: 12px; font-size: 12px; line-height: 1.5; }
-    .code-snip { background: #000; padding: 1px 5px; border-radius: 3px; font-family: monospace; color: #0f0; }
+    .stat-item .val {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1;
+    }
+    .stat-item .val.green { color: #00d26a; }
+    .stat-item .val.blue  { color: #6699ff; }
+    .stat-item .val.red   { color: #E8593C; }
 
-    hr { border: none; border-top: 1px solid #222; margin: 10px 0; }
+    .stat-item .lbl {
+      font-size: 10px;
+      color: #555;
+      margin-top: 3px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .progress-bar-wrap {
+      background: #222;
+      border-radius: 4px;
+      height: 5px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #0055ff, #00aaff);
+      border-radius: 4px;
+      transition: width 0.4s;
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #555;
+      margin-top: 4px;
+    }
+
+    .refresh-btn {
+      background: none;
+      border: 1px solid #2a2a2a;
+      color: #555;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      float: right;
+      margin-top: -2px;
+    }
+    .refresh-btn:hover { border-color: #0055ff; color: #0055ff; }
+
+    .open-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px;
+      background: #0055ff;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      margin-top: 4px;
+      transition: background 0.15s;
+    }
+    .open-btn:hover { background: #0044cc; }
+
+    .hint {
+      text-align: center;
+      font-size: 11px;
+      color: #444;
+      margin-top: 10px;
+    }
+
+    .error-msg {
+      font-size: 11px;
+      color: #E8593C;
+      margin-top: 8px;
+      display: none;
+    }
   </style>
 </head>
 <body>
 
-<!-- STATS CARD -->
-<div class="card card-green" id="statsCard">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-    <div>
-      <label style="margin:0;">Cota Gmail Hoje</label>
-      <div id="quotaDisplay" class="quota-big">...</div>
+  <div class="logo"><span class="pro">PRO</span><span class="specta">SPECTA</span></div>
+  <div class="logo-sub">Prospecting Suite</div>
+
+  <!-- QUOTA -->
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div>
+        <div class="section-label">Cota Gmail Hoje</div>
+        <div id="quotaDisplay" class="quota-number">...</div>
+        <div class="quota-sub">emails disponíveis</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="section-label" style="margin-bottom:6px;">Robô</div>
+        <span id="scheduleBadge" class="badge badge-off"><span class="dot"></span>INATIVO</span>
+        <button class="refresh-btn" onclick="refreshStats()">↻</button>
+      </div>
     </div>
-    <div style="text-align:right;">
-      <label style="margin:0;">Agendamento</label>
-      <div id="scheduleBadge" class="badge badge-off">INATIVO</div>
+
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div id="statTotal" class="val">—</div>
+        <div class="lbl">Total</div>
+      </div>
+      <div class="stat-item">
+        <div id="statSent" class="val green">—</div>
+        <div class="lbl">Enviados</div>
+      </div>
+      <div class="stat-item">
+        <div id="statPending" class="val blue">—</div>
+        <div class="lbl">Pendentes</div>
+      </div>
+      <div class="stat-item">
+        <div id="statErrors" class="val red">—</div>
+        <div class="lbl">Erros</div>
+      </div>
     </div>
-    <button class="btn btn-secondary" style="width:auto;padding:6px 10px;margin:0;" onclick="refreshStats()">🔄</button>
-  </div>
-  <hr>
-  <div class="stat-row"><span class="stat-label">Total na planilha</span><span id="statTotal" class="stat-val">—</span></div>
-  <div class="stat-row"><span class="stat-label">Enviados</span><span id="statSent" class="stat-val green">—</span></div>
-  <div class="stat-row"><span class="stat-label">Pendentes</span><span id="statPending" class="stat-val blue">—</span></div>
-  <div class="stat-row"><span class="stat-label">Erros</span><span id="statErrors" class="stat-val red">—</span></div>
-  <div class="stat-row"><span class="stat-label">Enviados hoje (robô)</span><span id="statDailySent" class="stat-val">—</span></div>
-  <div class="stat-row"><span class="stat-label">Limite diário</span><span id="statDailyLimit" class="stat-val">—</span></div>
-</div>
 
-<!-- CONFIGURAÇÕES -->
-<div class="card card-blue">
-  <h3>⚙️ Configurações</h3>
-  <label>Assunto do Rascunho (Gmail)</label>
-  <input id="subjectLine" type="text" placeholder="Ex: Proposta para {{EMPRESA}}">
-  <label>Nome do Remetente</label>
-  <input id="senderName" type="text" placeholder="Ex: João da Silva">
-  <div class="row2">
-    <div>
-      <label>Limite diário</label>
-      <input id="dailyLimit" type="number" value="80" min="1">
+    <!-- daily progress -->
+    <div id="dailyWrap" style="margin-top:12px; display:none;">
+      <div class="progress-bar-wrap">
+        <div id="dailyBar" class="progress-bar-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-label">
+        <span id="dailySentLabel">0 enviados hoje</span>
+        <span id="dailyLimitLabel">limite: —</span>
+      </div>
     </div>
-    <div>
-      <label>Lote por hora</label>
-      <input id="batchSize" type="number" value="20" min="1">
-    </div>
+
+    <div id="errorMsg" class="error-msg">Não foi possível carregar os dados.</div>
   </div>
-  <div class="row2">
-    <div>
-      <label>Hora início</label>
-      <input id="minHour" type="number" value="8" min="0" max="23">
-    </div>
-    <div>
-      <label>Hora fim</label>
-      <input id="maxHour" type="number" value="16" min="1" max="23">
-    </div>
-  </div>
-</div>
 
-<!-- AGENDAMENTO -->
-<div class="card card-orange">
-  <h3>⏰ Agendamento Automático</h3>
-  <label>Dias de funcionamento:</label>
-  <div class="week-selector">
-    <input type="checkbox" id="d1" class="day-check" value="1"><label for="d1" class="day-label">Seg</label>
-    <input type="checkbox" id="d2" class="day-check" value="2"><label for="d2" class="day-label">Ter</label>
-    <input type="checkbox" id="d3" class="day-check" value="3"><label for="d3" class="day-label">Qua</label>
-    <input type="checkbox" id="d4" class="day-check" value="4"><label for="d4" class="day-label">Qui</label>
-    <input type="checkbox" id="d5" class="day-check" value="5"><label for="d5" class="day-label">Sex</label>
-    <input type="checkbox" id="d6" class="day-check" value="6"><label for="d6" class="day-label">Sáb</label>
-    <input type="checkbox" id="d0" class="day-check" value="0"><label for="d0" class="day-label">Dom</label>
-  </div>
-  <div style="display:flex; gap:8px;">
-    <button class="btn btn-success" style="flex:1;" onclick="saveAutoSchedule(true)">✅ Ativar</button>
-    <button class="btn btn-danger"  style="flex:1;" onclick="saveAutoSchedule(false)">🛑 Parar</button>
-  </div>
-  <div id="scheduleMsg" style="font-size:11px; color:#888; margin-top:6px; text-align:center;"></div>
-</div>
+  <!-- LINK PARA O PAINEL -->
+  <a id="openPanelBtn" class="open-btn" href="https://prospecta-hub.vercel.app/leads" target="_blank">
+    ↗ Abrir Painel Completo
+  </a>
 
-<!-- ENVIO MANUAL -->
-<div class="card">
-  <h3>🚀 Envio Manual (Agora)</h3>
-  <div class="row2">
-    <div><label>Delay mín (ms)</label><input id="minDelay" type="number" value="10000"></div>
-    <div><label>Delay máx (ms)</label><input id="maxDelay" type="number" value="15000"></div>
-  </div>
-  <label>Limite do lote</label>
-  <input id="emailLimit" type="number" value="20" min="1">
+  <p class="hint">Gerencie planilhas, robô e agendamento em<br><strong style="color:#333;">prospecta-hub.vercel.app</strong></p>
 
-  <button id="btnStart" class="btn btn-primary" onclick="startBulkProcess()">▶ Iniciar Envio Manual</button>
-  <button id="btnStop"  class="btn btn-stop"    onclick="stopProcess()">⛔ PARAR TUDO</button>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => { refreshStats(); });
 
-  <div id="progressArea" class="progress-area">
-    <div class="progress-labels">
-      <span id="statusText">Aguardando...</span>
-      <span id="countText">0/0</span>
-    </div>
-    <div class="progress-track"><div id="progressBar" class="progress-fill"></div></div>
-  </div>
-</div>
+    function refreshStats() {
+      const quota = document.getElementById('quotaDisplay');
+      const errMsg = document.getElementById('errorMsg');
+      quota.innerText = '...';
+      quota.className = 'quota-number';
+      errMsg.style.display = 'none';
 
-<!-- LOGS / FERRAMENTAS -->
-<div class="card">
-  <button class="btn btn-secondary" onclick="toggleLogs()">📜 Logs / Console</button>
-  <div id="logWrap" class="log-wrap">
-    <div id="terminal" class="terminal"><div style="color:#555;">> Pronto.</div></div>
-  </div>
-  <hr>
-  <label>Email de Teste</label>
-  <div style="display:flex; gap:8px;">
-    <input id="testEmail" type="email" placeholder="seu@email.com" style="flex:1; margin:0;">
-    <button class="btn btn-secondary" style="width:auto; padding:8px 12px; margin:0;" onclick="sendTest()">Testar</button>
-  </div>
-  <hr>
-  <button class="btn btn-danger" style="margin-top:4px;" onclick="confirmClear()">🧹 Limpar Lista de Leads</button>
-</div>
-
-<button class="help-btn" onclick="openHelp()">❓ Ajuda — Como usar</button>
-
-<!-- MODAL DE AJUDA -->
-<div id="helpModal" class="modal">
-  <div class="modal-content">
-    <span class="close-modal" onclick="closeHelp()">×</span>
-    <h2 style="margin:0 0 12px; font-size:15px; border-bottom:1px solid #333; padding-bottom:10px;">🎓 Ajuda — Prospecta HUB</h2>
-    <ul class="help-list">
-      <li>📝 <strong>Template:</strong> Crie um <strong>rascunho no Gmail</strong> com o assunto exato digitado acima. Use <span class="code-snip">{{EMPRESA}}</span>, <span class="code-snip">{{EMAIL}}</span>, <span class="code-snip">{{CIDADE}}</span> no corpo.</li>
-      <li>🔗 <strong>Integração com Prospectahub:</strong> Na plataforma, clique em "Enviar para Planilhas" — os leads chegam aqui automaticamente pela URL do webapp.</li>
-      <li>⏰ <strong>Robô automático:</strong> Verifica a cada hora dentro do horário configurado e envia em pequenos lotes para não ser bloqueado pelo Gmail.</li>
-      <li>🔢 <strong>Limite diário:</strong> O robô respeita o limite e para automaticamente quando atingido.</li>
-      <li>✅ <strong>Status da planilha:</strong> Vazio = pendente · OK = enviado manual · OK_AUTO = enviado pelo robô · ERRO: ... = falhou.</li>
-      <li>🌐 <strong>Controle remoto:</strong> O Prospectahub pode configurar e disparar envios remotamente via API — você não precisa abrir o Sheets para isso.</li>
-    </ul>
-    <button class="btn btn-primary" onclick="closeHelp()">Entendi!</button>
-  </div>
-</div>
-
-<script>
-  let isRunning = false;
-
-  document.addEventListener('DOMContentLoaded', () => {
-    loadSettings();
-    refreshStats();
-  });
-
-  // --- STATS ---
-  function refreshStats() {
-    document.getElementById('quotaDisplay').innerText = '...';
-    google.script.run.withSuccessHandler(s => {
-      document.getElementById('quotaDisplay').innerText  = s.quota_gmail;
-      document.getElementById('quotaDisplay').style.color = s.quota_gmail > 85 ? '#00d26a' : '#ff4444';
-      document.getElementById('statTotal').innerText     = s.total;
-      document.getElementById('statSent').innerText      = s.sent;
-      document.getElementById('statPending').innerText   = s.pending;
-      document.getElementById('statErrors').innerText    = s.errors;
-      document.getElementById('statDailySent').innerText = s.daily_sent + ' / ' + s.daily_limit;
-      document.getElementById('statDailyLimit').innerText = s.daily_remaining + ' restantes';
-
-      const badge = document.getElementById('scheduleBadge');
-      badge.className = 'badge ' + (s.schedule_active ? 'badge-on' : 'badge-off');
-      badge.innerText = s.schedule_active ? 'ATIVO' : 'INATIVO';
-    }).handleGetStats();
-  }
-
-  // --- SETTINGS ---
-  function loadSettings() {
-    google.script.run.withSuccessHandler(s => {
-      document.getElementById('subjectLine').value = s.subject       || '';
-      document.getElementById('senderName').value  = s.sender_name   || '';
-      document.getElementById('dailyLimit').value  = s.daily_limit   || 80;
-      document.getElementById('batchSize').value   = s.hourly_batch_size || 20;
-      document.getElementById('minHour').value     = s.min_hour      || 8;
-      document.getElementById('maxHour').value     = s.max_hour      || 16;
-
-      const days = JSON.parse(s.days || '[]');
-      days.forEach(d => {
-        const el = document.querySelector(`input[value="${d}"]`);
-        if (el) el.checked = true;
-      });
-
-      const msgDiv = document.getElementById('scheduleMsg');
-      if (s.active) {
-        msgDiv.innerText = '🟢 Robô ativo — verificando a cada hora.';
-        msgDiv.style.color = '#00d26a';
-      } else {
-        msgDiv.innerText = '⚪ Agendamento inativo.';
-        msgDiv.style.color = '#888';
-      }
-    }).getStoredSettings();
-  }
-
-  // --- SALVAR AGENDA ---
-  function saveAutoSchedule(isActive) {
-    const subject  = document.getElementById('subjectLine').value.trim();
-    const minHour  = Number(document.getElementById('minHour').value);
-    const maxHour  = Number(document.getElementById('maxHour').value);
-    const daily    = Number(document.getElementById('dailyLimit').value);
-    const batch    = Number(document.getElementById('batchSize').value);
-    const sender   = document.getElementById('senderName').value.trim();
-    const days     = Array.from(document.querySelectorAll('.day-check:checked')).map(cb => Number(cb.value));
-
-    if (!subject) return alert('Defina o Assunto do rascunho antes de agendar!');
-    if (isActive && days.length === 0) return alert('Selecione pelo menos um dia da semana!');
-    if (minHour >= maxHour) return alert('Hora início deve ser menor que hora fim!');
-
-    document.getElementById('scheduleMsg').innerText = 'Salvando...';
-    google.script.run
-      .withSuccessHandler(res => {
-        alert(res);
-        loadSettings();
-        refreshStats();
-      })
-      .withFailureHandler(err => alert('Erro: ' + err))
-      .saveSchedule({ subject, days, active: isActive, daily_limit: daily, hourly_batch_size: batch,
-                      min_hour: minHour, max_hour: maxHour, sender_name: sender });
-  }
-
-  // --- ENVIO MANUAL ---
-  async function startBulkProcess() {
-    const subject = document.getElementById('subjectLine').value.trim();
-    const min     = document.getElementById('minDelay').value;
-    const max     = document.getElementById('maxDelay').value;
-    const limit   = document.getElementById('emailLimit').value;
-
-    if (!subject) return alert('Digite o assunto do rascunho!');
-
-    document.getElementById('btnStart').style.display = 'none';
-    document.getElementById('btnStop').style.display  = 'flex';
-    document.getElementById('progressArea').style.display = 'block';
-    document.getElementById('logWrap').style.display  = 'block';
-    logToTerminal('Buscando emails pendentes...');
-
-    google.script.run.withSuccessHandler(res => {
-      if (res.total === 0) { logToTerminal('Nenhum email pendente.'); resetUI(); return; }
-      if (res.total > res.quota) {
-        if (!confirm(`⚠️ Cota baixa!\nPendentes: ${res.total} | Cota Gmail: ${res.quota}\nContinuar assim mesmo?`)) {
-          resetUI(); return;
-        }
-      }
-      isRunning = true;
-      logToTerminal(`Enviando ${res.rows.length} emails...`);
-      processQueue(res.rows, { subjectLine: subject, minDelay: min, maxDelay: max });
-    }).getPendingEmails(limit);
-  }
-
-  function stopProcess() {
-    if (isRunning) { isRunning = false; logToTerminal('🛑 Parada solicitada...', true); }
-  }
-
-  function processQueue(rows, config) {
-    const total = rows.length;
-    let processed = 0;
-
-    function next() {
-      if (!isRunning) { logToTerminal('Cancelado.'); resetUI(); return; }
-      if (!rows.length) {
-        logToTerminal('✅ Lote concluído!');
-        alert('Envio manual concluído!');
-        refreshStats();
-        resetUI();
-        return;
-      }
-      const row = rows.shift();
-      updateProgress(processed, total);
       google.script.run
-        .withSuccessHandler(res => {
-          processed++;
-          updateProgress(processed, total);
-          if (res.success) logToTerminal('✓ ' + res.email);
-          else logToTerminal('✗ ' + (res.error || 'Erro'), true);
-          next();
+        .withSuccessHandler(s => {
+          // Quota
+          const q = s.quota_gmail;
+          quota.innerText = q;
+          quota.className = 'quota-number' + (q > 85 ? '' : ' low');
+
+          // Stats
+          document.getElementById('statTotal').innerText   = s.total   ?? '—';
+          document.getElementById('statSent').innerText    = s.sent    ?? '—';
+          document.getElementById('statPending').innerText = s.pending ?? '—';
+          document.getElementById('statErrors').innerText  = s.errors  ?? '—';
+
+          // Badge
+          const badge = document.getElementById('scheduleBadge');
+          const active = s.schedule_active;
+          badge.className = 'badge ' + (active ? 'badge-on' : 'badge-off');
+          badge.innerHTML = `<span class="dot"></span>${active ? 'ATIVO' : 'INATIVO'}`;
+
+          // Daily progress
+          const dailySent  = s.daily_sent  ?? 0;
+          const dailyLimit = s.daily_limit ?? 0;
+          if (dailyLimit > 0) {
+            const pct = Math.min(100, Math.round((dailySent / dailyLimit) * 100));
+            document.getElementById('dailyBar').style.width = pct + '%';
+            document.getElementById('dailySentLabel').innerText = dailySent + ' enviados hoje';
+            document.getElementById('dailyLimitLabel').innerText = 'limite: ' + dailyLimit;
+            document.getElementById('dailyWrap').style.display = 'block';
+          }
         })
-        .withFailureHandler(() => { logToTerminal('Erro de rede', true); processed++; next(); })
-        .sendSingleEmail(row, config);
+        .withFailureHandler(() => {
+          quota.innerText = '—';
+          errMsg.style.display = 'block';
+        })
+        .handleGetStats();
     }
-    next();
-  }
-
-  function updateProgress(curr, total) {
-    const pct = Math.round((curr / total) * 100);
-    document.getElementById('progressBar').style.width = pct + '%';
-    document.getElementById('countText').innerText     = curr + '/' + total;
-    document.getElementById('statusText').innerText    = curr === total ? 'Finalizado' : 'Enviando...';
-  }
-
-  function resetUI() {
-    isRunning = false;
-    document.getElementById('btnStart').style.display = 'flex';
-    document.getElementById('btnStop').style.display  = 'none';
-  }
-
-  // --- TESTE ---
-  function sendTest() {
-    const email = document.getElementById('testEmail').value.trim();
-    const sub   = document.getElementById('subjectLine').value.trim();
-    if (!email || !sub) return alert('Preencha o email e o assunto!');
-    logToTerminal('Enviando teste para ' + email + '...');
-    google.script.run
-      .withSuccessHandler(res => { alert(res); logToTerminal('Teste OK'); })
-      .withFailureHandler(err => { alert('Erro: ' + err); logToTerminal('Erro no teste', true); })
-      .sendTest({ to: email, subjectLine: sub });
-  }
-
-  // --- LIMPAR ---
-  function confirmClear() {
-    if (!confirm('Tem certeza? Isso apagará todos os leads da planilha (o cabeçalho é mantido).')) return;
-    google.script.run.withSuccessHandler(msg => { alert(msg); refreshStats(); }).clearData();
-  }
-
-  // --- LOGS ---
-  function logToTerminal(msg, isError = false) {
-    const term = document.getElementById('terminal');
-    const div  = document.createElement('div');
-    div.className = isError ? 'log-entry log-error' : 'log-entry';
-    div.innerText = '[' + new Date().toLocaleTimeString() + '] ' + msg;
-    term.appendChild(div);
-    term.scrollTop = term.scrollHeight;
-  }
-
-  function toggleLogs() {
-    const w = document.getElementById('logWrap');
-    w.style.display = w.style.display === 'block' ? 'none' : 'block';
-  }
-
-  // --- MODAL ---
-  function openHelp()  { document.getElementById('helpModal').style.display = 'block'; }
-  function closeHelp() { document.getElementById('helpModal').style.display = 'none'; }
-  window.onclick = e => { if (e.target === document.getElementById('helpModal')) closeHelp(); };
-</script>
+  </script>
 </body>
 </html>

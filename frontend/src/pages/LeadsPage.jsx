@@ -407,16 +407,9 @@ function GSheetsTab() {
     } catch (e) { toast.error('Erro ao remover') }
   }
 
-  const handleToggle = async (webhook) => {
-    try {
-      await gsheetsService.updateWebhook(webhook.id, { active: !webhook.active })
-      loadAll()
-    } catch (e) { toast.error('Erro ao atualizar') }
-  }
-
   return (
     <div className="space-y-6">
-      {/* Send Stats */}
+      {/* Totals from Supabase send history */}
       {sendStats && (
         <div className="grid grid-cols-3 gap-4">
           <StatCard label="Enviados Hoje" value={sendStats.today} icon="today" color="text-primary" />
@@ -426,8 +419,8 @@ function GSheetsTab() {
       )}
 
       {/* Webhooks List */}
-      <div className="glass-card rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/10">
+      <div>
+        <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-lg">Planilhas Cadastradas</h3>
           <button onClick={() => setShowAddModal(true)} className="btn-primary">
             <span className="material-symbols-outlined text-lg">add</span>
@@ -436,11 +429,11 @@ function GSheetsTab() {
         </div>
 
         {loading ? (
-          <div className="p-8 text-center">
+          <div className="glass-card rounded-lg p-8 text-center">
             <div className="inline-block w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         ) : webhooks.length === 0 ? (
-          <div className="p-12 text-center">
+          <div className="glass-card rounded-lg p-12 text-center">
             <span className="material-symbols-outlined text-6xl text-on-surface-variant opacity-30">table_chart</span>
             <p className="mt-4 text-on-surface-variant">Nenhuma planilha cadastrada</p>
             <p className="text-sm text-on-surface-variant opacity-60 mt-1">
@@ -448,43 +441,14 @@ function GSheetsTab() {
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-outline-variant/5">
+          <div className="grid grid-cols-1 gap-4">
             {webhooks.map(wh => (
-              <div key={wh.id} className="flex items-center gap-4 px-6 py-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{wh.name}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      wh.active ? 'bg-primary/20 text-primary' : 'bg-surface-container-high text-on-surface-variant'
-                    }`}>
-                      {wh.active ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </div>
-                  {wh.description && <p className="text-sm text-on-surface-variant mt-0.5">{wh.description}</p>}
-                  <p className="text-xs text-on-surface-variant opacity-60 mt-1 truncate">{wh.webhook_url}</p>
-                </div>
-                <div className="text-right text-sm text-on-surface-variant shrink-0">
-                  <div>Limite: {wh.daily_limit}/dia</div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => setControlWebhook(wh)}
-                    className="p-2 rounded-lg hover:bg-surface-container-highest transition-all"
-                    title="Gerenciar">
-                    <span className="material-symbols-outlined text-sm text-primary">settings</span>
-                  </button>
-                  <button onClick={() => handleToggle(wh)}
-                    className="p-2 rounded-lg hover:bg-surface-container-highest transition-all"
-                    title={wh.active ? 'Desativar' : 'Ativar'}>
-                    <span className="material-symbols-outlined text-sm text-on-surface-variant">
-                      {wh.active ? 'toggle_on' : 'toggle_off'}
-                    </span>
-                  </button>
-                  <button onClick={() => handleDelete(wh.id)}
-                    className="p-2 rounded-lg hover:bg-surface-container-highest transition-all">
-                    <span className="material-symbols-outlined text-sm text-error">delete</span>
-                  </button>
-                </div>
-              </div>
+              <WebhookCard
+                key={wh.id}
+                webhook={wh}
+                onManage={() => setControlWebhook(wh)}
+                onDelete={() => handleDelete(wh.id)}
+              />
             ))}
           </div>
         )}
@@ -536,6 +500,226 @@ function GSheetsTab() {
           onClose={() => setControlWebhook(null)}
         />
       )}
+    </div>
+  )
+}
+
+/* ── WEBHOOK CARD (live stats from AppScript) ───────────────── */
+
+function WebhookCard({ webhook, onManage, onDelete }) {
+  const [stats, setStats] = useState(null)
+  const [loadingStats, setLoadingStats] = useState(true)
+  const [triggering, setTriggering] = useState(false)
+  const [togglingSchedule, setTogglingSchedule] = useState(false)
+
+  const fetchStats = async () => {
+    setLoadingStats(true)
+    try {
+      const res = await fetch(webhook.webhook_url + '?action=stats')
+      const data = await res.json()
+      setStats(data)
+    } catch {
+      setStats(null)
+    } finally {
+      setLoadingStats(false)
+    }
+  }
+
+  useEffect(() => { fetchStats() }, [webhook.webhook_url])
+
+  const apiPost = async (payload) => {
+    const res = await fetch(webhook.webhook_url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    return res.json()
+  }
+
+  const handleToggleSchedule = async () => {
+    if (!stats) return
+    const next = !stats.schedule_active
+    if (next && !stats.subject) {
+      toast.error('Configure o assunto do rascunho antes de ativar o robô')
+      onManage()
+      return
+    }
+    setTogglingSchedule(true)
+    try {
+      const res = await apiPost({ action: next ? 'schedule' : 'stop', active: next })
+      if (res.success) {
+        toast.success(next ? 'Robô ativado!' : 'Robô parado!')
+        fetchStats()
+      } else {
+        toast.error(res.error || 'Erro')
+      }
+    } catch { toast.error('Erro de conexão') }
+    finally { setTogglingSchedule(false) }
+  }
+
+  const handleTrigger = async () => {
+    if (!confirm(`Disparar um lote de emails agora para "${webhook.name}"?`)) return
+    setTriggering(true)
+    try {
+      const res = await apiPost({ action: 'trigger_send' })
+      if (res.success) {
+        toast.success(`${res.sent} email(s) enviado(s)!`)
+        fetchStats()
+      } else {
+        toast.error(res.error || 'Erro ao disparar')
+      }
+    } catch { toast.error('Erro de conexão') }
+    finally { setTriggering(false) }
+  }
+
+  const scheduleActive = stats?.schedule_active
+  const dailyPct = stats?.daily_limit > 0
+    ? Math.min(100, Math.round((stats.daily_sent / stats.daily_limit) * 100))
+    : 0
+
+  return (
+    <div className="glass-card rounded-xl overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-outline-variant/10 flex items-center gap-3">
+        <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>table_chart</span>
+        <div className="flex-1 min-w-0">
+          <div className="font-bold">{webhook.name}</div>
+          {webhook.description && (
+            <div className="text-xs text-on-surface-variant mt-0.5">{webhook.description}</div>
+          )}
+        </div>
+        {/* Robot status badge */}
+        <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
+          scheduleActive
+            ? 'bg-primary/15 text-primary'
+            : 'bg-surface-container-high text-on-surface-variant'
+        }`}>
+          <span className={`inline-block w-1.5 h-1.5 rounded-full ${scheduleActive ? 'bg-primary animate-pulse' : 'bg-on-surface-variant opacity-40'}`} />
+          {scheduleActive ? 'ATIVO' : 'INATIVO'}
+        </span>
+      </div>
+
+      {/* Stats body */}
+      <div className="px-5 py-4">
+        {loadingStats ? (
+          <div className="flex items-center gap-2 text-sm text-on-surface-variant py-2">
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            Carregando stats...
+          </div>
+        ) : stats ? (
+          <>
+            {/* Main stats row */}
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              {[
+                { label: 'Total', value: stats.total ?? '—', color: '' },
+                { label: 'Enviados', value: stats.sent ?? '—', color: 'text-primary' },
+                { label: 'Pendentes', value: stats.pending ?? '—', color: 'text-secondary' },
+                { label: 'Erros', value: stats.errors ?? '—', color: stats.errors > 0 ? 'text-error' : '' },
+              ].map(s => (
+                <div key={s.label} className="bg-surface-container rounded-lg p-3 text-center">
+                  <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
+                  <div className="text-xs text-on-surface-variant mt-1">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Secondary row */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-surface-container rounded-lg p-3">
+                <div className="text-xs text-on-surface-variant mb-1">Cota Gmail Hoje</div>
+                <div className={`text-lg font-bold ${(stats.quota_gmail ?? 100) > 85 ? 'text-primary' : 'text-error'}`}>
+                  {stats.quota_gmail ?? '—'}%
+                </div>
+              </div>
+              <div className="bg-surface-container rounded-lg p-3">
+                <div className="text-xs text-on-surface-variant mb-1">Enviados hoje (robô)</div>
+                <div className="text-lg font-bold">{stats.daily_sent ?? 0} <span className="text-sm font-normal text-on-surface-variant">/ {stats.daily_limit ?? webhook.daily_limit}</span></div>
+              </div>
+            </div>
+
+            {/* Daily progress bar */}
+            {(stats.daily_limit ?? 0) > 0 && (
+              <div className="mb-1">
+                <div className="flex justify-between text-xs text-on-surface-variant mb-1.5">
+                  <span>Progresso diário</span>
+                  <span>{dailyPct}% · {stats.daily_remaining ?? 0} restantes</span>
+                </div>
+                <div className="h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: dailyPct + '%',
+                      background: dailyPct > 90 ? '#E8593C' : 'linear-gradient(90deg, #0055ff, #00aaff)',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-sm text-error flex items-center gap-2 py-2">
+            <span className="material-symbols-outlined text-base">error</span>
+            Não foi possível conectar à planilha
+          </div>
+        )}
+      </div>
+
+      {/* Actions footer */}
+      <div className="px-5 pb-4 flex items-center gap-2 flex-wrap">
+        <button
+          onClick={handleToggleSchedule}
+          disabled={togglingSchedule || loadingStats}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 ${
+            scheduleActive
+              ? 'bg-error/15 text-error hover:bg-error/25'
+              : 'bg-primary/15 text-primary hover:bg-primary/25'
+          }`}
+        >
+          {togglingSchedule
+            ? <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            : <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{scheduleActive ? 'stop_circle' : 'play_circle'}</span>
+          }
+          {scheduleActive ? 'Parar robô' : 'Ativar robô'}
+        </button>
+
+        <button
+          onClick={handleTrigger}
+          disabled={triggering || loadingStats}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-container-high hover:bg-surface-container-highest text-on-surface transition-all disabled:opacity-50"
+        >
+          {triggering
+            ? <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            : <span className="material-symbols-outlined" style={{ fontSize: 14 }}>rocket_launch</span>
+          }
+          Disparar agora
+        </button>
+
+        <button
+          onClick={fetchStats}
+          disabled={loadingStats}
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-on-surface-variant hover:bg-surface-container-high transition-all disabled:opacity-50"
+          title="Atualizar"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>refresh</span>
+        </button>
+
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            onClick={onManage}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-container-high hover:bg-surface-container-highest text-on-surface transition-all"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>settings</span>
+            Configurar
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1.5 rounded-lg text-error hover:bg-error/10 transition-all"
+            title="Remover planilha"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
