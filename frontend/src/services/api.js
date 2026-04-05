@@ -162,8 +162,51 @@ export const api = {
     }),
 
   // ── Locations ──
-  getLocationSets: () => request('/locations'),
-  createLocationSet: (data) => request('/locations', { method: 'POST', body: JSON.stringify(data) }),
-  deleteLocationSet: (id) => request(`/locations/${id}`, { method: 'DELETE' }),
-  getLocationSetPreview: (id, limit = 10) => request(`/locations/${id}/preview?limit=${limit}`),
-}
+  getLocationSets: async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return []
+    
+    const { data, error } = await supabase
+      .from('location_sets')
+      .select('*')
+      .order('created_at', { ascending: false })
+      
+    if (error) throw new Error(error.message)
+    return data || []
+  },
+  
+  createLocationSet: async (setData) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Usuário não autenticado')
+    
+    const { data, error } = await supabase
+      .from('location_sets')
+      .insert([{
+        name: setData.name.trim(),
+        description: setData.description.trim(),
+        location_count: setData.locations.length,
+        locations: setData.locations,
+        user_id: session.user.id
+      }])
+      .select()
+      .single()
+      
+    if (error) {
+      if (error.code === '23505') throw new Error('duplicate')
+      throw new Error(`Failed to create: ${error.message}`)
+    }
+    return data
+  },
+  
+  deleteLocationSet: async (id) => {
+    const { error } = await supabase.from('location_sets').delete().eq('id', id)
+    if (error) throw new Error(error.message)
+    return { status: 'deleted' }
+  },
+  
+  getLocationSetPreview: async (id, limit = 10) => {
+    const { data, error } = await supabase.from('location_sets').select('locations').eq('id', id).single()
+    if (error) throw new Error(error.message)
+    return data.locations.slice(0, limit)
+  }
+} 
