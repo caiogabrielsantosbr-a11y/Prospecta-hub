@@ -110,6 +110,9 @@ export const api = {
       body: JSON.stringify({ searchTerm, cities, delay, headless, extractEmails }),
     }),
   getGmapResults: (taskId) => request(`/gmap/results/${taskId}`),
+  getGmapProgress: () => request('/gmap/progress'),
+  markCityCompleted: (data) => request('/gmap/progress/mark-completed', { method: 'POST', body: JSON.stringify(data) }),
+  resetGmapProgress: () => request('/gmap/progress/reset', { method: 'POST' }),
 
   // ── Facebook ADS ──
   startFacebookFeed: (keyword, delay) =>

@@ -41,8 +41,7 @@ export default function GMapPage() {
   useEffect(() => {
     const loadProgress = async () => {
       try {
-        const response = await fetch('/api/gmap/progress')
-        const data = await response.json()
+        const data = await api.getGmapProgress()
         setCompletedCities(data.completed_cities || {})
       } catch (err) {
         console.error('Failed to load progress:', err)
@@ -90,7 +89,7 @@ export default function GMapPage() {
     setSelectedLocationSet(setId)
 
     // Find the location set from available locations
-    const locationSet = availableLocations.find(loc => loc.id === setId)
+    const locationSet = availableLocations.find(loc => loc.id.toString() === setId.toString())
 
     if (!locationSet) return
 
@@ -135,13 +134,9 @@ export default function GMapPage() {
   const markCityCompleted = async (city) => {
     const cityKey = `${selectedLocationSet}:${city}`
     try {
-      await fetch('/api/gmap/progress/mark-completed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location_set: selectedLocationSet,
-          city: city
-        })
+      await api.markCityCompleted({
+        location_set: selectedLocationSet.toString(),
+        city: city
       })
       setCompletedCities(prev => ({ ...prev, [cityKey]: true }))
     } catch (err) {
@@ -152,7 +147,7 @@ export default function GMapPage() {
   const resetProgress = async () => {
     if (confirm('Deseja resetar o progresso de todas as cidades?')) {
       try {
-        await fetch('/api/gmap/progress/reset', { method: 'POST' })
+        await api.resetGmapProgress()
         setCompletedCities({})
       } catch (err) {
         console.error('Failed to reset progress:', err)

@@ -13,54 +13,61 @@ from middleware.auth import get_optional_user
 
 router = APIRouter()
 
-PROGRESS_FILE = "backend/data/gmap_progress.json"
+def get_progress_file(user_id: Optional[str]) -> str:
+    uid = user_id if user_id else "anonymous"
+    # Ensure safe filename
+    uid = "".join(c for c in uid if c.isalnum() or c in ('-', '_'))
+    return f"backend/data/gmap_progress_{uid}.json"
 
 
-def load_progress():
-    """Load progress from JSON file"""
-    if os.path.exists(PROGRESS_FILE):
+def load_progress(user_id: Optional[str]):
+    """Load progress from JSON file for specific user"""
+    file_path = get_progress_file(user_id)
+    if os.path.exists(file_path):
         try:
-            with open(PROGRESS_FILE, 'r', encoding='utf-8') as f:
+            with open(file_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
             print(f"Error loading progress: {e}")
     return {"completed_cities": {}}
 
 
-def save_progress(progress):
-    """Save progress to JSON file"""
+def save_progress(progress, user_id: Optional[str]):
+    """Save progress to JSON file for specific user"""
+    file_path = get_progress_file(user_id)
     try:
-        os.makedirs(os.path.dirname(PROGRESS_FILE), exist_ok=True)
-        with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(progress, f, indent=2, ensure_ascii=False)
     except Exception as e:
         print(f"Error saving progress: {e}")
 
 
 @router.get("/progress")
-async def get_progress():
+async def get_progress(user_id: Optional[str] = Depends(get_optional_user)):
     """Get extraction progress for all cities"""
-    return load_progress()
+    return load_progress(user_id)
 
 
 @router.post("/progress/mark-completed")
 async def mark_city_completed(
     location_set: str = Body(...),
     city: str = Body(...),
+    user_id: Optional[str] = Depends(get_optional_user)
 ):
     """Mark a city as completed"""
-    progress = load_progress()
+    progress = load_progress(user_id)
     city_key = f"{location_set}:{city}"
     progress["completed_cities"][city_key] = True
-    save_progress(progress)
+    save_progress(progress, user_id)
     return {"success": True, "city_key": city_key}
 
 
 @router.post("/progress/reset")
-async def reset_progress():
+async def reset_progress(user_id: Optional[str] = Depends(get_optional_user)):
     """Reset all progress"""
     progress = {"completed_cities": {}}
-    save_progress(progress)
+    save_progress(progress, user_id)
     return {"success": True, "message": "Progress reset"}
 
 
