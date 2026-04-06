@@ -21,6 +21,9 @@ const BOTTOM_ITEMS = [
 export default function Sidebar() {
   const { theme } = useTheme()
 
+  // Debug: log current theme
+  console.log('Sidebar theme:', theme)
+
   const navItemStyle = (isActive) => ({
     display: 'flex',
     alignItems: 'center',
@@ -35,6 +38,9 @@ export default function Sidebar() {
     color: isActive ? '#F07A5F' : 'var(--pro-muted)',
   })
 
+  // Determine logo based on theme
+  const logoSrc = theme === 'dark' ? '/logo-branca.png' : '/logo-preta.png'
+
   return (
     <aside
       className="fixed left-0 top-0 h-full flex flex-col z-50"
@@ -48,13 +54,17 @@ export default function Sidebar() {
       {/* Logo */}
       <div style={{ padding: '22px 20px 18px', borderBottom: '0.5px solid var(--pro-border)' }}>
         <img
-          src={theme === 'dark' ? '/logo-branca.png' : '/logo-preta.png'}
+          src={logoSrc}
           alt="Prospecta"
           style={{
             width: '100%',
             maxWidth: '180px',
             height: 'auto',
             display: 'block'
+          }}
+          onError={(e) => {
+            console.error('Logo failed to load:', logoSrc)
+            e.target.style.display = 'none'
           }}
         />
       </div>

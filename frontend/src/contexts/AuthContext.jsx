@@ -34,15 +34,12 @@ export function AuthProvider({ children }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth event:', event)
-      
-      if (event === 'SIGNED_IN') {
-        toast.success('Login realizado com sucesso!')
-      }
-      
+
+      // Only show toast for USER_UPDATED (email confirmation)
       if (event === 'USER_UPDATED') {
         toast.success('Email confirmado com sucesso!')
       }
-      
+
       setUser(session?.user ?? null)
       if (session?.user) {
         loadProfile(session.user.id)
@@ -86,14 +83,14 @@ export function AuthProvider({ children }) {
       })
 
       if (error) throw error
-      
+
       // Check if email confirmation is required
       if (data?.user && !data.session) {
         toast.success('Conta criada! Verifique seu email para confirmar.')
       } else {
         toast.success('Conta criada com sucesso!')
       }
-      
+
       return { data, error: null }
     } catch (error) {
       console.error('Error signing up:', error)
@@ -110,7 +107,7 @@ export function AuthProvider({ children }) {
       })
 
       if (error) throw error
-      
+
       toast.success('Login realizado com sucesso!')
       return { data, error: null }
     } catch (error) {
@@ -124,7 +121,7 @@ export function AuthProvider({ children }) {
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-      
+
       toast.success('Logout realizado com sucesso!')
     } catch (error) {
       console.error('Error signing out:', error)
@@ -142,7 +139,7 @@ export function AuthProvider({ children }) {
         .single()
 
       if (error) throw error
-      
+
       setProfile(data)
       toast.success('Perfil atualizado com sucesso!')
       return { data, error: null }
@@ -199,7 +196,7 @@ export function AuthProvider({ children }) {
 
       // Atualizar perfil
       await updateProfile({ avatar_url: publicUrl })
-      
+
       toast.success('Foto atualizada com sucesso!')
       return { url: publicUrl, error: null }
     } catch (error) {
