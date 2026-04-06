@@ -832,7 +832,9 @@ function SendToSheetsModal({ leadIds, onClose, onSent }) {
     ])
       .then(([wh, count]) => {
         setWebhooks(wh.filter(w => w.active))
-        setUnsyncedCount(count || 0)
+        const c = count || 0
+        setUnsyncedCount(c)
+        if (c === 0) setUnsyncedOnly(false)
         setLoading(false)
       })
       .catch(e => { console.error(e); setLoading(false) })
@@ -852,8 +854,11 @@ function SendToSheetsModal({ leadIds, onClose, onSent }) {
       if (unsyncedOnly) {
         const result = await leadsService.getUnsyncedLeads({ limit: 500 })
         leads = result.leads || result
-      } else {
+      } else if (leadIds.length > 0) {
         leads = await leadsService.getLeadsByIds(leadIds)
+      } else {
+        const result = await leadsService.getLeadsFiltered({ limit: 500 })
+        leads = result.leads || result
       }
       const activeWebhooks = webhooks.filter(w => selectedWebhooks.has(w.id))
 
@@ -935,15 +940,19 @@ function SendToSheetsModal({ leadIds, onClose, onSent }) {
           {modalTab === 'now' ? (
             <div className="space-y-6">
               {/* Checkbox para apenas não-sincronizados */}
-              {unsyncedCount > 0 && (
-                <label className="flex items-center gap-3 p-3 rounded-lg border border-outline-variant/10 cursor-pointer hover:bg-surface-container-low">
-                  <input type="checkbox" checked={unsyncedOnly} onChange={(e) => setUnsyncedOnly(e.target.checked)} className="w-4 h-4" />
-                  <div>
-                    <div className="font-medium text-sm">Apenas não-sincronizados</div>
-                    <div className="text-xs text-on-surface-variant">{unsyncedCount} leads aguardando sincronização</div>
+              <label className="flex items-center gap-3 p-3 rounded-lg border border-outline-variant/10 cursor-pointer hover:bg-surface-container-low">
+                <input type="checkbox" checked={unsyncedOnly} onChange={(e) => setUnsyncedOnly(e.target.checked)} className="w-4 h-4" />
+                <div>
+                  <div className="font-medium text-sm">Apenas não-sincronizados</div>
+                  <div className="text-xs text-on-surface-variant">
+                    {unsyncedOnly
+                      ? unsyncedCount > 0
+                        ? `${unsyncedCount} leads aguardando sincronização`
+                        : 'Nenhum pendente — desmarque para incluir já enviados'
+                      : 'Incluindo leads já sincronizados (modo teste)'}
                   </div>
-                </label>
-              )}
+                </div>
+              </label>
 
               <div>
                 <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">
@@ -989,7 +998,7 @@ function SendToSheetsModal({ leadIds, onClose, onSent }) {
               <div className="bg-surface-container rounded-lg p-4 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary text-base">info</span>
-                  <span><strong>{unsyncedOnly && unsyncedCount > 0 ? unsyncedCount : leadIds.length} leads</strong> — {getPreview()}</span>
+                  <span><strong>{unsyncedOnly ? unsyncedCount : leadIds.length > 0 ? leadIds.length : 'todos os'} leads</strong> — {getPreview()}</span>
                 </div>
               </div>
             </div>
