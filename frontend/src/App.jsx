@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import useWebSocket from './hooks/useWebSocket'
 import { useSyncScheduler } from './hooks/useSyncScheduler'
 import useConfigStore from './store/useConfigStore'
@@ -23,11 +24,11 @@ import ProfilePage from './pages/ProfilePage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import { useEffect } from 'react'
 
-// Apply saved theme immediately on load (before React hydration)
-;(function() {
-  const t = localStorage.getItem('prospecta-theme') || 'light'
-  document.documentElement.setAttribute('data-theme', t)
-})()
+  // Apply saved theme immediately on load (before React hydration)
+  ; (function () {
+    const t = localStorage.getItem('prospecta-theme') || 'light'
+    document.documentElement.setAttribute('data-theme', t)
+  })()
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -35,8 +36,8 @@ function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--pro-black)' }}>
-        <div style={{ width:32, height:32, border:'3px solid rgba(232,89,60,0.2)', borderTopColor:'#E8593C', borderRadius:'50%' }} className="animate-spin" />
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--pro-black)' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid rgba(232,89,60,0.2)', borderTopColor: '#E8593C', borderRadius: '50%' }} className="animate-spin" />
       </div>
     )
   }
@@ -59,9 +60,9 @@ function AppLayout() {
   }, [loadFromSupabase])
 
   return (
-    <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'var(--pro-black)', transition:'background 0.25s ease' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--pro-black)', transition: 'background 0.25s ease' }}>
       <Sidebar />
-      <main style={{ marginLeft: 'var(--sidebar-width)', flex: 1, display:'flex', flexDirection:'column', overflow:'hidden', background:'var(--pro-black)', transition:'background 0.25s ease' }}>
+      <main style={{ marginLeft: 'var(--sidebar-width)', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--pro-black)', transition: 'background 0.25s ease' }}>
         <TopBar />
         <div style={{ flex: 1, overflowY: 'auto' }} className="custom-scrollbar">
           <Routes>
@@ -95,8 +96,9 @@ function AppLayout() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
@@ -109,7 +111,8 @@ export default function App() {
               }
             />
           </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
