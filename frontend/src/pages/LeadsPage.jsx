@@ -191,13 +191,11 @@ function LeadsTab() {
     <div className="space-y-6">
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard label="Total" value={stats.total} icon="groups" />
           <StatCard label="Com Telefone" value={stats.with_phone} icon="phone" color="text-primary" />
           <StatCard label="Com Email" value={stats.with_email} icon="email" color="text-secondary" />
           <StatCard label="Com Website" value={stats.with_website} icon="language" color="text-tertiary" />
-          <StatCard label="Sem Telefone" value={stats.without_phone} icon="phone_disabled" color="text-error" />
-          <StatCard label="Sem Website" value={stats.without_website} icon="link_off" color="text-on-surface-variant" />
         </div>
       )}
 
@@ -247,16 +245,16 @@ function LeadsTab() {
             {selectedLeads.size > 0 && (
               <>
                 <span className="text-sm text-on-surface-variant">{selectedLeads.size} selecionado(s)</span>
-                <button onClick={() => setShowSendModal(true)} className="btn-primary">
-                  <span className="material-symbols-outlined text-sm">send</span>
-                  Enviar para Planilhas
-                </button>
                 <button onClick={handleBulkDelete} className="btn-ghost text-error border-error hover:bg-error/10">
                   <span className="material-symbols-outlined text-sm">delete</span>
                   Excluir
                 </button>
               </>
             )}
+            <button onClick={() => setShowSendModal(true)} className="btn-primary">
+              <span className="material-symbols-outlined text-sm">sync</span>
+              {selectedLeads.size > 0 ? 'Enviar Selecionados' : `Sincronizar${unsyncedCount > 0 ? ` (${unsyncedCount})` : ''}`}
+            </button>
           </div>
           <button onClick={handleExport} className="btn-primary">
             <span className="material-symbols-outlined text-lg">download</span>
@@ -852,14 +850,16 @@ function SendToSheetsModal({ leadIds, onClose, onSent }) {
     try {
       let leads
       if (unsyncedOnly) {
-        leads = await leadsService.getUnsyncedLeads({ limit: 500 })
+        const result = await leadsService.getUnsyncedLeads({ limit: 500 })
+        leads = result.leads || result
       } else {
         leads = await leadsService.getLeadsByIds(leadIds)
       }
       const activeWebhooks = webhooks.filter(w => selectedWebhooks.has(w.id))
 
-      await sendLeadsToSheets({ leads, webhooks: activeWebhooks, distribution })
-      toast.success(`${leads.length} leads enviados para ${selectedWebhooks.size} planilha(s)`)
+      const { totalSent, errors: sendErrors } = await sendLeadsToSheets({ leads, webhooks: activeWebhooks, distribution })
+      if (sendErrors.length) toast.error(`Erro: ${sendErrors[0]}`)
+      toast.success(`${totalSent} leads enviados para ${selectedWebhooks.size} planilha(s)`)
       onSent()
     } catch (e) {
       console.error(e)
@@ -893,11 +893,12 @@ function SendToSheetsModal({ leadIds, onClose, onSent }) {
   const getPreview = () => {
     const count = selectedWebhooks.size
     if (!count) return 'Selecione planilhas'
-    if (distribution === 'all') return `${leadIds.length} leads → cada planilha`
-    if (distribution === 'equal') return `~${Math.ceil(leadIds.length / count)} leads/planilha`
+    const leadsCount = unsyncedOnly ? unsyncedCount : leadIds.length
+    if (distribution === 'all') return `${leadsCount} leads → cada planilha`
+    if (distribution === 'equal') return `~${Math.ceil(leadsCount / count)} leads/planilha`
     if (distribution === 'daily_limit') {
       const total = webhooks.filter(w => selectedWebhooks.has(w.id)).reduce((s, w) => s + w.daily_limit, 0)
-      return `Até ${Math.min(leadIds.length, total)} leads distribuídos`
+      return `Até ${Math.min(leadsCount, total)} leads distribuídos`
     }
   }
 

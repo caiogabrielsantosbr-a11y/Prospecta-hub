@@ -49,14 +49,9 @@ export default function TaskManagerBar() {
   // Show bar if there are active tasks OR recent completed tasks (last 3)
   const displayTasks = activeTasks.length > 0 ? activeTasks : recentTasks.slice(-3)
   const isCompleted = activeTasks.length === 0
-  
-  // Reset dismiss state when new active tasks appear
-  if (activeTasks.length > 0 && isDismissed) {
-    setIsDismissed(false)
-  }
-  
-  // Hide if dismissed and completed, or if no tasks
-  if ((isDismissed && isCompleted) || displayTasks.length === 0) return null
+
+  // Hide if dismissed or no tasks
+  if (isDismissed || displayTasks.length === 0) return null
 
   const totalProgress = isCompleted ? 100 : (activeTasks.reduce((sum, t) => sum + t.progress, 0) / activeTasks.length)
 
@@ -170,16 +165,14 @@ export default function TaskManagerBar() {
                 )}
               </div>
 
-              {/* Dismiss button (only for completed tasks) */}
-              {isCompleted && (
-                <button 
-                  onClick={handleDismiss}
-                  className="p-2 rounded-lg hover:bg-surface-container-highest transition-all"
-                  title="Dispensar"
-                >
-                  <span className="material-symbols-outlined text-on-surface-variant">close</span>
-                </button>
-              )}
+              {/* Dismiss button */}
+              <button
+                onClick={handleDismiss}
+                className="p-2 rounded-lg hover:bg-surface-container-highest transition-all"
+                title="Fechar"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant">close</span>
+              </button>
 
               {/* Expand button */}
               <button className="p-2 rounded-lg hover:bg-surface-container-highest transition-all group-hover:bg-surface-container-highest">
@@ -441,8 +434,8 @@ function TaskDetailCard({ task, onClick }) {
               <div key={i} className="flex gap-2">
                 <span className="text-on-surface-variant shrink-0">{log.time}</span>
                 <span className={`${
-                  log.level === 'error' ? 'text-error' : 
-                  log.level === 'success' ? 'text-primary' : 
+                  log.level === 'error' ? 'text-error' :
+                  log.level === 'success' ? 'text-primary' :
                   log.level === 'warning' ? 'text-secondary' :
                   'text-on-surface-variant'
                 }`}>

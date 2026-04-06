@@ -74,6 +74,7 @@ async def start_gmap(
     delay: int = Body(2000),
     headless: bool = Body(True),
     extractEmails: bool = Body(True),
+    locationSetName: Optional[str] = Body(None),
     user_id: Optional[str] = Depends(get_optional_user),
 ):
     config = {
@@ -82,6 +83,7 @@ async def start_gmap(
         "delay": delay,
         "headless": headless,
         "extractEmails": extractEmails,
+        "locationSetName": locationSetName,
         "user_id": user_id,
     }
     task_id = await task_manager.create_task("gmap", config, gmap_worker)

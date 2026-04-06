@@ -50,7 +50,7 @@ async function request(path, options = {}) {
       },
       ...options,
     })
-    
+
     if (!res.ok) {
       // Handle specific HTTP error codes
       if (res.status === 404) {
@@ -59,32 +59,32 @@ async function request(path, options = {}) {
       if (res.status === 500) {
         throw new Error('Erro interno do backend - verifique os logs')
       }
-      
+
       const err = await res.text()
       throw new Error(err)
     }
-    
+
     return res.json()
   } catch (error) {
     // Add timestamp to all error logs
     const timestamp = new Date().toISOString()
     console.error(`[${timestamp}] API Error:`, error)
-    
+
     // Handle network errors
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
       throw new Error('Backend não respondeu - verifique se o túnel está ativo')
     }
-    
+
     // Handle timeout errors
     if (error.name === 'AbortError' || error.message.includes('timeout')) {
       throw new Error('Timeout ao conectar com o backend - verifique a conexão')
     }
-    
+
     // Handle CORS errors
     if (error.message.includes('CORS') || error.message.includes('cors')) {
       throw new Error('Erro de CORS - adicione a URL do Vercel no CORS_ORIGINS do backend')
     }
-    
+
     throw error
   }
 }
@@ -110,10 +110,10 @@ export const api = {
   getEmailResults: (taskId) => request(`/emails/results/${taskId}`),
 
   // ── GMap ──
-  startGmapExtraction: (searchTerm, cities, delay, headless = true, extractEmails = true) =>
+  startGmapExtraction: (searchTerm, cities, delay, headless = true, extractEmails = true, locationSetName = null) =>
     request('/gmap/start', {
       method: 'POST',
-      body: JSON.stringify({ searchTerm, cities, delay, headless, extractEmails }),
+      body: JSON.stringify({ searchTerm, cities, delay, headless, extractEmails, locationSetName }),
     }),
   getGmapResults: (taskId) => request(`/gmap/results/${taskId}`),
   getGmapProgress: (locationSetId) => supabase
@@ -188,20 +188,20 @@ export const api = {
   getLocationSets: async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return []
-    
+
     const { data, error } = await supabase
       .from('location_sets')
       .select('*')
       .order('created_at', { ascending: false })
-      
+
     if (error) throw new Error(error.message)
     return data || []
   },
-  
+
   createLocationSet: async (setData) => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) throw new Error('Usuário não autenticado')
-    
+
     const { data, error } = await supabase
       .from('location_sets')
       .insert([{
@@ -213,23 +213,23 @@ export const api = {
       }])
       .select()
       .single()
-      
+
     if (error) {
       if (error.code === '23505') throw new Error('duplicate')
       throw new Error(`Failed to create: ${error.message}`)
     }
     return data
   },
-  
+
   deleteLocationSet: async (id) => {
     const { error } = await supabase.from('location_sets').delete().eq('id', id)
     if (error) throw new Error(error.message)
     return { status: 'deleted' }
   },
-  
+
   getLocationSetPreview: async (id, limit = 10) => {
     const { data, error } = await supabase.from('location_sets').select('locations').eq('id', id).single()
     if (error) throw new Error(error.message)
     return data.locations.slice(0, limit)
   }
-} 
+}

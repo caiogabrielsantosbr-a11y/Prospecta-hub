@@ -38,6 +38,7 @@ export default function GMapPage() {
   const [showManageModal, setShowManageModal] = useState(false)
 
   const prevTaskStatusRef = useRef(null)
+  const autoSyncIntervalRef = useRef(null)
 
   const tasks = useTaskStore((s) => s.tasks)
   const currentTask = tasks.find(t => t.id === taskId)
@@ -191,7 +192,9 @@ export default function GMapPage() {
 
     setIsStarting(true)
     try {
-      const res = await api.startGmapExtraction(searchTerm, citiesToExtract, delay * 1000, headless, extractEmails)
+      const selectedSet = availableLocations.find(loc => loc.id.toString() === selectedLocationSet?.toString())
+      const locationSetName = selectedSet?.name || null
+      const res = await api.startGmapExtraction(searchTerm, citiesToExtract, delay * 1000, headless, extractEmails, locationSetName)
       setTaskId(res.task_id)
       setIsPaused(false)
     } catch (err) {
@@ -254,13 +257,29 @@ export default function GMapPage() {
   useEffect(() => {
     const curr = currentTask?.status
     const prev = prevTaskStatusRef.current
-    if (
-      autoSyncToSheets &&
-      taskId &&
-      (curr === 'completed' || curr === 'done') &&
-      prev === 'running'
-    ) {
-      triggerAutoSync(taskId)
+
+    if (autoSyncToSheets && taskId) {
+      if (curr === 'running' && prev !== 'running') {
+        // Start polling every 60s while running
+        autoSyncIntervalRef.current = setInterval(async () => {
+          try {
+            const allWebhooks = await gsheetsService.getWebhooks()
+            const activeWebhooks = allWebhooks.filter(w => w.active !== false)
+            if (!activeWebhooks.length) return
+            const leads = await leadsService.getLeadsByTaskId(taskId)
+            if (!leads.length) return
+            const { totalSent } = await sendLeadsToSheets({ leads, webhooks: activeWebhooks, distribution: 'equal' })
+            if (totalSent > 0) toast.success(`Auto-sync: ${totalSent} leads → planilhas`)
+          } catch (e) { console.error('Auto-sync interval error', e) }
+        }, 60000)
+      }
+      if ((curr === 'completed' || curr === 'done') && prev === 'running') {
+        clearInterval(autoSyncIntervalRef.current)
+        triggerAutoSync(taskId)
+      }
+      if (curr === 'stopped' || curr === 'failed') {
+        clearInterval(autoSyncIntervalRef.current)
+      }
     }
     prevTaskStatusRef.current = curr ?? null
   }, [currentTask?.status])

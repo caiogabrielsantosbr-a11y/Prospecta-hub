@@ -52,11 +52,8 @@ export async function sendLeadsToSheets({ leads, webhooks, distribution = 'equal
         source: 'prospectahub',
         sent_at: new Date().toISOString(),
       }
-      const res = await fetch(webhook.webhook_url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+      const getUrl = webhook.webhook_url + '?payload=' + encodeURIComponent(JSON.stringify({ action: 'add_leads', ...payload }))
+      const res = await fetch(getUrl)
       const status = res.ok ? 'success' : 'error'
       await gsheetsService.recordSend({
         webhook_id: webhook.id,

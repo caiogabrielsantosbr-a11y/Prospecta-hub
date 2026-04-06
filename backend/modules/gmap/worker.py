@@ -381,9 +381,9 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
     extract_emails = config.get("extractEmails", True)  # Novo parâmetro para extração de email
     user_id = config.get("user_id")  # User ID for multi-user isolation
 
-    # Identify location set name from cities list
-    location_set_name = load_location_set_name(cities)
-    info.add_log(f"Conjunto de locais identificado: {location_set_name}", "info")
+    # Use provided location set name or fallback to detection from cities
+    location_set_name = config.get("locationSetName") or load_location_set_name(cities)
+    info.add_log(f"Conjunto de locais: {location_set_name}", "info")
     await _broadcast_safe(tm, info, main_loop)
 
     all_urls = []
@@ -531,6 +531,7 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
                             if success:
                                 info.stats["supabase_success"] += 1
                                 supabase_consecutive_failures = 0
+                                info.add_log(f"→ Supabase: {data['nome']} salvo", "success")
                             else:
                                 info.stats["supabase_failures"] += 1
                                 supabase_consecutive_failures += 1
