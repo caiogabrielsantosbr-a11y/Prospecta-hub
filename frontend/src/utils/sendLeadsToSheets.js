@@ -1,16 +1,21 @@
-import { leadsService, gsheetsService } from '../services/supabase'
+import { leadsService, gsheetsService, syncFieldsService, SYNC_FIELD_OPTIONS, DEFAULT_SYNC_FIELDS } from '../services/supabase'
 
 /**
  * Distribui e envia leads para webhooks do Google Sheets.
  * Marca os leads enviados como synced_to_sheets = true.
  *
- * @param {Object} params
- * @param {Array}  params.leads      - array de objetos lead
- * @param {Array}  params.webhooks   - array de objetos webhook (com id, name, webhook_url, daily_limit)
- * @param {string} params.distribution - 'equal' | 'all' | 'daily_limit'
+ * @param {Object}   params
+ * @param {Array}    params.leads        - array de objetos lead
+ * @param {Array}    params.webhooks     - array de objetos webhook
+ * @param {string}   params.distribution - 'equal' | 'all' | 'daily_limit'
+ * @param {string[]} [params.fields]     - campos a enviar (default: preferência salva ou todos)
  * @returns {{ totalSent: number, errors: string[] }}
  */
-export async function sendLeadsToSheets({ leads, webhooks, distribution = 'equal' }) {
+export async function sendLeadsToSheets({ leads, webhooks, distribution = 'equal', fields }) {
+  // Carregar preferência salva se não informada
+  if (!fields) {
+    try { fields = await syncFieldsService.get() } catch { fields = DEFAULT_SYNC_FIELDS }
+  }
   if (!leads.length || !webhooks.length) return { totalSent: 0, errors: [] }
 
   let assignments = []
@@ -37,14 +42,13 @@ export async function sendLeadsToSheets({ leads, webhooks, distribution = 'equal
   for (const { webhook, leads: batch } of assignments) {
     if (!batch.length) continue
     try {
+      const activeOptions = SYNC_FIELD_OPTIONS.filter(o => fields.includes(o.key))
       const payload = {
-        leads: batch.map(l => ({
-          EMPRESA: l.nome,
-          EMAIL: l.email || '',
-          TELEFONE: l.telefone || '',
-          CIDADE: l.cidade || '',
-          WEBSITE: l.website || '',
-        })),
+        leads: batch.map(l => {
+          const row = {}
+          activeOptions.forEach(o => { row[o.key] = l[o.leadField] || '' })
+          return row
+        }),
         source: 'prospectahub',
         sent_at: new Date().toISOString(),
       }

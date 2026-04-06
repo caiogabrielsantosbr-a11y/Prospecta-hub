@@ -2,7 +2,7 @@
  * Leads Management Page — tabbed layout with Google Sheets integration
  */
 import { useState, useEffect } from 'react'
-import { leadsService, gsheetsService, syncScheduleService } from '../services/supabase'
+import { leadsService, gsheetsService, syncScheduleService, syncFieldsService, SYNC_FIELD_OPTIONS, DEFAULT_SYNC_FIELDS } from '../services/supabase'
 import toast from 'react-hot-toast'
 import { sendLeadsToSheets } from '../utils/sendLeadsToSheets'
 
@@ -412,8 +412,13 @@ function GSheetsTab() {
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [controlWebhook, setControlWebhook] = useState(null)
+  const [syncFields, setSyncFields] = useState(DEFAULT_SYNC_FIELDS)
+  const [savingFields, setSavingFields] = useState(false)
 
-  useEffect(() => { loadAll() }, [])
+  useEffect(() => {
+    loadAll()
+    syncFieldsService.get().then(setSyncFields).catch(() => {})
+  }, [])
 
   const loadAll = async () => {
     setLoading(true)
@@ -440,6 +445,20 @@ function GSheetsTab() {
       toast.success('Planilha removida')
       loadAll()
     } catch (e) { toast.error('Erro ao remover') }
+  }
+
+  const toggleSyncField = async (fieldKey) => {
+    const next = syncFields.includes(fieldKey)
+      ? syncFields.filter(f => f !== fieldKey)
+      : [...syncFields, fieldKey]
+    // Mínimo: EMAIL obrigatório
+    if (!next.includes('EMAIL')) { toast.error('EMAIL é obrigatório para o disparo'); return }
+    setSyncFields(next)
+    setSavingFields(true)
+    try {
+      await syncFieldsService.set(next)
+      toast.success('Preferência salva')
+    } catch { toast.error('Erro ao salvar') } finally { setSavingFields(false) }
   }
 
   return (
@@ -487,6 +506,40 @@ function GSheetsTab() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Sync Fields Config */}
+      <div className="glass-card rounded-lg p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="material-symbols-outlined text-primary">tune</span>
+          <h3 className="font-bold">Campos Sincronizados</h3>
+          {savingFields && <span className="ml-auto text-xs text-on-surface-variant animate-pulse">Salvando...</span>}
+        </div>
+        <p className="text-xs text-on-surface-variant mb-4">
+          Selecione quais campos enviar para as planilhas. <strong>EMAIL</strong> é obrigatório para o disparo funcionar.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {SYNC_FIELD_OPTIONS.map(opt => {
+            const active = syncFields.includes(opt.key)
+            return (
+              <button
+                key={opt.key}
+                onClick={() => toggleSyncField(opt.key)}
+                disabled={savingFields}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors disabled:opacity-50 ${
+                  active
+                    ? 'bg-primary text-white border-primary'
+                    : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-low'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">
+                  {active ? 'check_circle' : 'radio_button_unchecked'}
+                </span>
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Send History */}

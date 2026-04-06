@@ -334,6 +334,47 @@ export const gsheetsService = {
 }
 
 /**
+ * SYNC FIELDS PREFERENCE
+ * Salva quais campos enviar para o Google Sheets (app_settings key: sync_fields)
+ */
+
+export const SYNC_FIELD_OPTIONS = [
+  { key: 'EMPRESA',  label: 'Empresa',  leadField: 'nome' },
+  { key: 'EMAIL',    label: 'Email',    leadField: 'email' },
+  { key: 'TELEFONE', label: 'Telefone', leadField: 'telefone' },
+  { key: 'CIDADE',   label: 'Cidade',   leadField: 'cidade' },
+  { key: 'WEBSITE',  label: 'Website',  leadField: 'website' },
+]
+
+export const DEFAULT_SYNC_FIELDS = ['EMPRESA', 'EMAIL', 'TELEFONE', 'CIDADE', 'WEBSITE']
+
+export const syncFieldsService = {
+  async get() {
+    const userId = await getCurrentUserId()
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('user_id', userId)
+      .eq('key', 'sync_fields')
+      .single()
+    if (error && error.code !== 'PGRST116') throw error
+    if (!data?.value) return DEFAULT_SYNC_FIELDS
+    try { return JSON.parse(data.value) } catch { return DEFAULT_SYNC_FIELDS }
+  },
+
+  async set(fields) {
+    const userId = await getCurrentUserId()
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert(
+        { user_id: userId, key: 'sync_fields', value: JSON.stringify(fields), updated_at: new Date().toISOString() },
+        { onConflict: 'user_id,key' }
+      )
+    if (error) throw error
+  },
+}
+
+/**
  * SYNC SCHEDULES
  */
 
