@@ -118,8 +118,9 @@ function doGet(e) {
  *******************************************************/
 
 /**
- * add_leads — adiciona leads à planilha
+ * add_leads — adiciona leads à planilha com deduplicação
  * Payload: { leads: [{EMPRESA, EMAIL, TELEFONE, CIDADE, WEBSITE}] }
+ * Retorna: { success, rows_added, skipped }
  */
 function handleAddLeads(payload) {
   const leads = payload.leads || [];
@@ -128,26 +129,47 @@ function handleAddLeads(payload) {
   }
 
   const sheet = SpreadsheetApp.getActiveSheet();
+  const HEADERS = ['EMPRESA', 'EMAIL', 'TELEFONE', 'CIDADE', 'WEBSITE', 'STATUS'];
 
   // Garante cabeçalho
   if (sheet.getLastRow() === 0 || sheet.getLastColumn() === 0) {
-    sheet.appendRow(['EMPRESA', 'EMAIL', 'TELEFONE', 'CIDADE', 'WEBSITE', 'STATUS']);
+    sheet.appendRow(HEADERS);
+    SpreadsheetApp.flush();
   }
 
-  leads.forEach(lead => {
-    sheet.appendRow([
-      lead.EMPRESA  || '',
-      lead.EMAIL    || '',
-      lead.TELEFONE || '',
-      lead.CIDADE   || '',
-      lead.WEBSITE  || '',
-      '', // STATUS vazio = pronto para envio
-    ]);
+  // Coletar emails existentes para deduplicação (coluna 2 = EMAIL)
+  const existingEmails = new Set();
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    sheet.getRange(2, 2, lastRow - 1, 1).getValues()
+      .forEach(r => { if (r[0]) existingEmails.add(String(r[0]).toLowerCase().trim()); });
+  }
+
+  // Filtrar apenas leads novos (email não duplicado)
+  const newLeads = leads.filter(lead => {
+    const email = String(lead.EMAIL || '').toLowerCase().trim();
+    return email && !existingEmails.has(email);
   });
 
+  if (!newLeads.length) {
+    return jsonResponse({ success: true, rows_added: 0, skipped: leads.length, message: 'Todos os leads já existem na planilha' });
+  }
+
+  // Batch write — muito mais rápido que appendRow em loop
+  const rows = newLeads.map(lead => [
+    lead.EMPRESA  || '',
+    lead.EMAIL    || '',
+    lead.TELEFONE || '',
+    lead.CIDADE   || '',
+    lead.WEBSITE  || '',
+    '',
+  ]);
+
+  const startRow = sheet.getLastRow() + 1;
+  sheet.getRange(startRow, 1, rows.length, HEADERS.length).setValues(rows);
   SpreadsheetApp.flush();
 
-  return jsonResponse({ success: true, rows_added: leads.length });
+  return jsonResponse({ success: true, rows_added: newLeads.length, skipped: leads.length - newLeads.length });
 }
 
 /**

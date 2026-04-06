@@ -16,19 +16,25 @@ export async function sendLeadsToSheets({ leads, webhooks, distribution = 'equal
   if (!fields) {
     try { fields = await syncFieldsService.get() } catch { fields = DEFAULT_SYNC_FIELDS }
   }
-  if (!leads.length || !webhooks.length) return { totalSent: 0, errors: [] }
+
+  // Filtrar apenas leads com email E website/domínio preenchidos
+  const validLeads = leads.filter(l =>
+    l.email && l.email.trim() &&
+    l.website && l.website.trim() && l.website !== 'Sem Website'
+  )
+  if (!validLeads.length || !webhooks.length) return { totalSent: 0, errors: [] }
 
   let assignments = []
   if (distribution === 'all') {
-    assignments = webhooks.map(w => ({ webhook: w, leads }))
+    assignments = webhooks.map(w => ({ webhook: w, leads: validLeads }))
   } else if (distribution === 'equal') {
-    const chunkSize = Math.ceil(leads.length / webhooks.length)
+    const chunkSize = Math.ceil(validLeads.length / webhooks.length)
     assignments = webhooks.map((w, i) => ({
       webhook: w,
-      leads: leads.slice(i * chunkSize, (i + 1) * chunkSize),
+      leads: validLeads.slice(i * chunkSize, (i + 1) * chunkSize),
     }))
   } else if (distribution === 'daily_limit') {
-    let remaining = [...leads]
+    let remaining = [...validLeads]
     assignments = webhooks.map(w => {
       const chunk = remaining.splice(0, w.daily_limit || 80)
       return { webhook: w, leads: chunk }
@@ -52,8 +58,10 @@ export async function sendLeadsToSheets({ leads, webhooks, distribution = 'equal
         source: 'prospectahub',
         sent_at: new Date().toISOString(),
       }
-      const getUrl = webhook.webhook_url + '?payload=' + encodeURIComponent(JSON.stringify({ action: 'add_leads', ...payload }))
-      const res = await fetch(getUrl)
+      const res = await fetch(webhook.webhook_url, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'add_leads', ...payload }),
+      })
       const status = res.ok ? 'success' : 'error'
       await gsheetsService.recordSend({
         webhook_id: webhook.id,
@@ -62,7 +70,12 @@ export async function sendLeadsToSheets({ leads, webhooks, distribution = 'equal
         status,
       })
       if (res.ok) {
-        totalSent += batch.length
+        let rowsAdded = batch.length
+        try {
+          const json = await res.json()
+          if (typeof json.rows_added === 'number') rowsAdded = json.rows_added
+        } catch (_) {}
+        totalSent += rowsAdded
         syncedIds.push(...batch.map(l => l.id))
       } else {
         errors.push(`${webhook.name}: HTTP ${res.status}`)
