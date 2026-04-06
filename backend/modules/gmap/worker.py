@@ -103,14 +103,14 @@ async def extract_email_from_website(website: str, info, tm, main_loop=None) -> 
     domain = extract_domain_from_url(website)
     if not domain:
         return None
-    
+
     try:
         async with httpx.AsyncClient(verify=False) as client:
             # Try RDAP first
             email = await fetch_rdap_email(domain, client)
             if email:
                 return email
-            
+
             # Try page scraping
             email = await fetch_page_email(domain, client)
             return email
@@ -166,7 +166,7 @@ async def collect_urls(page: Page, search_query: str, info, tm, main_loop=None) 
     for attempt in range(max_attempts):
         if info.is_cancelled() or end_of_list:
             break
-        
+
         if not main_loop:
             await info.wait_if_paused()
 
@@ -180,7 +180,7 @@ async def collect_urls(page: Page, search_query: str, info, tm, main_loop=None) 
             """)
         except Exception as e:
             info.add_log(f"Erro ao scrollar: {str(e)}", "warning")
-        
+
         await asyncio.sleep(2)
 
         # Check end of list
@@ -198,7 +198,7 @@ async def collect_urls(page: Page, search_query: str, info, tm, main_loop=None) 
             current_count = await page.evaluate("""
                 document.querySelectorAll('a[href*="/maps/place/"]').length
             """)
-            
+
             if current_count == last_count:
                 consecutive_no_new += 1
                 if consecutive_no_new > 5:
@@ -273,7 +273,7 @@ async def extract_place_details(page: Page, url: str) -> dict:
                             break;
                         }
                     }
-                    
+
                     // Fallback 2: procurar por aria-label com "phone"
                     if (d.telefone === 'Sem Telefone') {
                         for (const b of buttons) {
@@ -361,7 +361,7 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
     """
     # Initialize Supabase client singleton
     supabase_client = get_supabase_client()
-    
+
     # Check if Supabase integration is available
     if not supabase_client.is_available():
         # Try to reload credentials in case they were added after initialization
@@ -372,7 +372,7 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
             info.add_log("⚠️ Supabase indisponível - leads serão salvos apenas localmente", "warning")
     else:
         info.add_log("✓ Supabase conectado", "success")
-    
+
     config = info.config
     cities = config.get("cities", [])
     search_term = config.get("searchTerm", "")
@@ -401,7 +401,7 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
         "emails_extracted": 0
     }
     supabase_consecutive_failures = 0
-    
+
     mode_msg = "Navegador: " + ("Oculto" if headless else "Visual")
     email_msg = " | Extração de email: " + ("Ativada" if extract_emails else "Desativada")
     info.add_log(f"Iniciando: '{search_term}' em {total_cities} cidades", "info")
@@ -412,7 +412,7 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
         async with async_playwright() as p:
             info.add_log("Iniciando navegador...", "info")
             await _broadcast_safe(tm, info, main_loop)
-            
+
             browser = await p.chromium.launch(
                 headless=headless,
                 args=[
@@ -426,16 +426,16 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
                 viewport={"width": 1280, "height": 900},
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             )
-            
+
             # Remover detecção de automação
             await context.add_init_script("""
                 Object.defineProperty(navigator, 'webdriver', {
                     get: () => undefined
                 });
             """)
-            
+
             page = await context.new_page()
-            
+
             info.add_log("Navegador iniciado!", "success")
             await _broadcast_safe(tm, info, main_loop)
 
@@ -484,80 +484,73 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
                 data = await extract_place_details(page, url)
 
                 if data.get("nome") and data["nome"] not in ["Erro", "Erro - Timeout"]:
-                    info.stats["leads"] += 1
-                    
-                    # Extract email from website if enabled
+                    # ── Extrai email ANTES de decidir se o lead vale ──
                     email_extraido = None
-                    if extract_emails and data.get("website") and data["website"] != "Sem Website":
+                    tem_website = data.get("website") and data["website"] != "Sem Website"
+                    if extract_emails and tem_website:
                         info.add_log(f"Extraindo email de {data['website']}...", "info")
                         await _broadcast_safe(tm, info, main_loop)
                         email_extraido = await extract_email_from_website(data["website"], info, tm, main_loop)
                         if email_extraido:
                             info.stats["emails_extracted"] += 1
-                            info.add_log(f"✓ Email encontrado: {email_extraido}", "success")
+                            info.add_log(f"✓ Email: {email_extraido}", "success")
                         else:
-                            info.add_log(f"✗ Nenhum email encontrado no site", "warning")
+                            info.add_log(f"✗ Sem email no site", "warning")
                         await _broadcast_safe(tm, info, main_loop)
-                    
-                    log_msg = f"✓ {data['nome']} — {data.get('telefone', 'N/A')}"
-                    if email_extraido:
-                        log_msg += f" — {email_extraido}"
-                    info.add_log(log_msg, "success")
 
-                    # Find which city from the URL or address
-                    cidade = ""
-                    for c in cities:
-                        city_name = c.split(",")[0].strip().lower()
-                        if city_name in data.get("endereco", "").lower():
-                            cidade = c
-                            break
+                    # ── Descarta leads sem site E sem email (inúteis) ──
+                    if not tem_website and not email_extraido:
+                        info.add_log(f"↷ Descartado (sem site e sem email): {data['nome']}", "info")
+                    else:
+                        info.stats["leads"] += 1
+                        log_msg = f"✓ {data['nome']} — {data.get('telefone', 'N/A')}"
+                        if email_extraido:
+                            log_msg += f" — {email_extraido}"
+                        info.add_log(log_msg, "success")
 
-                    # Save to Supabase
-                    if supabase_client.is_available():
-                        try:
-                            lead_data = {
-                                'nome': data["nome"],
-                                'telefone': data.get("telefone", ""),
-                                'website': data.get("website", ""),
-                                'email': email_extraido or "",  # Add extracted email
-                                'endereco': data.get("endereco", ""),
-                                'cidade': cidade,
-                                'url': url,
-                                'conjunto_de_locais': location_set_name,
-                                'task_id': info.id,
-                                'user_id': user_id,
-                            }
-                            success = await supabase_client.insert_lead(lead_data)
-                            if success:
-                                info.stats["supabase_success"] += 1
-                                supabase_consecutive_failures = 0
-                                info.add_log(f"→ Supabase: {data['nome']} salvo", "success")
-                            else:
+                        # Find which city from the URL or address
+                        cidade = ""
+                        for c in cities:
+                            city_name = c.split(",")[0].strip().lower()
+                            if city_name in data.get("endereco", "").lower():
+                                cidade = c
+                                break
+
+                        # Save to Supabase
+                        if supabase_client.is_available():
+                            try:
+                                lead_data = {
+                                    'nome': data["nome"],
+                                    'telefone': data.get("telefone", ""),
+                                    'website': data.get("website", ""),
+                                    'email': email_extraido or "",
+                                    'endereco': data.get("endereco", ""),
+                                    'cidade': cidade,
+                                    'url': url,
+                                    'conjunto_de_locais': location_set_name,
+                                    'task_id': info.id,
+                                    'user_id': user_id,
+                                }
+                                success = await supabase_client.insert_lead(lead_data)
+                                if success:
+                                    info.stats["supabase_success"] += 1
+                                    supabase_consecutive_failures = 0
+                                    info.add_log(f"→ Supabase: {data['nome']} salvo", "success")
+                                else:
+                                    info.stats["supabase_failures"] += 1
+                                    supabase_consecutive_failures += 1
+                                    info.add_log(f"⚠️ Supabase: Falha ao salvar '{data['nome']}'", "warning")
+                                    if supabase_consecutive_failures >= 5:
+                                        info.add_log(f"⚠️ {supabase_consecutive_failures} falhas consecutivas no Supabase", "error")
+                            except Exception as e:
                                 info.stats["supabase_failures"] += 1
                                 supabase_consecutive_failures += 1
-                                info.add_log(f"⚠️ Supabase: Falha ao salvar '{data['nome']}'", "warning")
-                                
-                                # Detect 5+ consecutive failures and log warning
+                                info.add_log(f"❌ Erro Supabase: {type(e).__name__} - {data['nome']}", "error")
                                 if supabase_consecutive_failures >= 5:
-                                    info.add_log(
-                                        f"⚠️ {supabase_consecutive_failures} falhas consecutivas no Supabase",
-                                        "error"
-                                    )
-                        except Exception as e:
-                            info.stats["supabase_failures"] += 1
-                            supabase_consecutive_failures += 1
-                            info.add_log(f"❌ Erro Supabase: {type(e).__name__} - {data['nome']}", "error")
-                            
-                            # Detect 5+ consecutive failures and log warning
-                            if supabase_consecutive_failures >= 5:
-                                info.add_log(
-                                    f"⚠️ {supabase_consecutive_failures} falhas consecutivas no Supabase",
-                                    "error"
-                                )
-                            # Continue extraction despite Supabase error
-                    else:
-                        # Supabase unavailable - log warning but continue extraction
-                        info.add_log(f"⚠️ Supabase indisponível: '{data['nome']}' não foi salvo", "warning")
+                                    info.add_log(f"⚠️ {supabase_consecutive_failures} falhas consecutivas no Supabase", "error")
+                        else:
+                            info.add_log(f"⚠️ Supabase indisponível: '{data['nome']}' não foi salvo", "warning")
+
                 else:
                     info.stats["errors"] += 1
                     error_msg = data.get("error", "Desconhecido")
@@ -571,17 +564,17 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
                 await asyncio.sleep(delay)
 
             await browser.close()
-            
+
             # Final log with statistics including Supabase and emails
             final_msg = f"Extração finalizada! {info.stats['leads']} leads extraídos."
             if extract_emails:
                 final_msg += f" {info.stats['emails_extracted']} emails encontrados."
             if supabase_client.is_available():
                 final_msg += f" Supabase: {info.stats['supabase_success']} sucessos, {info.stats['supabase_failures']} falhas."
-            
+
             info.add_log(final_msg, "success")
             await _broadcast_safe(tm, info, main_loop)
-            
+
     except Exception as e:
         info.add_log(f"Erro fatal: {str(e)}", "error")
         info.status = "failed"
