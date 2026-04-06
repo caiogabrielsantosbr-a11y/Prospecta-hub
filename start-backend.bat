@@ -82,6 +82,16 @@ if errorlevel 1 (
 echo Iniciando servidor backend na porta 8000...
 echo Pressione Ctrl+C para parar o servidor
 echo.
+echo ========================================
+echo  IMPORTANTE - URL DO NGROK
+echo ========================================
+echo.
+echo Para ver a URL publica do ngrok:
+echo 1. Abra no navegador: http://localhost:4040
+echo 2. Ou aguarde 5 segundos apos o backend iniciar
+echo.
+echo ========================================
+echo.
 
 REM Usar o Python do venv diretamente para garantir
 venv\Scripts\python.exe -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
