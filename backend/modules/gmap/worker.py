@@ -21,7 +21,12 @@ from modules.gmap.location_utils import load_location_set_name
 IGNORE_USERS = ["exemplo", "ex", "email", "seuemail", "nome", "user", "usuario", "teste", "test", "admin", "domain", "contato_exemplo"]
 IGNORE_DOMAINS_LIST = ["exemplo.com", "email.com", "teste.com", "dominio.com", "example.com", "domain.com"]
 IGNORE_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".js", ".css", ".woff", ".ttf"]
-CONTACT_PATHS = ["", "/contato", "/contact", "/fale-conosco", "/sobre", "/about"]
+CONTACT_PATHS = [
+    "", "/contato", "/contact", "/fale-conosco", "/sobre", "/about",
+    "/sobre-nos", "/about-us", "/contatos", "/contacts",
+    "/atendimento", "/suporte", "/support", "/quem-somos", "/empresa",
+    "/institucional", "/fale-com-a-gente", "/faleconosco",
+]
 
 
 def extract_domain_from_url(url: str) -> str:
@@ -38,7 +43,7 @@ def extract_domain_from_url(url: str) -> str:
 
 def extract_best_email(text: str) -> Optional[str]:
     """Extract the best email from page text, filtering junk."""
-    raw_emails = re.findall(r"[\w\.\-]+@[\w\.\-]+\.\w+", text, re.IGNORECASE)
+    raw_emails = re.findall(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}", text, re.IGNORECASE)
     if not raw_emails:
         return None
 
@@ -83,41 +88,141 @@ async def fetch_rdap_email(domain: str, client: httpx.AsyncClient) -> Optional[s
     return None
 
 
-async def fetch_page_email(domain: str, client: httpx.AsyncClient) -> Optional[str]:
-    """Scrape contact pages for emails."""
-    for path in CONTACT_PATHS:
-        url = f"https://{domain}{path}"
+def _extract_mailto_links(html: str) -> Optional[str]:
+    """Extract email from mailto: links — highest confidence."""
+    matches = re.findall(r'mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})', html, re.IGNORECASE)
+    for m in matches:
+        clean = m.strip().lower()
+        user = clean.split("@")[0]
+        if user not in IGNORE_USERS and len(user) >= 2:
+            return clean
+    return None
+
+
+def _extract_schema_email(html: str) -> Optional[str]:
+    """Extract email from JSON-LD schema.org blocks."""
+    import json as _json
+    blocks = re.findall(r'<script[^>]*type=["\']application/ld[+]json["\'][^>]*>(.*?)</script>', html, re.DOTALL | re.IGNORECASE)
+    for block in blocks:
         try:
-            resp = await client.get(url, timeout=10, follow_redirects=True)
-            if resp.status_code == 200:
-                email = extract_best_email(resp.text)
-                if email:
-                    return email
+            obj = _json.loads(block)
+            items = [obj] if isinstance(obj, dict) else obj if isinstance(obj, list) else []
+            for item in items:
+                email = item.get("email") or (item.get("contactPoint") or {}).get("email") if isinstance(item, dict) else None
+                if email and "@" in str(email):
+                    return str(email).strip().lower()
         except Exception:
             continue
     return None
 
 
-async def extract_email_from_website(website: str, info, tm, main_loop=None) -> Optional[str]:
-    """Extract email from website domain using RDAP + page scraping."""
+def _extract_meta_email(html: str) -> Optional[str]:
+    """Extract email from meta tags."""
+    matches = re.findall(r'<meta[^>]+content=["\']([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})["\']', html, re.IGNORECASE)
+    for m in matches:
+        user = m.strip().lower().split("@")[0]
+        if user not in IGNORE_USERS and len(user) >= 2:
+            return m.strip().lower()
+    return None
+
+
+async def fetch_page_email(domain: str, client: httpx.AsyncClient) -> Optional[str]:
+    """Scrape contact pages for emails using multiple extraction methods in cascade."""
+    for path in CONTACT_PATHS:
+        url = f"https://{domain}{path}"
+        try:
+            resp = await client.get(url, timeout=12, follow_redirects=True)
+            if resp.status_code != 200:
+                continue
+            html = resp.text
+
+            # 1. mailto: links — highest confidence
+            email = _extract_mailto_links(html)
+            if email:
+                return email
+
+            # 2. JSON-LD schema.org
+            email = _extract_schema_email(html)
+            if email:
+                return email
+
+            # 3. Meta tags
+            email = _extract_meta_email(html)
+            if email:
+                return email
+
+            # 4. Plain text regex
+            email = extract_best_email(html)
+            if email:
+                return email
+        except Exception:
+            continue
+    return None
+
+
+async def fetch_page_email_playwright(domain: str, browser_context) -> Optional[str]:
+    """Playwright fallback — for JS-rendered sites that block httpx."""
+    page = await browser_context.new_page()
+    try:
+        for path in CONTACT_PATHS[:8]:  # limit paths for speed
+            url = f"https://{domain}{path}"
+            try:
+                await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+                await page.wait_for_timeout(1500)
+                html = await page.content()
+
+                email = _extract_mailto_links(html)
+                if email:
+                    return email
+                email = _extract_schema_email(html)
+                if email:
+                    return email
+                email = _extract_meta_email(html)
+                if email:
+                    return email
+                email = extract_best_email(html)
+                if email:
+                    return email
+            except Exception:
+                continue
+    finally:
+        await page.close()
+    return None
+
+
+async def extract_email_from_website(website: str, info, tm, main_loop=None, browser_context=None) -> Optional[str]:
+    """Extract email from website domain using RDAP + page scraping + Playwright fallback."""
     domain = extract_domain_from_url(website)
     if not domain:
         return None
 
     try:
-        async with httpx.AsyncClient(verify=False) as client:
-            # Try RDAP first
+        async with httpx.AsyncClient(verify=False, timeout=15) as client:
+            # 1. RDAP registry (fast, high confidence for .com.br)
             email = await fetch_rdap_email(domain, client)
             if email:
                 return email
 
-            # Try page scraping
+            # 2. HTTP scraping with multiple methods
             email = await fetch_page_email(domain, client)
-            return email
+            if email:
+                return email
     except Exception as e:
-        info.add_log(f"Erro ao extrair email de {domain}: {str(e)}", "warning")
+        info.add_log(f"httpx falhou em {domain}: {str(e)}", "warning")
         await _broadcast_safe(tm, info, main_loop)
-        return None
+
+    # 3. Playwright fallback (JS-rendered sites)
+    if browser_context:
+        try:
+            email = await fetch_page_email_playwright(domain, browser_context)
+            if email:
+                info.add_log(f"✓ Email via Playwright: {email}", "success")
+                return email
+        except Exception as e:
+            info.add_log(f"Playwright falhou em {domain}: {str(e)}", "warning")
+            await _broadcast_safe(tm, info, main_loop)
+
+    return None
 
 
 async def wait_and_get(page: Page, selector: str, timeout: int = 8000) -> bool:
@@ -490,7 +595,7 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
                     if extract_emails and tem_website:
                         info.add_log(f"Extraindo email de {data['website']}...", "info")
                         await _broadcast_safe(tm, info, main_loop)
-                        email_extraido = await extract_email_from_website(data["website"], info, tm, main_loop)
+                        email_extraido = await extract_email_from_website(data["website"], info, tm, main_loop, browser_context=context)
                         if email_extraido:
                             info.stats["emails_extracted"] += 1
                             info.add_log(f"✓ Email: {email_extraido}", "success")
