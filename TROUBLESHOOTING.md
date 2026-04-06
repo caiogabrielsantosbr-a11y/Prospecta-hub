@@ -4,6 +4,56 @@ Guia rápido para resolver problemas comuns.
 
 ---
 
+## ❌ Problema: "No module named uvicorn"
+
+### Causa
+As dependências Python não foram instaladas corretamente no ambiente virtual.
+
+### Solução Rápida
+
+Execute o script de correção:
+```bash
+fix-backend.bat
+```
+
+### Solução Manual
+
+1. **Abra o terminal como Administrador**
+
+2. **Navegue até a pasta do projeto:**
+   ```bash
+   cd C:\caminho\para\Prospecta-hub
+   cd backend
+   ```
+
+3. **Ative o ambiente virtual:**
+   ```bash
+   venv\Scripts\activate
+   ```
+
+4. **Atualize o pip:**
+   ```bash
+   python -m pip install --upgrade pip
+   ```
+
+5. **Instale as dependências:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+6. **Instale o Playwright:**
+   ```bash
+   python -m playwright install chromium
+   ```
+
+7. **Teste:**
+   ```bash
+   cd ..
+   start-backend.bat
+   ```
+
+---
+
 ## ❌ Problema: start-backend.bat abre e fecha rapidamente
 
 ### Causa Provável
