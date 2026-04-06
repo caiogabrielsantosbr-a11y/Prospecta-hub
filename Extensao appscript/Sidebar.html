@@ -294,7 +294,7 @@
       google.script.run
         .withSuccessHandler(stats => {
           // Quota
-          const q = stats.quota_gmail;
+          const q = stats.quota_gmail !== undefined ? stats.quota_gmail : 0;
           quota.innerText = q;
           quota.className = 'quota-number' + (q > 85 ? '' : ' low');
 
@@ -304,7 +304,8 @@
           badge.className = 'badge ' + (active ? 'badge-on' : 'badge-off');
           badge.innerHTML = `<span class="dot"></span>${active ? 'ATIVO' : 'INATIVO'}`;
         })
-        .withFailureHandler(() => {
+        .withFailureHandler((error) => {
+          console.error('Erro ao carregar stats:', error);
           quota.innerText = '—';
           errMsg.style.display = 'block';
         })

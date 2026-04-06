@@ -322,6 +322,15 @@ function handleGetStats() {
   const rows    = countRows_();
   const dailySent = Number(props.getProperty('DAILY_SENT_COUNT') || 0);
   const dailyLimit = Number(props.getProperty('DAILY_LIMIT') || DEFAULT_DAILY_LIMIT);
+  
+  // Get Gmail quota with fallback
+  let gmailQuota;
+  try {
+    gmailQuota = MailApp.getRemainingDailyQuota();
+  } catch (e) {
+    console.error('Erro ao obter cota do Gmail:', e.message);
+    gmailQuota = 0;
+  }
 
   return jsonResponse({
     success:        true,
@@ -329,7 +338,7 @@ function handleGetStats() {
     sent:           rows.sent,
     pending:        rows.pending,
     errors:         rows.errors,
-    quota_gmail:    MailApp.getRemainingDailyQuota(),
+    quota_gmail:    gmailQuota,
     daily_sent:     dailySent,
     daily_limit:    dailyLimit,
     daily_remaining: Math.max(0, dailyLimit - dailySent),
