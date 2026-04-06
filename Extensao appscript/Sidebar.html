@@ -1,300 +1,357 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     body {
-      background: #0d0d0d;
+      background: #0A0A0A;
       color: #e0e0e0;
       font-family: "Inter", sans-serif;
-      padding: 20px 16px;
+      padding: 24px 20px;
       font-size: 13px;
       min-height: 100vh;
     }
 
-    .logo {
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: -0.01em;
-      margin-bottom: 4px;
-    }
-    .logo .pro { color: #0055ff; }
-    .logo .specta { color: #fff; }
-    .logo-sub {
-      font-size: 10px;
-      color: #555;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      margin-bottom: 20px;
+    /* Logo */
+    .logo-container {
+      text-align: center;
+      margin-bottom: 28px;
     }
 
+    .logo-img {
+      width: 180px;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+
+    /* Card */
     .card {
-      background: #1c1c1c;
-      border: 1px solid #2a2a2a;
+      background: #1A1A1A;
+      border: 1px solid #2A2A2A;
       border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 12px;
+      padding: 18px;
+      margin-bottom: 14px;
     }
 
-    .section-label {
-      font-size: 10px;
-      color: #555;
+    .card-title {
+      font-size: 11px;
+      color: #666;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       font-weight: 600;
-      margin-bottom: 6px;
+      margin-bottom: 10px;
     }
 
+    /* Quota */
     .quota-number {
-      font-size: 42px;
-      font-weight: 700;
+      font-size: 48px;
+      font-weight: 800;
       line-height: 1;
-      color: #00d26a;
+      color: #00D26A;
+      text-align: center;
     }
-    .quota-number.low { color: #E8593C; }
+
+    .quota-number.low {
+      color: #E8593C;
+    }
+
     .quota-sub {
-      font-size: 11px;
-      color: #555;
-      margin-top: 4px;
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+      margin-top: 6px;
+    }
+
+    /* Status Badge */
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .status-label {
+      font-size: 12px;
+      color: #999;
+      font-weight: 500;
     }
 
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
+      gap: 6px;
+      padding: 6px 12px;
       border-radius: 20px;
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
-    .badge-on  { background: #003d1f; color: #00d26a; border: 1px solid #00d26a33; }
-    .badge-off { background: #1a1a1a; color: #555;    border: 1px solid #2a2a2a; }
+
+    .badge-on {
+      background: #003D1F;
+      color: #00D26A;
+      border: 1px solid #00D26A33;
+    }
+
+    .badge-off {
+      background: #1A1A1A;
+      color: #666;
+      border: 1px solid #2A2A2A;
+    }
 
     .dot {
-      width: 6px; height: 6px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: currentColor;
     }
-    .badge-on .dot  { animation: pulse 1.5s infinite; }
+
+    .badge-on .dot {
+      animation: pulse 1.5s infinite;
+    }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
     }
 
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .stat-item {
+    /* Webhook URL */
+    .webhook-container {
       background: #111;
       border: 1px solid #222;
       border-radius: 8px;
-      padding: 10px;
-    }
-
-    .stat-item .val {
-      font-size: 18px;
-      font-weight: 700;
-      color: #fff;
-      line-height: 1;
-    }
-    .stat-item .val.green { color: #00d26a; }
-    .stat-item .val.blue  { color: #6699ff; }
-    .stat-item .val.red   { color: #E8593C; }
-
-    .stat-item .lbl {
-      font-size: 10px;
-      color: #555;
-      margin-top: 3px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .progress-bar-wrap {
-      background: #222;
-      border-radius: 4px;
-      height: 5px;
-      margin-top: 10px;
-      overflow: hidden;
-    }
-    .progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #0055ff, #00aaff);
-      border-radius: 4px;
-      transition: width 0.4s;
-    }
-    .progress-label {
+      padding: 12px;
       display: flex;
-      justify-content: space-between;
-      font-size: 10px;
-      color: #555;
-      margin-top: 4px;
+      align-items: center;
+      gap: 10px;
     }
 
-    .refresh-btn {
-      background: none;
-      border: 1px solid #2a2a2a;
-      color: #555;
-      border-radius: 6px;
-      padding: 3px 8px;
+    .webhook-url {
+      flex: 1;
       font-size: 11px;
-      cursor: pointer;
-      float: right;
-      margin-top: -2px;
+      color: #999;
+      font-family: 'Courier New', monospace;
+      word-break: break-all;
+      line-height: 1.4;
     }
-    .refresh-btn:hover { border-color: #0055ff; color: #0055ff; }
 
+    .copy-btn {
+      background: #2A2A2A;
+      border: 1px solid #333;
+      color: #999;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover {
+      background: #333;
+      border-color: #444;
+      color: #fff;
+    }
+
+    .copy-btn.copied {
+      background: #003D1F;
+      border-color: #00D26A33;
+      color: #00D26A;
+    }
+
+    /* Button */
     .open-btn {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
       width: 100%;
-      padding: 12px;
-      background: #0055ff;
+      padding: 14px;
+      background: linear-gradient(135deg, #e8593c 0%, #c4185a 100%);
       color: #fff;
       border: none;
       border-radius: 10px;
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 14px;
+      font-weight: 700;
       cursor: pointer;
       text-decoration: none;
-      margin-top: 4px;
-      transition: background 0.15s;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 12px rgba(232, 89, 60, 0.3);
     }
-    .open-btn:hover { background: #0044cc; }
+
+    .open-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(232, 89, 60, 0.4);
+    }
+
+    .open-btn:active {
+      transform: translateY(0);
+    }
 
     .hint {
       text-align: center;
       font-size: 11px;
       color: #444;
-      margin-top: 10px;
+      margin-top: 12px;
+      line-height: 1.5;
     }
 
     .error-msg {
       font-size: 11px;
       color: #E8593C;
+      text-align: center;
       margin-top: 8px;
       display: none;
     }
+
+    .loading {
+      text-align: center;
+      color: #666;
+      font-size: 12px;
+      padding: 20px;
+    }
   </style>
 </head>
+
 <body>
 
-  <div class="logo"><span class="pro">PRO</span><span class="specta">SPECTA</span></div>
-  <div class="logo-sub">Prospecting Suite</div>
-
-  <!-- QUOTA -->
-  <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-      <div>
-        <div class="section-label">Cota Gmail Hoje</div>
-        <div id="quotaDisplay" class="quota-number">...</div>
-        <div class="quota-sub">emails disponíveis</div>
-      </div>
-      <div style="text-align:right;">
-        <div class="section-label" style="margin-bottom:6px;">Robô</div>
-        <span id="scheduleBadge" class="badge badge-off"><span class="dot"></span>INATIVO</span>
-        <button class="refresh-btn" onclick="refreshStats()">↻</button>
-      </div>
-    </div>
-
-    <div class="stats-grid">
-      <div class="stat-item">
-        <div id="statTotal" class="val">—</div>
-        <div class="lbl">Total</div>
-      </div>
-      <div class="stat-item">
-        <div id="statSent" class="val green">—</div>
-        <div class="lbl">Enviados</div>
-      </div>
-      <div class="stat-item">
-        <div id="statPending" class="val blue">—</div>
-        <div class="lbl">Pendentes</div>
-      </div>
-      <div class="stat-item">
-        <div id="statErrors" class="val red">—</div>
-        <div class="lbl">Erros</div>
-      </div>
-    </div>
-
-    <!-- daily progress -->
-    <div id="dailyWrap" style="margin-top:12px; display:none;">
-      <div class="progress-bar-wrap">
-        <div id="dailyBar" class="progress-bar-fill" style="width:0%"></div>
-      </div>
-      <div class="progress-label">
-        <span id="dailySentLabel">0 enviados hoje</span>
-        <span id="dailyLimitLabel">limite: —</span>
-      </div>
-    </div>
-
-    <div id="errorMsg" class="error-msg">Não foi possível carregar os dados.</div>
+  <!-- Logo -->
+  <div class="logo-container">
+    <img src="https://i.imgur.com/vB9YXUj.png" alt="Prospecta" class="logo-img">
   </div>
 
-  <!-- LINK PARA O PAINEL -->
-  <a id="openPanelBtn" class="open-btn" href="https://prospecta-hub.vercel.app/leads" target="_blank">
-    ↗ Abrir Painel Completo
+  <!-- Cota Gmail -->
+  <div class="card">
+    <div class="card-title">Cota Gmail Hoje</div>
+    <div id="quotaDisplay" class="quota-number">...</div>
+    <div class="quota-sub">emails disponíveis</div>
+  </div>
+
+  <!-- Status da Integração -->
+  <div class="card">
+    <div class="card-title">Integração Prospecta</div>
+    <div class="status-row">
+      <span class="status-label">Status do Robô</span>
+      <span id="scheduleBadge" class="badge badge-off">
+        <span class="dot"></span>INATIVO
+      </span>
+    </div>
+  </div>
+
+  <!-- Webhook URL -->
+  <div class="card">
+    <div class="card-title">URL do Webhook</div>
+    <div class="webhook-container">
+      <div id="webhookUrl" class="webhook-url">Carregando...</div>
+      <button id="copyBtn" class="copy-btn" onclick="copyWebhook()">Copiar</button>
+    </div>
+  </div>
+
+  <!-- Botão Abrir Painel -->
+  <a class="open-btn" href="https://prospecta-hub.vercel.app/leads" target="_blank">
+    <span>↗</span> Abrir Painel Completo
   </a>
 
-  <p class="hint">Gerencie planilhas, robô e agendamento em<br><strong style="color:#333;">prospecta-hub.vercel.app</strong></p>
+  <p class="hint">
+    Gerencie planilhas, robô e agendamento no<br>
+    <strong style="color:#666;">Painel Completo</strong>
+  </p>
+
+  <div id="errorMsg" class="error-msg">Não foi possível carregar os dados.</div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => { refreshStats(); });
+    let webhookUrlText = '';
 
-    function refreshStats() {
+    document.addEventListener('DOMContentLoaded', () => {
+      loadData();
+    });
+
+    function loadData() {
       const quota = document.getElementById('quotaDisplay');
       const errMsg = document.getElementById('errorMsg');
       quota.innerText = '...';
       quota.className = 'quota-number';
       errMsg.style.display = 'none';
 
+      // Load stats
       google.script.run
-        .withSuccessHandler(s => {
+        .withSuccessHandler(stats => {
           // Quota
-          const q = s.quota_gmail;
+          const q = stats.quota_gmail;
           quota.innerText = q;
           quota.className = 'quota-number' + (q > 85 ? '' : ' low');
 
-          // Stats
-          document.getElementById('statTotal').innerText   = s.total   ?? '—';
-          document.getElementById('statSent').innerText    = s.sent    ?? '—';
-          document.getElementById('statPending').innerText = s.pending ?? '—';
-          document.getElementById('statErrors').innerText  = s.errors  ?? '—';
-
           // Badge
           const badge = document.getElementById('scheduleBadge');
-          const active = s.schedule_active;
+          const active = stats.schedule_active;
           badge.className = 'badge ' + (active ? 'badge-on' : 'badge-off');
           badge.innerHTML = `<span class="dot"></span>${active ? 'ATIVO' : 'INATIVO'}`;
-
-          // Daily progress
-          const dailySent  = s.daily_sent  ?? 0;
-          const dailyLimit = s.daily_limit ?? 0;
-          if (dailyLimit > 0) {
-            const pct = Math.min(100, Math.round((dailySent / dailyLimit) * 100));
-            document.getElementById('dailyBar').style.width = pct + '%';
-            document.getElementById('dailySentLabel').innerText = dailySent + ' enviados hoje';
-            document.getElementById('dailyLimitLabel').innerText = 'limite: ' + dailyLimit;
-            document.getElementById('dailyWrap').style.display = 'block';
-          }
         })
         .withFailureHandler(() => {
           quota.innerText = '—';
           errMsg.style.display = 'block';
         })
         .handleGetStats();
+
+      // Load webhook URL
+      google.script.run
+        .withSuccessHandler(url => {
+          webhookUrlText = url;
+          document.getElementById('webhookUrl').innerText = url;
+        })
+        .withFailureHandler(() => {
+          document.getElementById('webhookUrl').innerText = 'Erro ao carregar URL';
+        })
+        .getWebhookUrl();
+    }
+
+    function copyWebhook() {
+      const btn = document.getElementById('copyBtn');
+
+      // Copy to clipboard
+      const textarea = document.createElement('textarea');
+      textarea.value = webhookUrlText;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand('copy');
+        btn.innerText = '✓ Copiado';
+        btn.classList.add('copied');
+
+        setTimeout(() => {
+          btn.innerText = 'Copiar';
+          btn.classList.remove('copied');
+        }, 2000);
+      } catch (err) {
+        btn.innerText = 'Erro';
+        setTimeout(() => {
+          btn.innerText = 'Copiar';
+        }, 2000);
+      }
+
+      document.body.removeChild(textarea);
     }
   </script>
 </body>
+
 </html>

@@ -3,21 +3,24 @@ import {
   LayoutDashboard, MapPin, Target, Users, Inbox,
   User, Settings
 } from 'lucide-react'
+import { useTheme } from '../../contexts/ThemeContext'
 
 const NAV_ITEMS = [
-  { path: '/',            icon: LayoutDashboard, label: 'Painel' },
-  { path: '/gmap',        icon: MapPin,           label: 'Google Maps' },
-  { path: '/facebook',    icon: Target,           label: 'Facebook ADS' },
-  { path: '/leads',       icon: Users,            label: 'Leads' },
-  { path: '/inbox',       icon: Inbox,            label: 'Inbox Gmail' },
+  { path: '/', icon: LayoutDashboard, label: 'Painel' },
+  { path: '/gmap', icon: MapPin, label: 'Google Maps' },
+  { path: '/facebook', icon: Target, label: 'Facebook ADS' },
+  { path: '/leads', icon: Users, label: 'Leads' },
+  { path: '/inbox', icon: Inbox, label: 'Inbox Gmail' },
 ]
 
 const BOTTOM_ITEMS = [
-  { path: '/profile',     icon: User,             label: 'Perfil' },
-  { path: '/admin/config',icon: Settings,         label: 'Configurações' },
+  { path: '/profile', icon: User, label: 'Perfil' },
+  { path: '/admin/config', icon: Settings, label: 'Configurações' },
 ]
 
 export default function Sidebar() {
+  const { theme } = useTheme()
+
   const navItemStyle = (isActive) => ({
     display: 'flex',
     alignItems: 'center',
@@ -44,15 +47,16 @@ export default function Sidebar() {
     >
       {/* Logo */}
       <div style={{ padding: '22px 20px 18px', borderBottom: '0.5px solid var(--pro-border)' }}>
-        <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: '-0.01em' }}>
-          <span style={{ background: 'var(--pro-grad)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            PRO
-          </span>
-          <span style={{ color: 'var(--pro-text)' }}>SPECTA</span>
-        </div>
-        <div style={{ fontSize: 11, color: 'var(--pro-muted2)', marginTop: 2, letterSpacing: '0.06em' }}>
-          Prospecting Suite
-        </div>
+        <img
+          src={theme === 'dark' ? '/logo-branca.png' : '/logo-preta.png'}
+          alt="Prospecta"
+          style={{
+            width: '100%',
+            maxWidth: '180px',
+            height: 'auto',
+            display: 'block'
+          }}
+        />
       </div>
 
       {/* Navigation */}

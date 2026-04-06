@@ -449,7 +449,6 @@ function processBatchServerSide_(subjectLine, maxEmails) {
           msgObj.text,
           {
             htmlBody:     msgObj.html,
-            name:         'Prospecta HUB',
             attachments:  template.attachments,
             inlineImages: template.inlineImages,
           }
@@ -521,7 +520,6 @@ function sendSingleEmail(rowIndex, config) {
 
     GmailApp.sendEmail(recipient, msgObj.subject, msgObj.text, {
       htmlBody:     msgObj.html,
-      name:         getProps().getProperty('SENDER_NAME') || 'Prospecta HUB',
       attachments:  template.attachments,
       inlineImages: template.inlineImages,
     });
@@ -543,6 +541,10 @@ function sendSingleEmail(rowIndex, config) {
 
 function getQuotaOnly() {
   return MailApp.getRemainingDailyQuota();
+}
+
+function getWebhookUrl() {
+  return ScriptApp.getService().getUrl();
 }
 
 function getStoredSettings() {
@@ -594,7 +596,6 @@ function sendTest(config) {
     const template = getGmailTemplateFromDrafts_(config.subjectLine);
     GmailApp.sendEmail(config.to, template.message.subject, template.message.text, {
       htmlBody: template.message.html,
-      name:     'Prospecta HUB',
       attachments:  template.attachments,
       inlineImages: template.inlineImages,
     });
