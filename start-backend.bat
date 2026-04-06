@@ -45,22 +45,46 @@ echo.
 REM Ativar ambiente virtual e iniciar backend
 echo Ativando ambiente virtual...
 cd /d "%~dp0backend"
-call venv\Scripts\activate
 
-if errorlevel 1 (
-    echo [ERRO] Falha ao ativar ambiente virtual
+REM Verificar se o activate.bat existe
+if not exist "venv\Scripts\activate.bat" (
+    echo [ERRO] Arquivo activate.bat nao encontrado!
+    echo Execute fix-backend.bat para recriar o ambiente virtual
     echo.
     pause
     exit /b 1
 )
 
+REM Ativar ambiente virtual
+call venv\Scripts\activate.bat
+
+REM Verificar se ativou corretamente testando o caminho do Python
+where python | findstr /i "venv" >nul 2>&1
+if errorlevel 1 (
+    echo [AVISO] Ambiente virtual pode nao ter sido ativado corretamente
+    echo Usando Python do venv diretamente...
+    echo.
+)
+
 echo [OK] Ambiente virtual ativado
 echo.
+
+REM Verificar se uvicorn está instalado
+venv\Scripts\python.exe -m pip show uvicorn >nul 2>&1
+if errorlevel 1 (
+    echo [ERRO] uvicorn nao esta instalado!
+    echo Execute fix-backend.bat para instalar as dependencias
+    echo.
+    pause
+    exit /b 1
+)
+
 echo Iniciando servidor backend na porta 8000...
 echo Pressione Ctrl+C para parar o servidor
 echo.
 
-python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+REM Usar o Python do venv diretamente para garantir
+venv\Scripts\python.exe -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 REM Se o uvicorn falhar, mostrar erro
 if errorlevel 1 (
