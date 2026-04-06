@@ -61,14 +61,17 @@ venv\Scripts\python.exe -c "import openpyxl; print('[OK] openpyxl')"
 venv\Scripts\python.exe -c "import aiofiles; print('[OK] aiofiles')"
 venv\Scripts\python.exe -c "import playwright; print('[OK] playwright')"
 venv\Scripts\python.exe -c "import bs4; print('[OK] beautifulsoup4')"
-venv\Scripts\python.exe -c "import supabase; print('[OK] supabase')"
+venv\Scripts\python.exe -c "import supabase; print('[OK] supabase')" 2>nul || echo [AVISO] supabase nao instalado (opcional)
 
 echo.
 echo ========================================
 echo  INSTALACAO COMPLETA!
 echo ========================================
 echo.
-echo Todas as dependencias foram instaladas.
+echo Todas as dependencias essenciais foram instaladas.
+echo.
+echo IMPORTANTE: Se o supabase falhou, o backend ainda funciona!
+echo O supabase so e necessario para salvar dados na nuvem.
 echo.
 echo Agora execute: start-backend.bat
 echo.
