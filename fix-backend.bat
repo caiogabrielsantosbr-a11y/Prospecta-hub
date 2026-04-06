@@ -8,41 +8,61 @@ echo Este script vai reinstalar todas as dependencias do backend
 echo.
 pause
 
-cd backend
+cd /d "%~dp0backend"
 
-echo [1/5] Ativando ambiente virtual...
-call venv\Scripts\activate
-
-if errorlevel 1 (
-    echo [ERRO] Falha ao ativar ambiente virtual
-    echo Recriando ambiente virtual...
-    rmdir /s /q venv
+echo [1/6] Verificando ambiente virtual...
+if not exist "venv" (
+    echo Ambiente virtual nao encontrado. Criando...
     python -m venv venv
-    call venv\Scripts\activate
+    if errorlevel 1 (
+        echo [ERRO] Falha ao criar ambiente virtual
+        pause
+        exit /b 1
+    )
 )
-
-echo [OK] Ambiente virtual ativado
+echo [OK] Ambiente virtual existe
 echo.
 
-echo [2/5] Atualizando pip...
-python -m pip install --upgrade pip
+echo [2/6] Atualizando pip...
+venv\Scripts\python.exe -m pip install --upgrade pip
 echo.
 
-echo [3/5] Instalando dependencias principais...
-pip install fastapi uvicorn python-dotenv httpx pydantic supabase
+echo [3/6] Instalando uvicorn (OBRIGATORIO)...
+venv\Scripts\python.exe -m pip install uvicorn[standard]
 echo.
 
-echo [4/5] Instalando Playwright...
-pip install playwright
-python -m playwright install chromium
+echo [4/6] Instalando dependencias principais...
+venv\Scripts\python.exe -m pip install fastapi python-dotenv httpx pydantic supabase
 echo.
 
-echo [5/5] Instalando dependencias restantes...
-pip install -r requirements.txt
+echo [5/6] Instalando Playwright...
+venv\Scripts\python.exe -m pip install playwright
+venv\Scripts\python.exe -m playwright install chromium
+echo.
+
+echo [6/6] Instalando dependencias restantes do requirements.txt...
+venv\Scripts\python.exe -m pip install -r requirements.txt
 echo.
 
 echo ========================================
-echo  INSTALACAO CONCLUIDA!
+echo  VERIFICANDO INSTALACAO
+echo ========================================
+echo.
+
+echo Verificando se uvicorn foi instalado...
+venv\Scripts\python.exe -m pip show uvicorn
+if errorlevel 1 (
+    echo [ERRO] uvicorn NAO foi instalado!
+    echo Tente instalar manualmente:
+    echo   cd backend
+    echo   venv\Scripts\python.exe -m pip install uvicorn
+    pause
+    exit /b 1
+)
+
+echo.
+echo ========================================
+echo  INSTALACAO CONCLUIDA COM SUCESSO!
 echo ========================================
 echo.
 echo Agora execute: start-backend.bat
