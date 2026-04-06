@@ -41,6 +41,9 @@ venv\Scripts\python.exe -m pip install python-dotenv
 echo - httpx (cliente HTTP)
 venv\Scripts\python.exe -m pip install httpx
 
+echo - python-socketio (WebSocket)
+venv\Scripts\python.exe -m pip install python-socketio
+
 echo - playwright (automacao navegador)
 venv\Scripts\python.exe -m pip install playwright
 
