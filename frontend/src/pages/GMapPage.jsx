@@ -1,8 +1,10 @@
 /**
  * Google Maps Extractor Page - V4 Lime Design
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '../services/api'
+import { leadsService, gsheetsService } from '../services/supabase'
+import { sendLeadsToSheets } from '../utils/sendLeadsToSheets'
 import useTaskStore from '../store/useTaskStore'
 import { sessionCache } from '../utils/sessionCache'
 import useConfigStore from '../store/useConfigStore'
@@ -21,6 +23,7 @@ export default function GMapPage() {
   const [isPaused, setIsPaused] = useState(false)
   const [headless, setHeadless] = useState(true) // Navegador oculto por padrão
   const [extractEmails, setExtractEmails] = useState(true) // Extração de email ativada por padrão
+  const [autoSyncToSheets, setAutoSyncToSheets] = useState(false)
   const [isStarting, setIsStarting] = useState(false) // Prevent double-click
   const [liveStats, setLiveStats] = useState({
     queue: 0,
@@ -33,6 +36,8 @@ export default function GMapPage() {
 
   // Location Sets Management Modal State
   const [showManageModal, setShowManageModal] = useState(false)
+
+  const prevTaskStatusRef = useRef(null)
 
   const tasks = useTaskStore((s) => s.tasks)
   const currentTask = tasks.find(t => t.id === taskId)
@@ -196,6 +201,25 @@ export default function GMapPage() {
     }
   }
 
+  const triggerAutoSync = async (completedTaskId) => {
+    try {
+      const leads = await leadsService.getLeadsByTaskId(completedTaskId)
+      if (!leads.length) return
+      const allWebhooks = await gsheetsService.getWebhooks()
+      const activeWebhooks = allWebhooks.filter(w => w.active !== false)
+      if (!activeWebhooks.length) {
+        toast('Nenhuma planilha ativa para auto-sync', { icon: 'ℹ️' })
+        return
+      }
+      const { totalSent, errors } = await sendLeadsToSheets({ leads, webhooks: activeWebhooks, distribution: 'equal' })
+      if (totalSent > 0) toast.success(`Auto-sync: ${totalSent} leads enviados`)
+      if (errors.length) toast.error(`Auto-sync com erros: ${errors[0]}`)
+    } catch (e) {
+      console.error('Auto-sync failed', e)
+      toast.error('Erro no auto-sync')
+    }
+  }
+
   const handlePause = () => {
     setIsPaused(true)
     // TODO: Implement pause API call
@@ -227,6 +251,19 @@ export default function GMapPage() {
     }
   }, [currentTask])
 
+  useEffect(() => {
+    const curr = currentTask?.status
+    const prev = prevTaskStatusRef.current
+    if (
+      autoSyncToSheets &&
+      taskId &&
+      (curr === 'completed' || curr === 'done') &&
+      prev === 'running'
+    ) {
+      triggerAutoSync(taskId)
+    }
+    prevTaskStatusRef.current = curr ?? null
+  }, [currentTask?.status])
 
   // Animate map markers
   useEffect(() => {
@@ -338,6 +375,13 @@ export default function GMapPage() {
                   <div style={{ fontSize: 10, color: 'var(--pro-muted)' }}>{extractEmails ? 'Buscando emails' : 'Sem extração'}</div>
                 </div>
                 <div className={`pro-toggle ${extractEmails ? 'on' : ''}`} onClick={() => setExtractEmails(!extractEmails)} />
+              </div>
+              <div style={{ flex: 1, background: 'var(--pro-surface3)', border: '0.5px solid var(--pro-border)', borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--pro-text)' }}>{autoSyncToSheets ? 'Enviar p/ Planilhas' : 'Sem Envio Auto'}</div>
+                  <div style={{ fontSize: 10, color: 'var(--pro-muted)' }}>{autoSyncToSheets ? 'Sincroniza ao concluir' : 'Desativado'}</div>
+                </div>
+                <div className={`pro-toggle ${autoSyncToSheets ? 'on' : ''}`} onClick={() => setAutoSyncToSheets(!autoSyncToSheets)} />
               </div>
             </div>
 

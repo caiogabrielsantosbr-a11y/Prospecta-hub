@@ -2,8 +2,9 @@
  * Leads Management Page — tabbed layout with Google Sheets integration
  */
 import { useState, useEffect } from 'react'
-import { leadsService, gsheetsService } from '../services/supabase'
+import { leadsService, gsheetsService, syncScheduleService } from '../services/supabase'
 import toast from 'react-hot-toast'
+import { sendLeadsToSheets } from '../utils/sendLeadsToSheets'
 
 export default function LeadsPage() {
   const [activeTab, setActiveTab] = useState('leads')
@@ -53,13 +54,27 @@ function LeadsTab() {
   const [editingLead, setEditingLead] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
+  const [filterUnsynced, setFilterUnsynced] = useState(false)
+  const [unsyncedCount, setUnsyncedCount] = useState(0)
 
-  useEffect(() => { loadStats(); loadConjuntos(); loadLeads() }, [])
-  useEffect(() => { loadLeads() }, [selectedConjunto, selectedCidade, searchTerm, page])
+  useEffect(() => { loadStats(); loadConjuntos(); loadLeads(); loadUnsyncedCount() }, [])
+  useEffect(() => { loadLeads() }, [selectedConjunto, selectedCidade, searchTerm, page, filterUnsynced])
   useEffect(() => {
     if (selectedConjunto) loadCidades(selectedConjunto)
     else { setCidades([]); setSelectedCidade('') }
   }, [selectedConjunto])
+  useEffect(() => {
+    loadUnsyncedCount()
+  }, [])
+
+  const loadUnsyncedCount = async () => {
+    try {
+      const count = await leadsService.getUnsyncedCount()
+      setUnsyncedCount(count || 0)
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
   const loadStats = async () => {
     try { setStats(await leadsService.getStats()) }
@@ -79,11 +94,12 @@ function LeadsTab() {
   const loadLeads = async () => {
     setLoading(true)
     try {
-      const { leads: data, total: count } = await leadsService.getLeads({
+      const { leads: data, total: count } = await leadsService.getLeadsFiltered({
         limit, offset: (page - 1) * limit,
         conjunto: selectedConjunto || undefined,
         cidade: selectedCidade || undefined,
         search: searchTerm || undefined,
+        unsyncedOnly: filterUnsynced,
       })
       setLeads(data || [])
       setTotal(count || 0)
@@ -213,6 +229,19 @@ function LeadsTab() {
           </div>
         </div>
 
+        <div className="flex items-center justify-between gap-2 flex-wrap pt-2">
+          <button
+            onClick={() => { setFilterUnsynced(!filterUnsynced); setPage(1) }}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+              filterUnsynced
+                ? 'bg-primary text-white border-primary'
+                : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-low'
+            }`}
+          >
+            Não Sincronizados{unsyncedCount > 0 ? ` (${unsyncedCount})` : ''}
+          </button>
+        </div>
+
         <div className="flex items-center justify-between pt-4 border-t border-outline-variant/10">
           <div className="flex items-center gap-2 flex-wrap">
             {selectedLeads.size > 0 && (
@@ -272,7 +301,13 @@ function LeadsTab() {
                           onChange={() => toggleSelect(lead.id)} className="w-4 h-4" />
                       </td>
                       <td className="p-4">
-                        <div className="font-semibold">{lead.nome}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold">{lead.nome}</div>
+                          {lead.synced_to_sheets
+                            ? <span className="material-symbols-outlined text-green-500 text-sm" title="Sincronizado">check_circle</span>
+                            : <span className="material-symbols-outlined text-orange-400 text-sm" title="Não sincronizado">sync</span>
+                          }
+                        </div>
                         {lead.endereco && <div className="text-xs text-on-surface-variant mt-1">{lead.endereco}</div>}
                       </td>
                       <td className="p-4">
@@ -730,10 +765,25 @@ function SendToSheetsModal({ leadIds, onClose, onSent }) {
   const [distribution, setDistribution] = useState('all')
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [modalTab, setModalTab] = useState('now')
+  const [unsyncedOnly, setUnsyncedOnly] = useState(true)
+  const [unsyncedCount, setUnsyncedCount] = useState(0)
+  const [schedFrequency, setSchedFrequency] = useState('daily')
+  const [schedHour, setSchedHour] = useState(8)
+  const [schedRepeat, setSchedRepeat] = useState(1)
+  const [schedUnlimited, setSchedUnlimited] = useState(false)
+  const [scheduling, setScheduling] = useState(false)
 
   useEffect(() => {
-    gsheetsService.getWebhooks()
-      .then(wh => { setWebhooks(wh.filter(w => w.active)); setLoading(false) })
+    Promise.all([
+      gsheetsService.getWebhooks(),
+      leadsService.getUnsyncedCount(),
+    ])
+      .then(([wh, count]) => {
+        setWebhooks(wh.filter(w => w.active))
+        setUnsyncedCount(count || 0)
+        setLoading(false)
+      })
       .catch(e => { console.error(e); setLoading(false) })
   }, [])
 
@@ -747,63 +797,43 @@ function SendToSheetsModal({ leadIds, onClose, onSent }) {
     if (!selectedWebhooks.size) { toast.error('Selecione ao menos uma planilha'); return }
     setSending(true)
     try {
-      const leads = await leadsService.getLeadsByIds(leadIds)
+      let leads
+      if (unsyncedOnly) {
+        leads = await leadsService.getUnsyncedLeads({ limit: 500 })
+      } else {
+        leads = await leadsService.getLeadsByIds(leadIds)
+      }
       const activeWebhooks = webhooks.filter(w => selectedWebhooks.has(w.id))
 
-      let assignments = []
-      if (distribution === 'all') {
-        assignments = activeWebhooks.map(w => ({ webhook: w, leads }))
-      } else if (distribution === 'equal') {
-        const chunkSize = Math.ceil(leads.length / activeWebhooks.length)
-        assignments = activeWebhooks.map((w, i) => ({
-          webhook: w, leads: leads.slice(i * chunkSize, (i + 1) * chunkSize)
-        }))
-      } else if (distribution === 'daily_limit') {
-        let remaining = [...leads]
-        assignments = activeWebhooks.map(w => {
-          const chunk = remaining.splice(0, w.daily_limit)
-          return { webhook: w, leads: chunk }
-        })
-      }
-
-      let totalSent = 0
-      for (const { webhook, leads: batch } of assignments) {
-        if (!batch.length) continue
-        try {
-          const payload = {
-            leads: batch.map(l => ({
-              EMPRESA: l.nome, EMAIL: l.email || '', TELEFONE: l.telefone || '',
-              CIDADE: l.cidade || '', WEBSITE: l.website || '',
-            })),
-            source: 'prospectahub',
-            sent_at: new Date().toISOString(),
-          }
-          const res = await fetch(webhook.webhook_url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          })
-          const status = res.ok ? 'success' : 'error'
-          await gsheetsService.recordSend({
-            webhook_id: webhook.id, webhook_name: webhook.name,
-            leads_sent: batch.length, status,
-          })
-          if (res.ok) totalSent += batch.length
-        } catch (e) {
-          await gsheetsService.recordSend({
-            webhook_id: webhook.id, webhook_name: webhook.name,
-            leads_sent: 0, status: 'error', error_detail: e.message,
-          })
-        }
-      }
-
-      toast.success(`${totalSent} leads enviados para ${selectedWebhooks.size} planilha(s)`)
+      await sendLeadsToSheets({ leads, webhooks: activeWebhooks, distribution })
+      toast.success(`${leads.length} leads enviados para ${selectedWebhooks.size} planilha(s)`)
       onSent()
     } catch (e) {
       console.error(e)
       toast.error('Erro ao enviar leads')
     } finally {
       setSending(false)
+    }
+  }
+
+  const handleSchedule = async () => {
+    if (!selectedWebhooks.size) { toast.error('Selecione ao menos uma planilha'); return }
+    setScheduling(true)
+    try {
+      const webhookIds = [...selectedWebhooks]
+      await syncScheduleService.create({
+        frequency: schedFrequency,
+        hour_of_day: schedFrequency === 'daily' ? schedHour : null,
+        repeat_count: schedUnlimited ? -1 : schedRepeat,
+        webhook_ids: webhookIds,
+      })
+      toast.success('Agendamento criado com sucesso')
+      onClose()
+    } catch (e) {
+      console.error(e)
+      toast.error('Erro ao criar agendamento')
+    } finally {
+      setScheduling(false)
     }
   }
 
@@ -830,66 +860,169 @@ function SendToSheetsModal({ leadIds, onClose, onSent }) {
         </div>
       ) : (
         <div className="space-y-6">
-          <div>
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">
-              Planilhas de destino
-            </label>
-            <div className="space-y-2">
-              {webhooks.map(w => (
-                <label key={w.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-low cursor-pointer">
-                  <input type="checkbox" checked={selectedWebhooks.has(w.id)}
-                    onChange={() => toggleWebhook(w.id)} className="w-4 h-4" />
-                  <div className="flex-1">
-                    <div className="font-medium">{w.name}</div>
-                    {w.description && <div className="text-xs text-on-surface-variant">{w.description}</div>}
-                  </div>
-                  <span className="text-xs text-on-surface-variant">Limite: {w.daily_limit}/dia</span>
-                </label>
-              ))}
-            </div>
+          {/* Tabs */}
+          <div className="flex gap-1 p-1 bg-surface-container rounded-lg mb-4">
+            {[
+              { id: 'now', label: 'Sincronizar Agora' },
+              { id: 'schedule', label: 'Agendar' },
+            ].map(tab => (
+              <button key={tab.id} onClick={() => setModalTab(tab.id)}
+                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                  modalTab === tab.id
+                    ? 'bg-surface text-on-surface shadow-sm'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">
-              Modo de distribuição
-            </label>
-            <div className="space-y-2">
-              {[
-                { id: 'all', label: 'Todos para cada planilha', desc: 'Duplica os leads em todas as planilhas selecionadas' },
-                { id: 'equal', label: 'Distribuir igualmente', desc: 'Divide os leads entre as planilhas selecionadas' },
-                { id: 'daily_limit', label: 'Respeitar limite diário', desc: 'Não ultrapassa o limite configurado por planilha' },
-              ].map(opt => (
-                <label key={opt.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-surface-container-low cursor-pointer">
-                  <input type="radio" name="distribution" value={opt.id}
-                    checked={distribution === opt.id} onChange={() => setDistribution(opt.id)} className="mt-0.5" />
+          {modalTab === 'now' ? (
+            <div className="space-y-6">
+              {/* Checkbox para apenas não-sincronizados */}
+              {unsyncedCount > 0 && (
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-outline-variant/10 cursor-pointer hover:bg-surface-container-low">
+                  <input type="checkbox" checked={unsyncedOnly} onChange={(e) => setUnsyncedOnly(e.target.checked)} className="w-4 h-4" />
                   <div>
-                    <div className="font-medium text-sm">{opt.label}</div>
-                    <div className="text-xs text-on-surface-variant">{opt.desc}</div>
+                    <div className="font-medium text-sm">Apenas não-sincronizados</div>
+                    <div className="text-xs text-on-surface-variant">{unsyncedCount} leads aguardando sincronização</div>
                   </div>
                 </label>
-              ))}
-            </div>
-          </div>
+              )}
 
-          <div className="bg-surface-container rounded-lg p-4 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-base">info</span>
-              <span><strong>{leadIds.length} leads</strong> selecionados — {getPreview()}</span>
+              <div>
+                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">
+                  Planilhas de destino
+                </label>
+                <div className="space-y-2">
+                  {webhooks.map(w => (
+                    <label key={w.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-low cursor-pointer">
+                      <input type="checkbox" checked={selectedWebhooks.has(w.id)}
+                        onChange={() => toggleWebhook(w.id)} className="w-4 h-4" />
+                      <div className="flex-1">
+                        <div className="font-medium">{w.name}</div>
+                        {w.description && <div className="text-xs text-on-surface-variant">{w.description}</div>}
+                      </div>
+                      <span className="text-xs text-on-surface-variant">Limite: {w.daily_limit}/dia</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">
+                  Modo de distribuição
+                </label>
+                <div className="space-y-2">
+                  {[
+                    { id: 'all', label: 'Todos para cada planilha', desc: 'Duplica os leads em todas as planilhas selecionadas' },
+                    { id: 'equal', label: 'Distribuir igualmente', desc: 'Divide os leads entre as planilhas selecionadas' },
+                    { id: 'daily_limit', label: 'Respeitar limite diário', desc: 'Não ultrapassa o limite configurado por planilha' },
+                  ].map(opt => (
+                    <label key={opt.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-surface-container-low cursor-pointer">
+                      <input type="radio" name="distribution" value={opt.id}
+                        checked={distribution === opt.id} onChange={() => setDistribution(opt.id)} className="mt-0.5" />
+                      <div>
+                        <div className="font-medium text-sm">{opt.label}</div>
+                        <div className="text-xs text-on-surface-variant">{opt.desc}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-surface-container rounded-lg p-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-base">info</span>
+                  <span><strong>{unsyncedOnly && unsyncedCount > 0 ? unsyncedCount : leadIds.length} leads</strong> — {getPreview()}</span>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-6">
+              <div>
+                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">
+                  Frequência
+                </label>
+                <select value={schedFrequency} onChange={(e) => setSchedFrequency(e.target.value)} className="w-full">
+                  <option value="daily">Diário</option>
+                  <option value="weekly">Semanal</option>
+                  <option value="monthly">Mensal</option>
+                </select>
+              </div>
+
+              {schedFrequency === 'daily' && (
+                <div>
+                  <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">
+                    Hora do dia
+                  </label>
+                  <input type="number" min={0} max={23} value={schedHour} onChange={(e) => setSchedHour(parseInt(e.target.value) || 8)} className="w-full" />
+                </div>
+              )}
+
+              <div>
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-outline-variant/10 cursor-pointer hover:bg-surface-container-low">
+                  <input type="checkbox" checked={schedUnlimited} onChange={(e) => setSchedUnlimited(e.target.checked)} className="w-4 h-4" />
+                  <div>
+                    <div className="font-medium text-sm">Repetir indefinidamente</div>
+                    <div className="text-xs text-on-surface-variant">Sem limite de execuções</div>
+                  </div>
+                </label>
+              </div>
+
+              {!schedUnlimited && (
+                <div>
+                  <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">
+                    Número de repetições
+                  </label>
+                  <input type="number" min={1} value={schedRepeat} onChange={(e) => setSchedRepeat(parseInt(e.target.value) || 1)} className="w-full" />
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-3">
+                  Planilhas de destino
+                </label>
+                <div className="space-y-2">
+                  {webhooks.map(w => (
+                    <label key={w.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-low cursor-pointer">
+                      <input type="checkbox" checked={selectedWebhooks.has(w.id)}
+                        onChange={() => toggleWebhook(w.id)} className="w-4 h-4" />
+                      <div className="flex-1">
+                        <div className="font-medium">{w.name}</div>
+                        {w.description && <div className="text-xs text-on-surface-variant">{w.description}</div>}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       <div className="flex items-center justify-end gap-4 pt-4 border-t border-outline-variant/10 mt-4">
         <button onClick={onClose} className="btn-ghost">Cancelar</button>
-        <button onClick={handleSend} disabled={sending || !selectedWebhooks.size}
-          className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
-          {sending ? (
-            <><span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Enviando...</>
-          ) : (
-            <><span className="material-symbols-outlined text-lg">send</span>Enviar</>
-          )}
-        </button>
+        {modalTab === 'now' ? (
+          <button onClick={handleSend} disabled={sending || !selectedWebhooks.size}
+            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+            {sending ? (
+              <><span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Enviando...</>
+            ) : (
+              <><span className="material-symbols-outlined text-lg">send</span>Enviar</>
+            )}
+          </button>
+        ) : (
+          <button onClick={handleSchedule} disabled={scheduling || !selectedWebhooks.size}
+            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+            {scheduling ? (
+              <><span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Agendando...</>
+            ) : (
+              <><span className="material-symbols-outlined text-lg">schedule</span>Agendar</>
+            )}
+          </button>
+        )}
       </div>
     </Modal>
   )
@@ -1024,13 +1157,11 @@ function WebhookControlModal({ webhook, onClose }) {
     try {
       await gsheetsService.updateWebhook(webhook.id, { webhook_url: webhookUrl.trim() })
       toast.success('URL atualizada! Recarregando stats...')
-      // reload data with new URL
       loadData()
     } catch { toast.error('Erro ao salvar URL') }
     finally { setSavingUrl(false) }
   }
 
-  // Usa GET com ?payload= para evitar CORS preflight (Apps Script não suporta OPTIONS)
   const apiPost = async (payload) => {
     const url = currentUrl + '?payload=' + encodeURIComponent(JSON.stringify(payload))
     const res = await fetch(url)
@@ -1145,7 +1276,6 @@ function WebhookControlModal({ webhook, onClose }) {
 
   return (
     <Modal title={`Gerenciar — ${webhook.name}`} onClose={onClose}>
-      {/* URL do Webhook — editável para quando o AppScript gerar nova URL */}
       <div className="mb-5 p-4 rounded-lg" style={{ background: 'var(--pro-surface2)', border: '1px solid var(--pro-border)' }}>
         <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">
           URL do Webhook (AppScript)
@@ -1182,7 +1312,6 @@ function WebhookControlModal({ webhook, onClose }) {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Stats em tempo real */}
           {stats && (
             <>
               <div className="grid grid-cols-3 gap-3">
@@ -1225,100 +1354,81 @@ function WebhookControlModal({ webhook, onClose }) {
             </>
           )}
 
-          {/* Configurações */}
-          <div className="border-t border-outline-variant/10 pt-4">
-            <h4 className="font-semibold mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-base text-primary">settings</span>
-              Configurações de Envio
-            </h4>
-            <div className="space-y-4">
+          <div className="bg-surface-container rounded-lg p-4 space-y-4">
+            <h4 className="font-semibold text-sm">Configurar Robô de Envio</h4>
+            <div>
+              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">
+                Assunto do Rascunho Gmail
+              </label>
+              <input type="text" value={subject} onChange={e => setSubject(e.target.value)}
+                placeholder="Ex: Novos leads de prospecção" className="w-full text-sm" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">
-                  Assunto do Rascunho (Gmail) *
-                </label>
-                <input type="text" value={subject} onChange={e => setSubject(e.target.value)}
-                  placeholder="Ex: Proposta para {{EMPRESA}}" className="w-full" />
-                <p className="text-xs text-on-surface-variant mt-1">
-                  Crie um rascunho no Gmail com esse assunto. Use {`{{EMPRESA}}`}, {`{{EMAIL}}`}, {`{{CIDADE}}`} no corpo.
-                </p>
+                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Limite diário</label>
+                <input type="number" value={dailyLimit} min={1} onChange={e => setDailyLimit(parseInt(e.target.value) || 80)} className="w-full text-sm" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Limite diário (emails)</label>
-                  <input type="number" value={dailyLimit} min={1} max={500}
-                    onChange={e => setDailyLimit(parseInt(e.target.value) || 80)} className="w-full" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Lote por hora</label>
-                  <input type="number" value={batchSize} min={1} max={100}
-                    onChange={e => setBatchSize(parseInt(e.target.value) || 20)} className="w-full" />
-                </div>
+              <div>
+                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Batch/hora</label>
+                <input type="number" value={batchSize} min={1} onChange={e => setBatchSize(parseInt(e.target.value) || 20)} className="w-full text-sm" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Hora início</label>
-                  <input type="number" value={minHour} min={0} max={23}
-                    onChange={e => setMinHour(parseInt(e.target.value) || 8)} className="w-full" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Hora fim</label>
-                  <input type="number" value={maxHour} min={1} max={23}
-                    onChange={e => setMaxHour(parseInt(e.target.value) || 16)} className="w-full" />
-                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Hora mín.</label>
+                <input type="number" value={minHour} min={0} max={23} onChange={e => setMinHour(parseInt(e.target.value) || 8)} className="w-full text-sm" />
               </div>
-              <button onClick={handleConfigure} disabled={saving}
-                className="btn-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed">
-                {saving
-                  ? <><span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Salvando...</>
-                  : <><span className="material-symbols-outlined text-lg">save</span>Salvar Configurações</>}
+              <div>
+                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Hora máx.</label>
+                <input type="number" value={maxHour} min={0} max={23} onChange={e => setMaxHour(parseInt(e.target.value) || 16)} className="w-full text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">Dias da semana</label>
+              <div className="flex gap-1 flex-wrap">
+                {DAYS.map((d, i) => (
+                  <button key={i} onClick={() => toggleDay(i)}
+                    className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
+                      selectedDays.includes(i)
+                        ? 'bg-primary text-white'
+                        : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+                    }`}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button onClick={handleConfigure} disabled={saving}
+              className="btn-primary w-full justify-center disabled:opacity-50">
+              {saving ? 'Salvando...' : 'Salvar Configurações'}
+            </button>
+          </div>
+
+          <div className="bg-surface-container rounded-lg p-4">
+            <h4 className="font-semibold text-sm mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-base text-primary">schedule</span>
+              Agendamento
+            </h4>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => handleSchedule(true)} disabled={saving || stats?.schedule_active}
+                className={`justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
+                  stats?.schedule_active ? 'btn-ghost' : 'btn-primary'
+                }`}>
+                <span className="material-symbols-outlined text-lg">play_arrow</span>
+                {stats?.schedule_active ? 'Já ativo' : 'Ativar'}
+              </button>
+              <button onClick={() => handleSchedule(false)} disabled={saving || !stats?.schedule_active}
+                className={`justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
+                  stats?.schedule_active
+                    ? 'btn-ghost text-error border-error hover:bg-error/10'
+                    : 'btn-ghost opacity-40'
+                }`}>
+                <span className="material-symbols-outlined text-lg">stop</span>
+                Parar
               </button>
             </div>
           </div>
 
-          {/* Agendamento */}
-          <div className="border-t border-outline-variant/10 pt-4">
-            <h4 className="font-semibold mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-base text-primary">schedule</span>
-              Agendamento Automático
-            </h4>
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-2">
-                  Dias de funcionamento
-                </label>
-                <div className="flex gap-1">
-                  {DAYS.map((day, i) => (
-                    <button key={i} onClick={() => toggleDay(i)}
-                      className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-colors cursor-pointer ${
-                        selectedDays.includes(i)
-                          ? 'bg-primary border-primary text-white'
-                          : 'bg-surface-container border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high'
-                      }`}>{day}</button>
-                  ))}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => handleSchedule(true)} disabled={saving || stats?.schedule_active}
-                  className={`justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                    stats?.schedule_active ? 'btn-ghost' : 'btn-primary'
-                  }`}>
-                  <span className="material-symbols-outlined text-lg">play_arrow</span>
-                  {stats?.schedule_active ? 'Já ativo' : 'Ativar'}
-                </button>
-                <button onClick={() => handleSchedule(false)} disabled={saving || !stats?.schedule_active}
-                  className={`justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                    stats?.schedule_active
-                      ? 'btn-ghost text-error border-error hover:bg-error/10'
-                      : 'btn-ghost opacity-40'
-                  }`}>
-                  <span className="material-symbols-outlined text-lg">stop</span>
-                  Parar
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Ações imediatas */}
           <div className="border-t border-outline-variant/10 pt-4">
             <h4 className="font-semibold mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-base text-primary">bolt</span>
@@ -1344,7 +1454,6 @@ function WebhookControlModal({ webhook, onClose }) {
             </div>
           </div>
 
-          {/* Relatório Diário */}
           <div className="border-t border-outline-variant/10 pt-4">
             <h4 className="font-semibold mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-base text-primary">summarize</span>

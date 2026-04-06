@@ -147,6 +147,68 @@ export const leadsService = {
       .in('id', leadIds)
     if (error) throw error
     return data || []
+  },
+
+  /** Get only unsynced leads */
+  async getUnsyncedLeads({ limit = 500, conjunto, cidade } = {}) {
+    let query = supabase
+      .from('gmap_leads')
+      .select('*', { count: 'exact' })
+      .eq('synced_to_sheets', false)
+      .order('created_at', { ascending: false })
+      .range(0, limit - 1)
+    if (conjunto) query = query.eq('conjunto_de_locais', conjunto)
+    if (cidade) query = query.eq('cidade', cidade)
+    const { data, error, count } = await query
+    if (error) throw error
+    return { leads: data || [], total: count || 0 }
+  },
+
+  /** Mark leads as synced */
+  async markAsSynced(leadIds) {
+    if (!leadIds?.length) return
+    const { error } = await supabase
+      .from('gmap_leads')
+      .update({ synced_to_sheets: true })
+      .in('id', leadIds)
+    if (error) throw error
+  },
+
+  /** Get unsynced leads by task_id */
+  async getLeadsByTaskId(taskId) {
+    const { data, error } = await supabase
+      .from('gmap_leads')
+      .select('*')
+      .eq('task_id', taskId)
+      .eq('synced_to_sheets', false)
+    if (error) throw error
+    return data || []
+  },
+
+  /** Count unsynced leads */
+  async getUnsyncedCount() {
+    const { count, error } = await supabase
+      .from('gmap_leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('synced_to_sheets', false)
+    if (error) throw error
+    return count || 0
+  },
+
+  /** Get leads with optional unsyncedOnly filter */
+  async getLeadsFiltered({ limit = 50, offset = 0, conjunto, cidade, search, unsyncedOnly } = {}) {
+    let query = supabase
+      .from('gmap_leads')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+    if (conjunto) query = query.eq('conjunto_de_locais', conjunto)
+    if (cidade) query = query.eq('cidade', cidade)
+    if (search) query = query.or(`nome.ilike.%${search}%,telefone.ilike.%${search}%,website.ilike.%${search}%,email.ilike.%${search}%`)
+    if (unsyncedOnly) query = query.eq('synced_to_sheets', false)
+    const { data, error, count } = await query
+    if (error) throw error
+    return { leads: data || [], total: count || 0 }
   }
 }
 
@@ -268,6 +330,77 @@ export const gsheetsService = {
       week: sum(weekRes),
       month: sum(monthRes)
     }
+  }
+}
+
+/**
+ * SYNC SCHEDULES
+ */
+
+function computeNextRun(frequency, hour_of_day) {
+  const now = new Date()
+  if (frequency === 'hourly') {
+    return new Date(now.getTime() + 60 * 60 * 1000).toISOString()
+  }
+  const next = new Date(now)
+  next.setHours(hour_of_day ?? 8, 0, 0, 0)
+  if (next <= now) next.setDate(next.getDate() + 1)
+  return next.toISOString()
+}
+
+export const syncScheduleService = {
+  async getActive() {
+    const { data, error } = await supabase
+      .from('sync_schedules')
+      .select('*')
+      .eq('active', true)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  },
+
+  async create({ frequency, hour_of_day, repeat_count, webhook_ids }) {
+    const userId = await getCurrentUserId()
+    const next_run_at = computeNextRun(frequency, hour_of_day)
+    const { data, error } = await supabase
+      .from('sync_schedules')
+      .insert({ user_id: userId, frequency, hour_of_day, repeat_count, webhook_ids, next_run_at })
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async recordRun(id, currentSchedule) {
+    const runs_done = currentSchedule.runs_done + 1
+    const exhausted = currentSchedule.repeat_count !== -1 && runs_done >= currentSchedule.repeat_count
+    const { error } = await supabase
+      .from('sync_schedules')
+      .update({
+        runs_done,
+        last_run_at: new Date().toISOString(),
+        next_run_at: exhausted ? null : computeNextRun(currentSchedule.frequency, currentSchedule.hour_of_day),
+        active: !exhausted,
+      })
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  async deactivate(id) {
+    const { error } = await supabase
+      .from('sync_schedules')
+      .update({ active: false })
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  async getAll() {
+    const { data, error } = await supabase
+      .from('sync_schedules')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
   }
 }
 

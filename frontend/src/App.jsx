@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast'
 
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import useWebSocket from './hooks/useWebSocket'
+import { useSyncScheduler } from './hooks/useSyncScheduler'
 import useConfigStore from './store/useConfigStore'
 import Sidebar from './components/layout/Sidebar'
 import TopBar from './components/layout/TopBar'
@@ -49,6 +50,7 @@ function ProtectedRoute({ children }) {
 
 function AppLayout() {
   useWebSocket()
+  useSyncScheduler()
   const loadFromSupabase = useConfigStore((s) => s.loadFromSupabase)
 
   // Load configuration on app startup
