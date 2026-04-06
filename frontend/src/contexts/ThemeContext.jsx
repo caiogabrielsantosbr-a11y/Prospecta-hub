@@ -5,7 +5,7 @@ const ThemeContext = createContext(null);
 export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(() => {
     try {
-      const stored = localStorage.getItem('obsidian-hub-theme');
+      const stored = localStorage.getItem('prospecta-theme');
       return stored === 'light' ? 'light' : 'dark';
     } catch (error) {
       console.warn('Failed to read theme from localStorage:', error);
@@ -19,7 +19,7 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem('obsidian-hub-theme', theme);
+      localStorage.setItem('prospecta-theme', theme);
     } catch (error) {
       console.warn('Failed to save theme to localStorage:', error);
     }
@@ -50,10 +50,10 @@ export function ThemeProvider({ children }) {
 
 export function useTheme() {
   const context = useContext(ThemeContext);
-  
+
   if (context === null) {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
-  
+
   return context;
 }
