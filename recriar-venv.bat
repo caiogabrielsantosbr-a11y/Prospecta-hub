@@ -42,22 +42,28 @@ echo.
 
 echo [4/5] Instalando dependencias principais...
 echo Instalando uvicorn...
-venv\Scripts\python.exe -m pip install uvicorn[standard]
+venv\Scripts\python.exe -m pip install "uvicorn[standard]>=0.34"
 
 echo Instalando fastapi...
-venv\Scripts\python.exe -m pip install fastapi
+venv\Scripts\python.exe -m pip install "fastapi>=0.115"
 
-echo Instalando outras dependencias...
-venv\Scripts\python.exe -m pip install python-dotenv httpx pydantic supabase
+echo Instalando outras dependencias essenciais...
+venv\Scripts\python.exe -m pip install python-dotenv httpx playwright beautifulsoup4 aiofiles openpyxl
 
-echo Instalando playwright...
-venv\Scripts\python.exe -m pip install playwright
+echo Instalando supabase (pode demorar)...
+venv\Scripts\python.exe -m pip install supabase --no-build-isolation
+
+echo Instalando playwright browser...
 venv\Scripts\python.exe -m playwright install chromium
 echo.
 
-echo [5/5] Instalando dependencias do requirements.txt...
+echo [5/5] Instalando dependencias opcionais do requirements.txt...
 if exist "requirements.txt" (
-    venv\Scripts\python.exe -m pip install -r requirements.txt
+    echo Tentando instalar dependencias restantes...
+    venv\Scripts\python.exe -m pip install -r requirements.txt --no-build-isolation 2>nul
+    if errorlevel 1 (
+        echo [AVISO] Algumas dependencias opcionais falharam, mas o essencial foi instalado
+    )
 ) else (
     echo [AVISO] requirements.txt nao encontrado
 )

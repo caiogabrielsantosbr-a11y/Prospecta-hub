@@ -1,0 +1,26 @@
+# Requisitos mínimos para rodar o Prospecta HUB
+# Use este arquivo se tiver problemas com requirements.txt
+
+# Web Framework
+fastapi>=0.115
+uvicorn[standard]>=0.34
+
+# HTTP Client
+httpx>=0.28
+
+# Environment Variables
+python-dotenv>=1.0
+
+# Web Scraping
+playwright>=1.49
+beautifulsoup4>=4.12
+
+# File Handling
+openpyxl>=3.1
+aiofiles>=24.1
+
+# Database (Supabase)
+supabase>=2.0
+
+# WebSocket (opcional)
+python-socketio>=5.12
