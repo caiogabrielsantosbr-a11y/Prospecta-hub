@@ -25,6 +25,12 @@ export default function GMapPage() {
   const [extractEmails, setExtractEmails] = useState(true) // Extração de email ativada por padrão
   const [autoSyncToSheets, setAutoSyncToSheets] = useState(false)
   const [isStarting, setIsStarting] = useState(false) // Prevent double-click
+
+  // Sync configuration states
+  const [syncMode, setSyncMode] = useState('ao_concluir')
+  const [syncQuantity, setSyncQuantity] = useState(10)
+  const [syncInterval, setSyncInterval] = useState(30)
+
   const [liveStats, setLiveStats] = useState({
     queue: 0,
     done: 0,
@@ -106,6 +112,41 @@ export default function GMapPage() {
     }
     loadLocations()
   }, [])
+
+  // Load sync configuration on mount
+  useEffect(() => {
+    const loadSyncConfig = async () => {
+      try {
+        const response = await api.getSyncConfig()
+        if (response.success && response.config) {
+          setSyncMode(response.config.sync_mode)
+          setSyncQuantity(response.config.sync_quantity)
+          setSyncInterval(response.config.sync_interval_seconds)
+        }
+      } catch (err) {
+        console.error('Failed to load sync config:', err)
+      }
+    }
+    loadSyncConfig()
+  }, [])
+
+  // Save sync configuration
+  const saveSyncConfig = async (mode, quantity, interval) => {
+    try {
+      const response = await api.saveSyncConfig({
+        sync_mode: mode,
+        sync_quantity: quantity,
+        sync_interval_seconds: interval
+      })
+      if (response.success) {
+        toast.success('Configuração salva')
+      } else {
+        toast.error('Erro ao salvar: ' + response.error)
+      }
+    } catch (err) {
+      toast.error('Erro ao salvar configuração')
+    }
+  }
 
   const handleLocationSetChange = async (setId) => {
     setSelectedLocationSet(setId)
@@ -325,319 +366,460 @@ export default function GMapPage() {
   return (
     <>
       <div className="content-wrapper">
-      {/* Stats Dark Grid — 4 cols */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
-        <div className="stat-card-dark">
-          <div className="sc-label">Fila</div>
-          <div className="sc-val" style={{ fontSize: 24 }}>{stats.queue.toLocaleString()}</div>
+        {/* Stats Dark Grid — 4 cols */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
+          <div className="stat-card-dark">
+            <div className="sc-label">Fila</div>
+            <div className="sc-val" style={{ fontSize: 24 }}>{stats.queue.toLocaleString()}</div>
+          </div>
+          <div className="stat-card-dark">
+            <div className="sc-label" style={{ color: 'var(--pro-success)' }}>Concluídos</div>
+            <div className="sc-val" style={{ fontSize: 24, color: 'var(--pro-success)' }}>{stats.done.toLocaleString()}</div>
+          </div>
+          <div className="stat-card-dark">
+            <div className="sc-label">Leads</div>
+            <div className="sc-val" style={{ fontSize: 24 }}>{stats.leads.toLocaleString()}</div>
+          </div>
+          <div className="stat-card-dark">
+            <div className="sc-label" style={{ color: '#f87171' }}>Erros</div>
+            <div className="sc-val" style={{ fontSize: 24, color: '#f87171' }}>{stats.errors.toString().padStart(2, '0')}</div>
+          </div>
         </div>
-        <div className="stat-card-dark">
-          <div className="sc-label" style={{ color: 'var(--pro-success)' }}>Concluídos</div>
-          <div className="sc-val" style={{ fontSize: 24, color: 'var(--pro-success)' }}>{stats.done.toLocaleString()}</div>
-        </div>
-        <div className="stat-card-dark">
-          <div className="sc-label">Leads</div>
-          <div className="sc-val" style={{ fontSize: 24 }}>{stats.leads.toLocaleString()}</div>
-        </div>
-        <div className="stat-card-dark">
-          <div className="sc-label" style={{ color: '#f87171' }}>Erros</div>
-          <div className="sc-val" style={{ fontSize: 24, color: '#f87171' }}>{stats.errors.toString().padStart(2, '0')}</div>
-        </div>
-      </div>
 
-      {/* Main Content Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {/* Left Column - Config */}
-        <div>
-          {/* Extractor Config */}
-          <div className="form-section" style={{ marginBottom: 16 }}>
-            <div className="fs-title">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="10" y2="18"/></svg>
-              Configuração do Extrator
-            </div>
-
-            {/* Search Term */}
-            <div style={{ marginBottom: 12 }}>
-              <div className="field-label">Termo de Busca</div>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Ex: Dentistas em São Paulo"
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            {/* Delay */}
-            <div style={{ marginBottom: 12 }}>
-              <div className="field-label">Atraso (s)</div>
-              <input
-                type="number"
-                value={delay}
-                onChange={(e) => setDelay(parseInt(e.target.value) || 0)}
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            {/* Toggle Switches */}
-            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-              <div style={{ flex: 1, background: 'var(--pro-surface3)', border: '0.5px solid var(--pro-border)', borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--pro-text)' }}>{headless ? 'Navegador Oculto' : 'Navegador Visual'}</div>
-                  <div style={{ fontSize: 10, color: 'var(--pro-muted)' }}>{headless ? 'Modo headless' : 'Modo visível'}</div>
-                </div>
-                <div className={`pro-toggle ${!headless ? 'on' : ''}`} onClick={() => setHeadless(!headless)} />
+        {/* Main Content Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {/* Left Column - Config */}
+          <div>
+            {/* Extractor Config */}
+            <div className="form-section" style={{ marginBottom: 16 }}>
+              <div className="fs-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="14" y2="12" /><line x1="4" y1="18" x2="10" y2="18" /></svg>
+                Configuração do Extrator
               </div>
-              <div style={{ flex: 1, background: 'var(--pro-surface3)', border: '0.5px solid var(--pro-border)', borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--pro-text)' }}>{extractEmails ? 'Extração Ativa' : 'Extração Desativada'}</div>
-                  <div style={{ fontSize: 10, color: 'var(--pro-muted)' }}>{extractEmails ? 'Buscando emails' : 'Sem extração'}</div>
-                </div>
-                <div className={`pro-toggle ${extractEmails ? 'on' : ''}`} onClick={() => setExtractEmails(!extractEmails)} />
-              </div>
-              <div style={{ flex: 1, background: 'var(--pro-surface3)', border: '0.5px solid var(--pro-border)', borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--pro-text)' }}>{autoSyncToSheets ? 'Enviar p/ Planilhas' : 'Sem Envio Auto'}</div>
-                  <div style={{ fontSize: 10, color: 'var(--pro-muted)' }}>{autoSyncToSheets ? 'Sincroniza ao concluir' : 'Desativado'}</div>
-                </div>
-                <div className={`pro-toggle ${autoSyncToSheets ? 'on' : ''}`} onClick={() => setAutoSyncToSheets(!autoSyncToSheets)} />
-              </div>
-            </div>
 
-            {/* Location Set Selector - Always visible */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                  CONJUNTO DE LOCAIS
-                </label>
-                <button
-                  onClick={() => setShowManageModal(true)}
-                  className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
-                  title="Gerenciar conjuntos"
-                >
-                  <span className="material-symbols-outlined text-xs">settings</span>
-                  GERENCIAR
-                </button>
+              {/* Search Term */}
+              <div style={{ marginBottom: 12 }}>
+                <div className="field-label">Termo de Busca</div>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Ex: Dentistas em São Paulo"
+                  style={{ width: '100%' }}
+                />
               </div>
-              {availableLocations.length > 0 ? (
-                <select
-                  value={selectedLocationSet}
-                  onChange={(e) => handleLocationSetChange(e.target.value)}
-                  className="w-full !bg-surface-container-high !border-outline-variant/30 text-sm"
-                >
-                  {availableLocations.map(loc => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.name} ({loc.location_count} locais)
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="w-full p-3 rounded bg-surface-container-high border border-outline-variant/15 text-center text-sm text-on-surface-variant">
-                  Nenhum conjunto cadastrado
-                </div>
-              )}
-            </div>
 
-            {/* Target Geographies */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                  GEOGRAFIAS ALVO
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={selectAll}
-                    className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors"
-                  >
-                    TODOS
-                  </button>
-                  <button
-                    onClick={selectNone}
-                    className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors"
-                  >
-                    NENHUM
-                  </button>
-                  <button
-                    onClick={selectPending}
-                    className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors"
-                  >
-                    PENDENTES
-                  </button>
-                  <button
-                    onClick={resetProgress}
-                    className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-error/20 text-on-surface-variant hover:text-error transition-colors"
-                    title="Resetar progresso"
-                  >
-                    <span className="material-symbols-outlined text-xs">refresh</span>
-                  </button>
+              {/* Delay */}
+              <div style={{ marginBottom: 12 }}>
+                <div className="field-label">Atraso (s)</div>
+                <input
+                  type="number"
+                  value={delay}
+                  onChange={(e) => setDelay(parseInt(e.target.value) || 0)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              {/* Toggle Switches */}
+              <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                <div style={{ flex: 1, background: 'var(--pro-surface3)', border: '0.5px solid var(--pro-border)', borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--pro-text)' }}>{headless ? 'Navegador Oculto' : 'Navegador Visual'}</div>
+                    <div style={{ fontSize: 10, color: 'var(--pro-muted)' }}>{headless ? 'Modo headless' : 'Modo visível'}</div>
+                  </div>
+                  <div className={`pro-toggle ${!headless ? 'on' : ''}`} onClick={() => setHeadless(!headless)} />
+                </div>
+                <div style={{ flex: 1, background: 'var(--pro-surface3)', border: '0.5px solid var(--pro-border)', borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--pro-text)' }}>{extractEmails ? 'Extração Ativa' : 'Extração Desativada'}</div>
+                    <div style={{ fontSize: 10, color: 'var(--pro-muted)' }}>{extractEmails ? 'Buscando emails' : 'Sem extração'}</div>
+                  </div>
+                  <div className={`pro-toggle ${extractEmails ? 'on' : ''}`} onClick={() => setExtractEmails(!extractEmails)} />
+                </div>
+                <div style={{ flex: 1, background: 'var(--pro-surface3)', border: '0.5px solid var(--pro-border)', borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--pro-text)' }}>{autoSyncToSheets ? 'Enviar p/ Planilhas' : 'Sem Envio Auto'}</div>
+                    <div style={{ fontSize: 10, color: 'var(--pro-muted)' }}>{autoSyncToSheets ? 'Sincroniza ao concluir' : 'Desativado'}</div>
+                  </div>
+                  <div className={`pro-toggle ${autoSyncToSheets ? 'on' : ''}`} onClick={() => setAutoSyncToSheets(!autoSyncToSheets)} />
                 </div>
               </div>
-              <div className="text-[9px] text-on-surface-variant/60 italic">
-                * Nenhuma seleção = todos na ordem
-              </div>
-              {/* Location Checkboxes Grid */}
-              <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                {Object.entries(selectedCities).map(([city, selected]) => {
-                  const cityKey = `${selectedLocationSet}:${city}`
-                  const isCompleted = completedCities[cityKey]
 
-                  return (
-                    <label
-                      key={city}
-                      className={`flex items-center gap-2 cursor-pointer group relative ${isCompleted ? 'opacity-50' : ''}`}
-                    >
+              {/* Sync Options Section */}
+              {autoSyncToSheets && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--pro-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="23 4 23 10 17 10" />
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                    </svg>
+                    Opções de Sincronização
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* Option 1: Ao Concluir */}
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '10px 12px',
+                      background: syncMode === 'ao_concluir' ? 'var(--pro-surface3)' : 'transparent',
+                      border: '0.5px solid var(--pro-border)',
+                      borderRadius: 6,
+                      cursor: 'pointer'
+                    }}>
                       <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() => toggleCity(city)}
-                        className="w-4 h-4 rounded border-outline-variant bg-surface-container-high checked:bg-primary checked:border-primary cursor-pointer"
+                        type="radio"
+                        name="syncMode"
+                        value="ao_concluir"
+                        checked={syncMode === 'ao_concluir'}
+                        onChange={(e) => {
+                          setSyncMode(e.target.value)
+                          saveSyncConfig(e.target.value, syncQuantity, syncInterval)
+                        }}
+                        style={{ cursor: 'pointer' }}
                       />
-                      <span className={`text-sm ${isCompleted ? 'line-through text-on-surface-variant/50' : 'text-on-surface-variant group-hover:text-primary'} transition-colors`}>
-                        {city}
-                      </span>
-                      {isCompleted && (
-                        <span className="material-symbols-outlined text-primary text-xs ml-auto" title="Concluído">
-                          check_circle
-                        </span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--pro-text)' }}>
+                          Sincronizar ao concluir
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--pro-muted)' }}>
+                          Envia todos os leads apenas quando a extração finalizar
+                        </div>
+                      </div>
+                    </label>
+
+                    {/* Option 2: Por Quantidade */}
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '10px 12px',
+                      background: syncMode === 'por_quantidade' ? 'var(--pro-surface3)' : 'transparent',
+                      border: '0.5px solid var(--pro-border)',
+                      borderRadius: 6,
+                      cursor: 'pointer'
+                    }}>
+                      <input
+                        type="radio"
+                        name="syncMode"
+                        value="por_quantidade"
+                        checked={syncMode === 'por_quantidade'}
+                        onChange={(e) => {
+                          setSyncMode(e.target.value)
+                          saveSyncConfig(e.target.value, syncQuantity, syncInterval)
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--pro-text)' }}>
+                          Sincronizar a cada X leads
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--pro-muted)' }}>
+                          Envia um lote a cada quantidade configurada
+                        </div>
+                      </div>
+                      {syncMode === 'por_quantidade' && (
+                        <input
+                          type="number"
+                          value={syncQuantity}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 10
+                            setSyncQuantity(Math.max(1, Math.min(100, val)))
+                          }}
+                          onBlur={() => saveSyncConfig(syncMode, syncQuantity, syncInterval)}
+                          min="1"
+                          max="100"
+                          style={{ width: 70, textAlign: 'center', padding: '4px 8px', borderRadius: 4, border: '0.5px solid var(--pro-border)', background: 'var(--pro-surface2)' }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
                       )}
                     </label>
-                  )
-                })}
-              </div>
-            </div>
 
-            {/* Action Buttons */}
-            <button
-              onClick={handleStart}
-              disabled={isStarting || currentTask?.status === 'running'}
-              className="btn-primary"
-              style={{ width: '100%', justifyContent: 'center', marginBottom: 8, pointerEvents: isStarting || currentTask?.status === 'running' ? 'none' : 'auto' }}
-              aria-busy={isStarting}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              {isStarting ? 'Iniciando...' : 'Iniciar Processo'}
-            </button>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <button
-                onClick={handlePause}
-                disabled={!currentTask || currentTask.status !== 'running'}
-                className="btn-ghost"
-                style={{ justifyContent: 'center', opacity: (!currentTask || currentTask.status !== 'running') ? 0.4 : 1 }}
-              >
-                Pausar
-              </button>
-              <button
-                onClick={handleStop}
-                disabled={!currentTask}
-                className="btn-ghost"
-                style={{ justifyContent: 'center', opacity: !currentTask ? 0.4 : 1 }}
-              >
-                Parar
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column - Map & Logs */}
-        <div>
-          {/* Live Map Preview */}
-          <div className="map-preview" style={{ height: 200, marginBottom: 12 }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 30% 50%, rgba(232,89,60,0.06) 0%, transparent 60%), radial-gradient(circle at 70% 30%, rgba(196,24,90,0.05) 0%, transparent 50%)' }} />
-            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.15 }} viewBox="0 0 400 200" preserveAspectRatio="none">
-              <path d="M0 50 L400 50 M0 100 L400 100 M0 150 L400 150 M100 0 L100 200 M200 0 L200 200 M300 0 L300 200" stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" fill="none"/>
-            </svg>
-
-            {/* Map Pins */}
-            {mapMarkers.map((marker) => (
-              <div key={marker.id} className="map-pin" style={{ top: `${marker.y}%`, left: `${marker.x}%` }} />
-            ))}
-
-            {/* Live badge */}
-            <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(10,10,10,0.85)', border: '0.5px solid var(--pro-border2)', padding: '4px 10px', borderRadius: 6, fontSize: 10, color: 'var(--pro-orange)', display: 'flex', alignItems: 'center', gap: 5, fontWeight: 600 }}>
-              <div className="live-dot" />
-              Visualização ao Vivo: {currentLocation}
-            </div>
-          </div>
-
-          {/* Terminal Log */}
-          <div className="pro-terminal" style={{ height: 240, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div className="term-head">
-              <div className="term-dots">
-                <div className="term-dot" style={{ background: '#f87171' }} />
-                <div className="term-dot" style={{ background: '#fbbf24' }} />
-                <div className="term-dot" style={{ background: '#4ade80' }} />
-              </div>
-              <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.5)', letterSpacing: '0.1em' }}>LOG DO TERMINAL</span>
-            </div>
-
-            <div style={{ flex: 1, overflow: 'auto' }} className="custom-scrollbar">
-              {currentTask?.logs?.length > 0 ? (
-                currentTask.logs.slice(-15).map((log, i) => (
-                  <div key={i} className="term-line">
-                    [{log.time}] <span className="hl">{log.level === 'error' ? 'FALHA' : log.level === 'success' ? 'SUCESSO' : 'PENDENTE'}:</span> {log.message}
+                    {/* Option 3: Por Tempo */}
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '10px 12px',
+                      background: syncMode === 'por_tempo' ? 'var(--pro-surface3)' : 'transparent',
+                      border: '0.5px solid var(--pro-border)',
+                      borderRadius: 6,
+                      cursor: 'pointer'
+                    }}>
+                      <input
+                        type="radio"
+                        name="syncMode"
+                        value="por_tempo"
+                        checked={syncMode === 'por_tempo'}
+                        onChange={(e) => {
+                          setSyncMode(e.target.value)
+                          saveSyncConfig(e.target.value, syncQuantity, syncInterval)
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--pro-text)' }}>
+                          Sincronizar a cada X segundos
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--pro-muted)' }}>
+                          Envia um lote a cada intervalo de tempo
+                        </div>
+                      </div>
+                      {syncMode === 'por_tempo' && (
+                        <input
+                          type="number"
+                          value={syncInterval}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 30
+                            setSyncInterval(Math.max(10, Math.min(300, val)))
+                          }}
+                          onBlur={() => saveSyncConfig(syncMode, syncQuantity, syncInterval)}
+                          min="10"
+                          max="300"
+                          style={{ width: 70, textAlign: 'center', padding: '4px 8px', borderRadius: 4, border: '0.5px solid var(--pro-border)', background: 'var(--pro-surface2)' }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      )}
+                    </label>
                   </div>
-                ))
-              ) : (
-                <>
-                  <div className="term-line">[09:41:02] <span className="hl">SUCESSO:</span> Inicializando PROSPECTA V4...</div>
-                  <div className="term-line">[09:41:03] <span className="hl">SUCESSO:</span> Proxy estabelecido</div>
-                  <div className="term-line" style={{ color: 'rgba(251,191,36,0.7)' }}>[09:41:05] PENDENTE: Motor de busca iniciado</div>
-                  <div className="term-line">[09:41:08] <span className="hl">SUCESSO:</span> 48 localizações indexadas</div>
-                  <div className="term-line">[09:41:10] <span className="hl">SUCESSO:</span> Extraindo: Clínica Sorriso Real</div>
-                </>
+                </div>
               )}
+
+              {/* Location Set Selector - Always visible */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                    CONJUNTO DE LOCAIS
+                  </label>
+                  <button
+                    onClick={() => setShowManageModal(true)}
+                    className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+                    title="Gerenciar conjuntos"
+                  >
+                    <span className="material-symbols-outlined text-xs">settings</span>
+                    GERENCIAR
+                  </button>
+                </div>
+                {availableLocations.length > 0 ? (
+                  <select
+                    value={selectedLocationSet}
+                    onChange={(e) => handleLocationSetChange(e.target.value)}
+                    className="w-full !bg-surface-container-high !border-outline-variant/30 text-sm"
+                  >
+                    {availableLocations.map(loc => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.name} ({loc.location_count} locais)
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full p-3 rounded bg-surface-container-high border border-outline-variant/15 text-center text-sm text-on-surface-variant">
+                    Nenhum conjunto cadastrado
+                  </div>
+                )}
+              </div>
+
+              {/* Target Geographies */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                    GEOGRAFIAS ALVO
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={selectAll}
+                      className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors"
+                    >
+                      TODOS
+                    </button>
+                    <button
+                      onClick={selectNone}
+                      className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors"
+                    >
+                      NENHUM
+                    </button>
+                    <button
+                      onClick={selectPending}
+                      className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary transition-colors"
+                    >
+                      PENDENTES
+                    </button>
+                    <button
+                      onClick={resetProgress}
+                      className="text-[9px] px-2 py-1 rounded bg-surface-container-high hover:bg-error/20 text-on-surface-variant hover:text-error transition-colors"
+                      title="Resetar progresso"
+                    >
+                      <span className="material-symbols-outlined text-xs">refresh</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="text-[9px] text-on-surface-variant/60 italic">
+                  * Nenhuma seleção = todos na ordem
+                </div>
+                {/* Location Checkboxes Grid */}
+                <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                  {Object.entries(selectedCities).map(([city, selected]) => {
+                    const cityKey = `${selectedLocationSet}:${city}`
+                    const isCompleted = completedCities[cityKey]
+
+                    return (
+                      <label
+                        key={city}
+                        className={`flex items-center gap-2 cursor-pointer group relative ${isCompleted ? 'opacity-50' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => toggleCity(city)}
+                          className="w-4 h-4 rounded border-outline-variant bg-surface-container-high checked:bg-primary checked:border-primary cursor-pointer"
+                        />
+                        <span className={`text-sm ${isCompleted ? 'line-through text-on-surface-variant/50' : 'text-on-surface-variant group-hover:text-primary'} transition-colors`}>
+                          {city}
+                        </span>
+                        {isCompleted && (
+                          <span className="material-symbols-outlined text-primary text-xs ml-auto" title="Concluído">
+                            check_circle
+                          </span>
+                        )}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <button
+                onClick={handleStart}
+                disabled={isStarting || currentTask?.status === 'running'}
+                className="btn-primary"
+                style={{ width: '100%', justifyContent: 'center', marginBottom: 8, pointerEvents: isStarting || currentTask?.status === 'running' ? 'none' : 'auto' }}
+                aria-busy={isStarting}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                {isStarting ? 'Iniciando...' : 'Iniciar Processo'}
+              </button>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <button
+                  onClick={handlePause}
+                  disabled={!currentTask || currentTask.status !== 'running'}
+                  className="btn-ghost"
+                  style={{ justifyContent: 'center', opacity: (!currentTask || currentTask.status !== 'running') ? 0.4 : 1 }}
+                >
+                  Pausar
+                </button>
+                <button
+                  onClick={handleStop}
+                  disabled={!currentTask}
+                  className="btn-ghost"
+                  style={{ justifyContent: 'center', opacity: !currentTask ? 0.4 : 1 }}
+                >
+                  Parar
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--pro-border)' }}>
-              <span style={{ color: 'rgba(232,89,60,0.7)' }}>›</span>
-              <div className="term-cursor" />
+          </div>
+
+          {/* Right Column - Map & Logs */}
+          <div>
+            {/* Live Map Preview */}
+            <div className="map-preview" style={{ height: 200, marginBottom: 12 }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 30% 50%, rgba(232,89,60,0.06) 0%, transparent 60%), radial-gradient(circle at 70% 30%, rgba(196,24,90,0.05) 0%, transparent 50%)' }} />
+              <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.15 }} viewBox="0 0 400 200" preserveAspectRatio="none">
+                <path d="M0 50 L400 50 M0 100 L400 100 M0 150 L400 150 M100 0 L100 200 M200 0 L200 200 M300 0 L300 200" stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" fill="none" />
+              </svg>
+
+              {/* Map Pins */}
+              {mapMarkers.map((marker) => (
+                <div key={marker.id} className="map-pin" style={{ top: `${marker.y}%`, left: `${marker.x}%` }} />
+              ))}
+
+              {/* Live badge */}
+              <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(10,10,10,0.85)', border: '0.5px solid var(--pro-border2)', padding: '4px 10px', borderRadius: 6, fontSize: 10, color: 'var(--pro-orange)', display: 'flex', alignItems: 'center', gap: 5, fontWeight: 600 }}>
+                <div className="live-dot" />
+                Visualização ao Vivo: {currentLocation}
+              </div>
+            </div>
+
+            {/* Terminal Log */}
+            <div className="pro-terminal" style={{ height: 240, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div className="term-head">
+                <div className="term-dots">
+                  <div className="term-dot" style={{ background: '#f87171' }} />
+                  <div className="term-dot" style={{ background: '#fbbf24' }} />
+                  <div className="term-dot" style={{ background: '#4ade80' }} />
+                </div>
+                <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.5)', letterSpacing: '0.1em' }}>LOG DO TERMINAL</span>
+              </div>
+
+              <div style={{ flex: 1, overflow: 'auto' }} className="custom-scrollbar">
+                {currentTask?.logs?.length > 0 ? (
+                  currentTask.logs.slice(-15).map((log, i) => (
+                    <div key={i} className="term-line">
+                      [{log.time}] <span className="hl">{log.level === 'error' ? 'FALHA' : log.level === 'success' ? 'SUCESSO' : 'PENDENTE'}:</span> {log.message}
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="term-line">[09:41:02] <span className="hl">SUCESSO:</span> Inicializando PROSPECTA V4...</div>
+                    <div className="term-line">[09:41:03] <span className="hl">SUCESSO:</span> Proxy estabelecido</div>
+                    <div className="term-line" style={{ color: 'rgba(251,191,36,0.7)' }}>[09:41:05] PENDENTE: Motor de busca iniciado</div>
+                    <div className="term-line">[09:41:08] <span className="hl">SUCESSO:</span> 48 localizações indexadas</div>
+                    <div className="term-line">[09:41:10] <span className="hl">SUCESSO:</span> Extraindo: Clínica Sorriso Real</div>
+                  </>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--pro-border)' }}>
+                <span style={{ color: 'rgba(232,89,60,0.7)' }}>›</span>
+                <div className="term-cursor" />
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    {/* Location Sets Management Modal */}
-    <LocationSetsModal
-      isOpen={showManageModal}
-      onClose={() => setShowManageModal(false)}
-      locationSets={availableLocations}
-      onRefresh={async (newSetId) => {
-        // Reload location sets from Supabase after create/delete
-        try {
-          const locations = await api.getLocationSets()
-          setAvailableLocations(locations)
+      {/* Location Sets Management Modal */}
+      <LocationSetsModal
+        isOpen={showManageModal}
+        onClose={() => setShowManageModal(false)}
+        locationSets={availableLocations}
+        onRefresh={async (newSetId) => {
+          // Reload location sets from Supabase after create/delete
+          try {
+            const locations = await api.getLocationSets()
+            setAvailableLocations(locations)
 
-          if (newSetId) {
-            const addedSet = locations.find(loc => loc.id.toString() === newSetId.toString())
-            if (addedSet) {
-              setSelectedLocationSet(addedSet.id)
+            if (newSetId) {
+              const addedSet = locations.find(loc => loc.id.toString() === newSetId.toString())
+              if (addedSet) {
+                setSelectedLocationSet(addedSet.id)
+                const cities = {}
+                const locs = addedSet.locations || []
+                locs.forEach(city => {
+                  cities[city] = false
+                })
+                setSelectedCities(cities)
+                return
+              }
+            }
+
+            // If current selection was deleted, select first available
+            const currentExists = locations.find(loc => loc.id.toString() === selectedLocationSet?.toString())
+            if (!currentExists && locations.length > 0) {
+              setSelectedLocationSet(locations[0].id)
               const cities = {}
-              const locs = addedSet.locations || []
-              locs.forEach(city => {
+              const firstLocs = locations[0].locations || []
+              firstLocs.forEach(city => {
                 cities[city] = false
               })
               setSelectedCities(cities)
-              return
             }
+          } catch (err) {
+            console.error('Failed to reload location sets:', err)
           }
-
-          // If current selection was deleted, select first available
-          const currentExists = locations.find(loc => loc.id.toString() === selectedLocationSet?.toString())
-          if (!currentExists && locations.length > 0) {
-            setSelectedLocationSet(locations[0].id)
-            const cities = {}
-            const firstLocs = locations[0].locations || []
-            firstLocs.forEach(city => {
-              cities[city] = false
-            })
-            setSelectedCities(cities)
-          }
-        } catch (err) {
-          console.error('Failed to reload location sets:', err)
-        }
-      }}
-    />
+        }}
+      />
     </>
   )
 }

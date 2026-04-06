@@ -15,6 +15,8 @@ from playwright.async_api import TimeoutError as PlaywrightTimeout
 
 from database.supabase_client import get_supabase_client
 from modules.gmap.location_utils import load_location_set_name
+from modules.gmap.sync_config import SyncConfig
+from modules.gmap.sync_manager import SyncManager
 
 
 # ── Email Extraction Helpers ──
@@ -36,9 +38,37 @@ def extract_domain_from_url(url: str) -> str:
     try:
         from urllib.parse import urlparse
         parsed = urlparse(url if url.startswith("http") else f"http://{url}")
-        return parsed.hostname or ""
+        hostname = parsed.hostname or ""
+        # Remove www. prefix if present
+        if hostname.startswith("www."):
+            hostname = hostname[4:]
+        return hostname
     except Exception:
         return ""
+
+
+def _apply_empresa_fallback(lead_data: dict) -> dict:
+    """
+    Apply fallback: if nome is empty or 'Erro', use domain from website.
+    
+    Args:
+        lead_data: Lead dictionary with nome and website fields
+        
+    Returns:
+        Lead dictionary with nome filled if possible
+    """
+    nome = lead_data.get('nome', '').strip()
+    website = lead_data.get('website', '').strip()
+    
+    # Check if nome needs fallback
+    if not nome or nome.startswith('Erro'):
+        # Try to extract domain from website
+        if website and website != 'Sem Website':
+            domain = extract_domain_from_url(website)
+            if domain:
+                lead_data['nome'] = domain
+    
+    return lead_data
 
 
 def extract_best_email(text: str) -> Optional[str]:
@@ -448,6 +478,25 @@ async def gmap_worker(info, tm):
         await _gmap_playwright_work(info, tm)
 
 
+async def _load_sync_config(user_id: Optional[str]) -> SyncConfig:
+    """Load sync configuration from Supabase app_settings"""
+    if not user_id:
+        return SyncConfig.default()
+    
+    supabase_client = get_supabase_client()
+    if not supabase_client.is_available():
+        return SyncConfig.default()
+    
+    try:
+        data = await supabase_client.get_app_setting(user_id, 'gmap_sync_config')
+        if data:
+            return SyncConfig.from_dict(data)
+    except Exception:
+        pass
+    
+    return SyncConfig.default()
+
+
 async def _broadcast_safe(tm, info, main_loop=None):
     """Broadcast task update, safely from any thread."""
     if main_loop and main_loop != asyncio.get_event_loop():
@@ -485,6 +534,15 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
     headless = config.get("headless", True)  # Novo parâmetro para navegador visual
     extract_emails = config.get("extractEmails", True)  # Novo parâmetro para extração de email
     user_id = config.get("user_id")  # User ID for multi-user isolation
+
+    # Load sync configuration
+    sync_config = await _load_sync_config(user_id)
+    
+    # Initialize SyncManager with user_id and supabase_client
+    sync_manager = SyncManager(sync_config, user_id, supabase_client, info, tm)
+    await sync_manager.initialize()  # Load webhooks from Supabase
+    info.add_log(f"Modo de sincronização: {sync_config.sync_mode.value}", "info")
+    await _broadcast_safe(tm, info, main_loop)
 
     # Use provided location set name or fallback to detection from cities
     location_set_name = config.get("locationSetName") or load_location_set_name(cities)
@@ -636,11 +694,18 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
                                     'task_id': info.id,
                                     'user_id': user_id,
                                 }
+                                
+                                # Apply empresa fallback
+                                lead_data = _apply_empresa_fallback(lead_data)
+                                
                                 success = await supabase_client.insert_lead(lead_data)
                                 if success:
                                     info.stats["supabase_success"] += 1
                                     supabase_consecutive_failures = 0
-                                    info.add_log(f"→ Supabase: {data['nome']} salvo", "success")
+                                    info.add_log(f"→ Supabase: {lead_data['nome']} salvo", "success")
+                                    
+                                    # Add to sync manager
+                                    await sync_manager.add_lead(lead_data)
                                 else:
                                     info.stats["supabase_failures"] += 1
                                     supabase_consecutive_failures += 1
@@ -669,6 +734,16 @@ async def _gmap_playwright_work(info, tm, main_loop=None):
                 await asyncio.sleep(delay)
 
             await browser.close()
+
+            # Finalize sync manager
+            await sync_manager.finalize()
+            
+            # Update stats with sync info
+            info.stats.update({
+                "synced_batches": sync_manager.stats.synced_batches,
+                "synced_total": sync_manager.stats.synced_total,
+                "sync_failures": sync_manager.stats.sync_failures
+            })
 
             # Final log with statistics including Supabase and emails
             final_msg = f"Extração finalizada! {info.stats['leads']} leads extraídos."

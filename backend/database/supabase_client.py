@@ -5555,6 +5555,93 @@ class SupabaseClient:
             logger.error(f"Error in set_app_setting: {type(e).__name__}")
             return False
 
+    async def get_active_webhooks(self, user_id: str) -> list[dict]:
+        """
+        Get all active Google Sheets webhooks for a user.
+        
+        Args:
+            user_id: The user ID to filter webhooks by
+            
+        Returns:
+            list[dict]: List of active webhook dictionaries with fields:
+                - id: webhook ID
+                - name: webhook name
+                - webhook_url: the webhook URL
+                - daily_limit: daily limit for this webhook (default: 80)
+                - active: whether webhook is active
+        """
+        if not self._available or not user_id:
+            return []
+        
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(
+                    f"{self._url}/rest/v1/gsheets_webhooks",
+                    params={
+                        'user_id': f'eq.{user_id}',
+                        'active': 'eq.true',
+                        'select': 'id,name,webhook_url,daily_limit,active'
+                    },
+                    headers={
+                        'apikey': self._key,
+                        'Authorization': f'Bearer {self._service_key}',
+                        'Content-Type': 'application/json'
+                    }
+                )
+                
+                if response.status_code == 200:
+                    webhooks = response.json()
+                    logger.debug(f"Found {len(webhooks)} active webhooks for user {user_id}")
+                    return webhooks
+                else:
+                    logger.error(f"Error fetching webhooks: HTTP {response.status_code}")
+                    return []
+                    
+        except Exception as e:
+            logger.error(f"Error in get_active_webhooks: {type(e).__name__} - {str(e)}")
+            return []
+    
+    async def mark_leads_synced(self, lead_ids: list[int]) -> bool:
+        """
+        Mark leads as synced to Google Sheets.
+        
+        Args:
+            lead_ids: List of lead IDs to mark as synced
+            
+        Returns:
+            bool: True if update succeeded, False otherwise
+        """
+        if not self._available or not lead_ids:
+            return False
+        
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                # Build filter for multiple IDs: id=in.(1,2,3)
+                ids_str = ','.join(str(id) for id in lead_ids)
+                
+                response = await client.patch(
+                    f"{self._url}/rest/v1/gmap_leads",
+                    params={'id': f'in.({ids_str})'},
+                    json={'synced_to_sheets': True},
+                    headers={
+                        'apikey': self._key,
+                        'Authorization': f'Bearer {self._service_key}',
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    }
+                )
+                
+                if response.status_code in (200, 204):
+                    logger.debug(f"Marked {len(lead_ids)} leads as synced")
+                    return True
+                else:
+                    logger.error(f"Error marking leads as synced: HTTP {response.status_code}")
+                    return False
+                    
+        except Exception as e:
+            logger.error(f"Error in mark_leads_synced: {type(e).__name__} - {str(e)}")
+            return False
+
 
 # Global singleton instance
 _supabase_client: Optional[SupabaseClient] = None

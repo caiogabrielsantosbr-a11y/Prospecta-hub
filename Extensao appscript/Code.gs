@@ -131,13 +131,28 @@ function handleAddLeads(payload) {
   const sheet = SpreadsheetApp.getActiveSheet();
   const HEADERS = ['EMPRESA', 'EMAIL', 'TELEFONE', 'CIDADE', 'WEBSITE', 'STATUS'];
 
-  // Garante cabeçalho
+  // Ensure header exists
   if (sheet.getLastRow() === 0 || sheet.getLastColumn() === 0) {
     sheet.appendRow(HEADERS);
     SpreadsheetApp.flush();
   }
+  
+  // Verify header structure (ensure all 6 columns exist in correct order)
+  const existingHeaders = sheet.getRange(1, 1, 1, 6).getValues()[0];
+  let headerNeedsUpdate = false;
+  for (let i = 0; i < HEADERS.length; i++) {
+    if (existingHeaders[i] !== HEADERS[i]) {
+      headerNeedsUpdate = true;
+      break;
+    }
+  }
+  
+  if (headerNeedsUpdate) {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+    SpreadsheetApp.flush();
+  }
 
-  // Coletar emails existentes para deduplicação (coluna 2 = EMAIL)
+  // Collect existing emails for deduplication (column 2 = EMAIL)
   const existingEmails = new Set();
   const lastRow = sheet.getLastRow();
   if (lastRow > 1) {
@@ -145,31 +160,40 @@ function handleAddLeads(payload) {
       .forEach(r => { if (r[0]) existingEmails.add(String(r[0]).toLowerCase().trim()); });
   }
 
-  // Filtrar apenas leads novos (email não duplicado)
+  // Filter only new leads (email not duplicated)
   const newLeads = leads.filter(lead => {
     const email = String(lead.EMAIL || '').toLowerCase().trim();
     return email && !existingEmails.has(email);
   });
 
   if (!newLeads.length) {
-    return jsonResponse({ success: true, rows_added: 0, skipped: leads.length, message: 'Todos os leads já existem na planilha' });
+    return jsonResponse({ 
+      success: true, 
+      rows_added: 0, 
+      skipped: leads.length, 
+      message: 'Todos os leads já existem na planilha' 
+    });
   }
 
-  // Batch write — muito mais rápido que appendRow em loop
+  // Batch write — map fields to fixed column order
   const rows = newLeads.map(lead => [
-    lead.EMPRESA  || '',
-    lead.EMAIL    || '',
-    lead.TELEFONE || '',
-    lead.CIDADE   || '',
-    lead.WEBSITE  || '',
-    '',
+    lead.EMPRESA  || '',  // Column 1
+    lead.EMAIL    || '',  // Column 2
+    lead.TELEFONE || '',  // Column 3
+    lead.CIDADE   || '',  // Column 4
+    lead.WEBSITE  || '',  // Column 5
+    '',                   // Column 6 (STATUS)
   ]);
 
   const startRow = sheet.getLastRow() + 1;
   sheet.getRange(startRow, 1, rows.length, HEADERS.length).setValues(rows);
   SpreadsheetApp.flush();
 
-  return jsonResponse({ success: true, rows_added: newLeads.length, skipped: leads.length - newLeads.length });
+  return jsonResponse({ 
+    success: true, 
+    rows_added: newLeads.length, 
+    skipped: leads.length - newLeads.length 
+  });
 }
 
 /**

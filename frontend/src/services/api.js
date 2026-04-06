@@ -123,7 +123,7 @@ export const api = {
     .then(({ data, error }) => {
       if (error) throw new Error(error.message)
       const completed = {}
-      ;(data || []).forEach(row => { completed[`${locationSetId}:${row.city}`] = true })
+        ; (data || []).forEach(row => { completed[`${locationSetId}:${row.city}`] = true })
       return { completed_cities: completed }
     }),
 
@@ -231,5 +231,13 @@ export const api = {
     const { data, error } = await supabase.from('location_sets').select('locations').eq('id', id).single()
     if (error) throw new Error(error.message)
     return data.locations.slice(0, limit)
-  }
+  },
+
+  // ── Sync Configuration ──
+  getSyncConfig: () => request('/gmap/sync-config'),
+  saveSyncConfig: (config) =>
+    request('/gmap/sync-config', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    }),
 }

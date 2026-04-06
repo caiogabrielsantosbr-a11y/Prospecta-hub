@@ -166,3 +166,61 @@ async def get_supabase_results(
     # Return results (empty list if none found, status 200)
     return leads
 
+
+@router.post("/sync-config")
+async def save_sync_config(
+    sync_mode: str = Body(...),
+    sync_quantity: Optional[int] = Body(None),
+    sync_interval_seconds: Optional[int] = Body(None),
+    user_id: Optional[str] = Depends(get_optional_user)
+):
+    """Save sync configuration to Supabase app_settings"""
+    if not user_id:
+        return {"success": False, "error": "User not authenticated"}
+    
+    try:
+        from modules.gmap.sync_config import SyncConfig
+        
+        # Validate and create config
+        config = SyncConfig.from_dict({
+            'sync_mode': sync_mode,
+            'sync_quantity': sync_quantity,
+            'sync_interval_seconds': sync_interval_seconds
+        })
+        
+        # Save to Supabase
+        client = get_supabase_client()
+        success = await client.set_app_setting(user_id, 'gmap_sync_config', config.to_dict())
+        
+        if success:
+            return {"success": True, "config": config.to_dict()}
+        else:
+            return {"success": False, "error": "Failed to save configuration"}
+    
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/sync-config")
+async def get_sync_config(user_id: Optional[str] = Depends(get_optional_user)):
+    """Load sync configuration from Supabase app_settings"""
+    if not user_id:
+        return {"success": False, "error": "User not authenticated"}
+    
+    try:
+        from modules.gmap.sync_config import SyncConfig
+        
+        client = get_supabase_client()
+        data = await client.get_app_setting(user_id, 'gmap_sync_config')
+        
+        if data:
+            config = SyncConfig.from_dict(data)
+            return {"success": True, "config": config.to_dict()}
+        else:
+            # Return default config
+            config = SyncConfig.default()
+            return {"success": True, "config": config.to_dict()}
+    
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
